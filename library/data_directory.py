@@ -123,7 +123,7 @@ class generic_data_directory:
 				result = entry.value = factory()
 				return result
 			else:
-				raise Exception()
+				raise Exception(f'{self} already contains a value for {path!r}')
 		else:
 			result = self[path] = factory()
 			return result

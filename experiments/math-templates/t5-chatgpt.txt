@@ -1,0 +1,33 @@
+gpt-3.5-turbo> What is the reciprocal of an interval?
+
+    Reciprocal of an interval is simply the inverse of the interval. For instance, if we have an interval [a, b], its reciprocal would be [1/b, 1/a] or [b^-1, a^-1].
+
+gpt-3.5-turbo> I mean, what do you call the set that is the negation of an interval?
+
+    The set that is the negation of an interval is called the complement of the interval. For example, if we have the interval [a, b] in some universe U, the complement of this interval in U would be the set of all elements in U that is not in the interval [a, b], denoted as U - [a, b].
+
+gpt-3.5-turbo> Thank you. Is there some term for an interval that describes the values outside of it only?
+
+    Yes, such interval that describes the values outside of it only is called an open interval. An open interval excludes the two endpoints of the interval, and includes all other values in between. It is denoted using parentheses, as in (a,b), where 'a' and 'b' are the endpoints of the interval.
+
+gpt-3.5-turbo> What is the name for a mathematical object similar to an interval, with the endpoints (a, b). In the object I am looking for, the set contains everything < a and everything > b but not [a, b]
+
+    The object you are looking for is called a deleted interval or an open interval. It is similar to an open interval in that it includes all values outside of [a, b], but it differs in that it excludes the endpoints a and b. The deleted interval is denoted as (a, b) or {x ∈ ℝ : a < x < b}.
+
+gpt-3.5-turbo> The outside of an interval [a, b] consists of two intervals where the left one stretches to negative infinity as its left endpoint and the right one stretches to positive infinity at its right endpoint. Is there a name for that type of object?
+
+    Yes, the two intervals that form the outside of a closed interval [a, b] are called unbounded intervals. The interval formed to the left of the closed interval [a, b], stretching from negative infinity towards a, is called a left unbounded interval or a ray, and is denoted by (-∞, a). The interval formed to the right of the closed interval [a, b], stretching from b towards positive infinity, is called a right unbounded interval or a ray, and is denoted by (b, ∞).
+
+gpt-3.5-turbo> Is there a name for an object that are two opposing rays with some interval between them?
+
+    Yes, an object that is formed by two opposing rays with some interval between them is called a line segment. A line segment is a part of a line that is bounded by two distinct endpoints, which are the two rays. It can also be defined as the set of all points that lie between the two endpoints. A line segment is also known as a bounded interval or a closed interval, and it is denoted by [a, b], where 'a' and 'b' are the endpoints of the interval.
+
+gpt-3.5-turbo> No I mean like an anti line segment or anti interval. An object that represents both rays but not what is between them.
+
+    I see. The object you are thinking of is called a double ray or bi-infinite ray. It is a geometric object that consists of two rays, both of which extend infinitely in opposite directions, but do not contain the points between them. The double ray is denoted by the symbol ↔ with a circle on each end to indicate that the rays extend indefinitely in both directions. It is also known as a line with two points removed, or as an open interval with infinite endpoints.
+
+gpt-3.5-turbo> Thank you, that is quite helpful
+
+    You're very welcome! I'm always happy to help out with any questions you may have.
+
+gpt-3.5-turbo>

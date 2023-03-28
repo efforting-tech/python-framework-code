@@ -1,0 +1,14 @@
+gpt-3.5-turbo> Please summarize the following discoveries and pending tasks. Discoveries: AST must not contain non literal constants. A custom nodetransformer is needed to properly deal with list mutation. Pending tasks: AST manipulation context that can keep track of non literal constants for proper processing. Method for turning an AST tree into a python literal useful for templating.
+
+    Based on our recent discoveries, we now know that the Abstract Syntax Tree (AST) must not contain non-literal constants. As a result, we need to create a custom node transformer that will handle list mutation in a proper way. However, we still have some pending tasks that need to be accomplished. The first task is to develop an AST manipulation context that can keep track of non-literal constants, which is important for ensuring proper processing. The second task involves developing a method for turning an AST tree into a Python literal that is useful for templating. Once these tasks are complete, we will be able to more effectively utilize and manipulate the AST for a wide range of purposes.
+
+gpt-3.5-turbo> Please try again but without speculation on the use cases and in a form that is easier to digest, perhaps as bulletlists with title and description.
+
+    Discoveries:
+    - AST must not contain non-literal constants
+    - A custom nodetransformer is needed to properly deal with list mutation
+
+    Pending tasks:
+    - Develop an AST manipulation context that can keep track of non-literal constants for proper processing
+    - Create a method for turning an AST tree into a Python literal that is useful for templating
+

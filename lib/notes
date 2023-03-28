@@ -1,0 +1,55 @@
+API families
+
+	construction (to be determined)
+
+		*	from_table
+		*	from_raster_table
+		*	from_path
+		*	from_text
+		*	from_tree
+		*	from_node
+		*	from_sequence
+		*	from_item
+
+
+	data processing
+
+		High level processors
+			These will optionally include a post processing step and are used with generators
+
+			*	process_table
+			*	process_text
+			*	process_tree
+			*	process_sequence
+
+		Generator based processors
+
+			*	process_table_iteratively
+			*	process_text_iteratively
+			*	process_tree_iteratively
+			*	process_sequence_iteratively
+
+		Item specific processor
+			These will handle one item at a time
+
+			*	process_node
+			*	process_item
+
+
+	Notes:
+
+		in essence we can divide these 3 families into two main kingdoms:
+			* sequential
+			* item
+
+
+
+	Tangential:
+		If we want to use taxonomy ranking we would use:
+
+			domain
+			kingdom
+			family
+			species
+
+			We have removed life, phylum and genus since it is too biology related. We also removed class and order to avoid ambiguity with computer science terms. 4 ranks should be enough.

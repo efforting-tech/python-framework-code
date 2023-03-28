@@ -1,0 +1,36 @@
+
+
+Introduction
+
+	The idea with the tagging system is to make sure that only specific comments counts as non pending items.
+	This does not mean that there should be no comment once everything is complete but it does mean that comments need to be of a particular kind.
+	For instance some comments may reference the documentation because there might be some weird detail that needs further explanation, in such cases
+		a short in code explanation should be given together with a link to the documentation covering it to at least the same degree.
+
+
+Note
+	Tags that apply to this document must use double number sign (##) since this document is talking about the single number sign tags
+
+(losely) Defined tags
+
+	#TODO	Something needs to be done
+
+	#TO-DOC				Something needs to be documented
+	#TO DOCUMENT
+	#TO-DOCUMENT
+
+	#TO DECIDE			A decision needs to be made
+	#TO-DECIDE
+
+
+
+	#EXAMPLE			Something here should be used as an example
+
+	#TO PONDER			This needs further pondering before any task can be derived from it
+
+
+
+
+
+
+##TODO - harmonize tags that have many similar aliases

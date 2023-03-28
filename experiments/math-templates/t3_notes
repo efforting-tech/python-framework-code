@@ -1,0 +1,12 @@
+Could we define the ruleset nicer?
+
+
+	X * X → X ** 2
+
+
+
+# a_count * -(X ** sa_exp) * b_count * -X
+
+	A.count * -(X ** A.exp) * B.count * -X
+
+	A ** E1 * A ** E2 → A ** (E1 * E2)

@@ -1,0 +1,4 @@
+dotted path callable
+	An object that can be referenced using a dotted path such as `path.to.object` and that also is a callable.
+
+

@@ -1,0 +1,30 @@
+
+
+interval
+
+selection
+
+real
+
+index
+
+
+unit_circle
+
+
+vector
+	scalar[] components
+
+named_vector(vector)
+	identifier[] names
+
+	L(named) == L(components)
+
+	C swizzling
+		all(L(c) == 1 for c in names)
+
+ray
+	vector position
+	vector direction
+
+	D(position) == D(direction)	#Dimensionality constraint

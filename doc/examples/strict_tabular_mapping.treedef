@@ -1,0 +1,20 @@
+
+brief sketch for M-rudimentary_types.strict_tabular_mapping/C-strict_tabular_mapping
+
+	component_product_numbers = strict_tabular_mapping('mouser', 'digikey', 'internal')
+
+	#Accesing by field
+	component_product_numbers.by_mouser[...]
+	component_product_numbers.by_digikey[...]
+	component_product_numbers.by_internal[...]
+
+	#Must either match no entries or only one which is replaced
+	component_product_numbers.update((..., ..., ...))
+
+	#Iteration
+	for entry in component_product_numbers:
+		print(entry)
+
+	#Contents check
+	... in component_product_numbers
+

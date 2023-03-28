@@ -1,0 +1,214 @@
+Main library:
+
+	lib/__init__.py
+		Moved some stuff to their proper libraries.
+		There is only one function left in there and I am not sure if I even want it there or at all.
+		There are no tests to be made currently since it is a bit undecided what this module should focus on.
+		This module needs a more clear intent
+
+Feature: ABC - Abstract Base Classes
+
+	lib/abstract_base_classes/__init__.py
+		removed some old todos
+		Module is using data conversion but the data conversion feature has not been properly defined yet so this needs to be taken care of.
+		There are some things here that needs to be figured out and additional passes would be wise.
+
+Feature: DC - Data Conversaion
+
+	lib/abstract_base_classes/auto_conversion.py
+		This is a tiny start connected to the feature DC
+
+	lib/abstract_base_classes/interfaces.py
+		This might be related to the feature DC but it may also be the start of where to define API for various things.
+		Question is, should it really be under abstract_base_classes?
+
+	lib/abstract_base_classes/registry.py
+		Defines a few automatic conversation methods associated with the feature DC
+		This needs expansion and also examples and docs.
+
+Feature: API - Application Programming Interface Definitions
+
+	lib/api.py
+		The main idea here was to provide ways to not only define an API but to also enforce checking upon __init_subclass__
+		It is important though to notice that we may have to contend with a chain of multiple __init_subclass__ just as we may have multiple initializers.
+		Therefore we should not only make helper functions for that stuff but to define it better and implement it for this purpose as well.
+
+		Currently there are some things not decided, like API uses lots of conditions for type checking.
+		Not only do we have type checking needs in multiple locations in this project, but there is also built in support, such as the typing module.
+		We need to get deep into this particular rabbit hole and make a decision not only regarding inter-project harmonization but also whether we
+		should harmonize our solution with the typing module.
+
+lib/ast_utils/__init__.py
+	Some simple utilities for working with ASTs
+
+lib/ast_utils/extended_transformer.py
+	This is used by pp_ast_transform but we must make a decision regarding the whole templating shenanigans.
+
+Feature: CDD - Conditional Data Processing
+
+	lib/conditional_data_processing/__init__.py
+		Conditional data processing is one of the foundations for feature DC but can also be used for many other things.
+
+	lib/conditional_data_processing/actions.py
+		These are actions connected to the conditional data processing system.
+		Note that we are using similar actions for tokenization - maybe there is an opportunity for harmonization here.
+
+
+lib/data_utils/__init__.py
+	Implements functions useful for manipulating or accessing data within python, for instance attribute based access to mappings.
+	There are also some conditions here similar to those in the API feature which may provide an opportunity for further harmonization
+	Some features here are regarding sequences, such as strip_sequence
+	There are also stack limit features and stacking features
+
+lib/data_utils/proxy.py
+	There are some notes that I do not remember what they refer to.
+	In conclusion proxy can do resolving of instances that are pointing to other instances which is useful for unwrapping things
+	The unwrapping is useful so that we can get to the ultimate source of some truth and use that for identity comparison.
+	This should be a part of feature DC as well. The feature may need an early and late version.
+
+
+Feature: DU - Development Utils
+	lib/development_utils/__init__.py
+		Can create frame names and log stub messages.
+		Has a human time thing that should be moved to time_utils
+		Also has some nice conditional expanders for use in star expressions, they should be in data_utils
+		Have some neat features for filtering stdout or stderr via an external process
+
+	lib/development_utils/introspection/__init__.py
+		Looks like a started introspection utility but it doesn't do much for now.
+	lib/development_utils/introspection/package.py
+		Utilities for introspecting packages and modules.
+	lib/development_utils/syntax_highlight.py
+		Syntax highlight utilities
+
+lib/exceptions.py
+	A start of exceptions specific to this library. Needs lots of extension.
+	We may also extend some built in errors to be able to gain more information about them.
+
+lib/function_utils/__init__.py
+	Empty
+
+lib/function_utils/create_function.py
+	Contains some stackable states used for execution.
+	We may want to compare this to context and other code executing parts of this library and harmonize it.
+	Also contains some functions for merging data structures that should be moved to data_utils.
+
+lib/function_utils/orchestration.py
+	Defined a call sequence type used to orchestrate chained __init_subclass__ and such
+
+lib/function_utils/pattern_matching.py
+	Some experiments in using AST (and therefore regular python code) to define conditional patterns.
+	We should harmonize this with any other conditions we have.
+
+lib/iteration_utils/__init__.py
+	Contains functions for dealing with iteration.
+
+lib/iteration_utils/branchable_iterator.py
+	Defines a branchable iterator
+
+Feature: MSS - Math Sub System
+
+	lib/math/__init__.py
+		Early math stuff. It contains a resolver which should probably be implemented using feature DC.
+
+	lib/math/constants.py
+		Some mathematical constants.
+
+	lib/math/formatting.py
+		Some string utilities to automatically wrap things in paranthesis if they contain space.
+		Ideally we would define this using higher level features from other parts of the library.
+
+	lib/math/functions.py
+		Defines some mathematical functions.
+
+	lib/math/matrix_base.py
+		Defines a matrix and some of its operations.
+
+	lib/math/operations.py
+		Defines mathematical operations and also computing ops such as swizzle.
+
+	lib/math/types.py
+		Base types for the math sub system
+
+	lib/math/utils.py
+		Some utils which may be better located in data_utils
+
+	lib/math/vector_base.py
+		Defines a vector and some of its operations.
+
+lib/pattern_matching/__init__.py
+	Here we once again define a lot of things that overlap with feature CC and DC
+
+lib/pattern_matching/pm_types.py
+	These types represents use cases of feature CC, and CC should probably provide some nice way to represent these things.
+
+lib/presets/text_processing.py
+	A preset that builds a namespace with lots of the modules useful for text or table manipulation.
+
+Feature: RF - Rudimentary Features
+
+	lib/rudimentary_features/__init__.py
+		Empty
+	lib/rudimentary_features/code_manipulation/__init__.py
+		Empty
+	lib/rudimentary_features/code_manipulation/templating/__init__.py
+
+	lib/rudimentary_features/code_manipulation/templating/pp_ast_transform.py
+		AST transformation - should probably be a specific feature since nothing should really depend on this in the low level
+	lib/rudimentary_features/code_manipulation/templating/pp_bases.py
+		Bases used for PP
+	lib/rudimentary_features/code_manipulation/templating/pp_context.py
+		Here we have a start of a context object that we may be able to harmonize with other places we use eval
+
+
+--- END OF SESSION ---
+
+	lib/rudimentary_features/code_manipulation/templating/pp_structures.py
+	lib/rudimentary_features/code_manipulation/templating/template_classifications.py
+	lib/rudimentary_features/code_manipulation/templating/template_renderer.py
+	lib/rudimentary_features/code_manipulation/templating/templating_features.py
+	lib/rudimentary_features/code_manipulation/templating/text_templates.py
+	lib/rudimentary_features/code_manipulation/text_node_preprocessing.py
+	lib/rudimentary_features/graphml/__init__.py
+	lib/rudimentary_features/graphml/xml_formatting.py
+	lib/rudimentary_features/graphml/xml_helpers.py
+	lib/rudimentary_features/graphml/xml_highlevel.py
+	lib/rudimentary_features/graphml/xml_inspection.py
+	lib/rudimentary_features/graphml/xml_interface.py
+	lib/rudimentary_features/graphml/xml_rules.py
+	lib/rudimentary_features/graphml/xml_templating.py
+	lib/rudimentary_features/graphml/xml_tokenizer.py
+	lib/rudimentary_features/graphml/xml_types.py
+
+lib/rudimentary_type_system/__init__.py
+lib/rudimentary_type_system/bases.py
+lib/rudimentary_type_system/caching.py
+lib/rudimentary_type_system/features.py
+lib/rudimentary_type_system/initialization.py
+lib/rudimentary_type_system/introspection.py
+lib/rudimentary_type_system/representation.py
+lib/rudimentary_type_system/rts_types.py
+lib/rudimentary_types/__init__.py
+lib/rudimentary_types/context.py
+lib/rudimentary_types/data_path.py
+lib/rudimentary_types/generic_tabular_mapping.py
+lib/rudimentary_types/prefixed_key_registry.py
+lib/rudimentary_types/single_channel_stack.py
+lib/rudimentary_types/strict_tabular_mapping.py
+lib/rudimentary_types/testing.py
+lib/self_test/abc.py
+lib/self_test/table.py
+lib/string_utils/__init__.py
+lib/symbols/__init__.py
+lib/symbols/directory.py
+lib/table_processing/table.py
+lib/temp_test.py
+lib/testing/__init__.py
+lib/testing/__main__.py
+lib/testing/state.py
+lib/testing/type_system.py
+lib/text_nodes/__init__.py
+lib/text_processing/__init__.py
+lib/text_processing/priority_processing.py
+lib/text_processing/re_tokenization.py
+lib/text_processing/tokenization.py

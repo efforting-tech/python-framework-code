@@ -1,0 +1,33 @@
+Feature: CC - Condition Checking
+
+Feature: DC - Data Conversion
+
+	This feature is about automatically converting data which can be quite useful in constructor chains to make for versatile typing.
+	This feature is not properly defined yet.
+
+	Currently we have some functions defined in a base class (lib/abstract_base_classes/__init__.py)
+
+		_auto_convert(self, value)
+			Returns value if value is of instance self, otherwise calls _convert
+
+		_convert(self, value)
+			Unconditionally converts value to instance of self
+
+	I do not think I want it like this though, I think I want to keep the type clean and have a separate interface for this.
+	This could potentially be tied to the type metadata. Then one could add more rules to further customize the behavior.
+
+
+
+Feature: ABC - Abstract Base Classes
+
+Feature: API - Application Programming Interface
+
+Feature: CDD - Conditional Data Processing
+
+Feature: DU - Development Utils
+
+Feature: MSS - Math Sub System
+	This feature is one of many sketches where the newer sketches are likely to supercede this one.
+	In the new sketch vectors and matrices will both just be rank specific tensors.
+
+Feature: RF - Rudimentary Features

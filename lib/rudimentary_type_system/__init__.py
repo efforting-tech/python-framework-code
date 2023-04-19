@@ -1,3 +1,5 @@
+raise Exception('deprecated')
+
 #Maybe this needs to be moved as well so we can access the pre_rts stuff without going by here
 if False:
 	from .rts_types import field, field_configuration, SELF, initializer, SETTING, replace_initializer

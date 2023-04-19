@@ -1,0 +1,32 @@
+
+With this experiment we want to investigate how we may use some sort of templating system in order to make it easier to work with projects that may mix multiple source types, such as c code, python scripts, glsl shaders, cuda code and so forth.
+
+
+
+For for the specific initial experiment - the one with the points and edges, we have different approaches.
+
+	1. We make one application for exploring these concepts
+
+	2. We make an application that works as a 3D environment viewer and then stream data to it from various smaller contained experiments
+		(this is similar to the image viewer we made for a similar purpose.)
+
+
+
+We also need to consider some of the rabbit holes we have been in regarding the rendering aspect of this.
+
+	We started by wanting to use eye space for depth buffer manipulation but that proved kinda messy.
+	So instead it is likely better to just instance some nice geometry for the points
+
+	We briefly touched on geometry shaders and the concept is worth studying further but that is outside the scope of this current experiment.
+
+
+Where do we begin?
+
+	Let's start with a simple application with an infinite grid that we can traverse with some camera control.
+
+
+	We define the project using mnemonic tree definitions
+
+		Here we will define what translation units we want and how they interdepend, this data can also be used to create a makefile.
+
+

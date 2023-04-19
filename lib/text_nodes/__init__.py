@@ -1,5 +1,5 @@
-from .. import rudimentary_type_system as RTS
-from ..rudimentary_type_system.bases import standard_base
+from .. import type_system as RTS
+from ..type_system.bases import standard_base
 from .. import abstract_base_classes as ABC
 from pathlib import Path
 
@@ -10,12 +10,13 @@ def left_shave(line, to_shave):
 		return line
 
 
-def get_indention_prefix(line):
+def get_indention_prefix(line, strict=False):
 	stripped = line.lstrip('\t ')
 	count = len(line) - len(stripped)
 	prefix = line[:count]
 
-	if prefix and prefix[0] in '\t ':
+	if strict and prefix and prefix[0] in '\t ':
+		#Check that prefix is not mixed
 		assert not prefix.strip(prefix[0])
 
 	return prefix
@@ -102,8 +103,15 @@ class text_node(standard_base):
 		return cls.from_text(Path(path).read_text())
 
 	@classmethod
+	def from_branches(cls, *branches):
+		return cls.from_title_and_branches(None, branches)
+
+	@classmethod
 	def from_title_and_branches(cls, title, branches):
-		lines = (title or '',)
+		if title is None:
+			lines = ()
+		else:
+			lines = (title,)
 
 		for b in branches:
 			lines += b.indented_copy().lines
@@ -124,6 +132,12 @@ class text_node(standard_base):
 			if stripped := line.strip():
 				return index
 
+	#TODO - verify this works properly
+	def get_index_of_last_line_with_contents(self, end=-1):
+		for rindex, line in enumerate(self.lines[end:0:-1], 0):
+			index = len(self.lines) - rindex
+			if stripped := line.strip():
+				return index
 
 
 
@@ -189,6 +203,10 @@ class text_node(standard_base):
 	def dedented_copy(self):
 		prefix = get_minimum_indention_prefix(self.lines)
 		return self.__class__(tuple(left_shave(l, prefix) for l in self.lines))
+
+	def dedented_lines(self):
+		prefix = get_minimum_indention_prefix(self.lines)
+		return tuple(left_shave(l, prefix) for l in self.lines)
 
 	def indented_copy(self, prefix='\t'):
 		return self.__class__(tuple(f'{prefix}{l}' for l in self.lines))

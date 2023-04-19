@@ -1,11 +1,12 @@
+from ..symbols import register_symbol
 from .types import base, UNDEFINED
-from .. import rudimentary_type_system as RTS
+from .. import type_system as RTS
 from .. development_utils import cde #TODO import from proper place
 from .utils import ensure_mutable_sequence, maybe_get_tuple_of_integers
 from . import operations
 
-DEFAULT_ORDER = object()	#TODO - register proper symbol
-DEFAULT = object()
+DEFAULT_ORDER = register_symbol('internal.ordering.default')
+DEFAULT = register_symbol('internal.default')
 
 #TODO - harmonize with vector - use APIs - use interfaces - use common grounds
 

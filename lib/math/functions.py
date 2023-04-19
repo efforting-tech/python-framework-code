@@ -2,7 +2,7 @@ from ..data_utils import subscope as _subscope
 
 with _subscope() as ss:
 	from .types import function
-	from .. import rudimentary_type_system as RTS
+	from .. import type_system as RTS
 
 	known_functions = 'sin cos tan asin acos atan atan2 isin icos itan exp sqrt cbrt log log2 log10 logn'.split()
 	for function_name in known_functions:

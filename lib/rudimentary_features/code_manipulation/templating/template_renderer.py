@@ -1,6 +1,6 @@
-from ....rudimentary_features.code_manipulation.text_node_preprocessing import generic_tree_node_transformer, node_transformer_interface
-from ....rudimentary_type_system.bases import public_base
-from .... import rudimentary_type_system as RTS
+from ....type_system.code_manipulation.text_node_preprocessing import generic_tree_node_transformer, node_transformer_interface
+from ....type_system.bases import public_base
+from .... import type_system as RTS
 from .template_classifications import CL
 from ....text_nodes import text_node
 from ....text_processing.tokenization import token_match

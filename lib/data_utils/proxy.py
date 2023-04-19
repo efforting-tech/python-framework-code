@@ -1,3 +1,4 @@
+from ..symbols import create_symbol
 #TODO - this should be its own module
 
 #TO PONDER - I don't remember what the notes under here was referring to so it will remain for a bit
@@ -8,13 +9,15 @@
 
 import types
 
+MISS = create_symbol('internal.miss')
+
 TYPE_PROXY_DIRECTORY = dict()
 
 #This one will use silent fallback
 def proxy_resolve(item, item_type=None):
 	if item_type is None:
 		item_type = type(item)
-	MISS = object()
+
 	if proxy_field := TYPE_PROXY_DIRECTORY.get(item_type):
 		if (proxy_value := getattr(item, proxy_field, MISS)) is not MISS:
 			return proxy_resolve(proxy_value)

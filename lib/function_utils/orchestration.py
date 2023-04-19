@@ -1,5 +1,5 @@
 
-from .. import rudimentary_type_system as RTS
+from .. import type_system as RTS
 
 class call_sequence:
 	sequence = RTS.all_positional()

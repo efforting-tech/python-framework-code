@@ -1,4 +1,4 @@
-from .. import rudimentary_type_system as RTS
+from .. import type_system as RTS
 from .. import abstract_base_classes as ABC
 
 
@@ -8,7 +8,7 @@ class base_translator:
 	__repr__ = RTS.representation.local_fields
 
 
-
+#DEPRECATED - base new version from priority_translator
 class translator(base_translator):
 	rules = RTS.all_positional()
 

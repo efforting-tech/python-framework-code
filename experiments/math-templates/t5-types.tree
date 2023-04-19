@@ -1,30 +1,76 @@
+acronym table
+	A		abstract
+	T		type
+	F		function
+	P		property
+	USC		use specific sub classes
 
 
-interval
 
-selection
-
-real
-
-index
+T vector
+	RQ
 
 
-unit_circle
+
+note
+
+	T vector
+		scalar[] components
+
+		P dimensionality
+			len(components)
 
 
-vector
-	scalar[] components
+		USC
+			point
+			direction
+			A color
+				rgb
+				hsv
 
-named_vector(vector)
-	identifier[] names
 
-	L(named) == L(components)
 
-	C swizzling
-		all(L(c) == 1 for c in names)
 
-ray
-	vector position
-	vector direction
+note
 
-	D(position) == D(direction)	#Dimensionality constraint
+	interval
+
+	selection
+
+	real
+
+	index
+
+
+	function table
+		D(x)		x.dimensionality
+		M(x)		x.magnitude
+		P(a, b)		is_paralell(a, b)
+
+
+	T named_vector(vector)
+		identifier[] names
+
+		RQ
+			L(named) == L(components)
+
+		C swizzling
+			all(L(c) == 1 for c in names)
+
+
+	T ray
+		vector position
+		vector direction
+
+		RQ
+			D(position) == D(direction)	#Dimensionality constraint
+			M(direction) == 1
+
+	T double_ray
+		ray a
+		ray b
+
+		RQ
+			a.direction == -b.direction
+			P(b.position - a.position, a.direction)
+

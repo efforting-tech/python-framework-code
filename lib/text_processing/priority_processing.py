@@ -1,6 +1,6 @@
 from ..symbols import register_symbol
-from ..rudimentary_type_system.bases import public_base
-from .. import rudimentary_type_system as RTS
+from ..type_system.bases import public_base
+from .. import type_system as RTS
 from ..table_processing.table import table
 #from .tokenization import yield_value, yield_matched_text, tokenizer
 import ast, re
@@ -8,7 +8,7 @@ import ast, re
 #DEPRECATED?
 
 class CL:
-	token = register_symbol('token')
+	token = register_symbol('internal.token')
 
 	literal_match = token()
 	replacement = token()

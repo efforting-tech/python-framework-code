@@ -1,7 +1,8 @@
+from ....symbols import register_symbol
 from ....text_nodes import text_node
-from .... import rudimentary_type_system as RTS
-from ....rudimentary_type_system.bases import standard_base
-from ....rudimentary_type_system import factory_self_reference as fsr
+from .... import type_system as RTS
+from ....type_system.bases import standard_base
+from ....type_system import factory_self_reference as fsr
 from ....rudimentary_features.code_manipulation.templating import pp_structures
 from ....rudimentary_features.code_manipulation.templating.pp_context import template_pp_context
 from ....rudimentary_features.code_manipulation.templating.pp_ast_transform import pp_ast_transform, ast
@@ -17,12 +18,13 @@ from ..text_node_preprocessing import tn_preprocessor
 #	Example - sometimes we may want to have a quick way to call a template in order to produce text
 #		but in some other case we may want to do the same but to get the AST instead. Or maybe even compiled code
 
+MISS = register_symbol('internal.miss')
+
 class attribute_based_high_level_accessor(standard_base):
 	_context = RTS.positional()
 	_config = RTS.positional()	#Note that we later on want to setup the configuration chain to locally check this but then fall back to context - that way we can create differently configured high level accessors
 
 	def __getattr__(self, key):
-		MISS = object()
 		ctx = self._context
 		if (target := ctx.locals.get(key, MISS)) is not MISS:
 			return high_level_accessor(target)

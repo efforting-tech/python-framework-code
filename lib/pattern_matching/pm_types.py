@@ -1,6 +1,6 @@
 raise Exception('dep')
 
-from . import rudimentary_type_system as RTS
+from . import type_system as RTS
 from . import abstract_base_classes as ABC
 
 

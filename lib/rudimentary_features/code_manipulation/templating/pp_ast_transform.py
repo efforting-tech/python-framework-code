@@ -1,7 +1,9 @@
-
+from ....symbols import register_symbol
 from ....ast_utils.extended_transformer import extended_ast_node_transformer, ast
 from ....text_nodes import text_node
 from .pp_bases import pp_action, pp_gen_ast
+
+MISS = register_symbol('internal.miss')
 
 class generic_transform(extended_ast_node_transformer):
 
@@ -40,7 +42,6 @@ class replace_names(extended_ast_node_transformer):
 
 	def visit_Name(self, node):
 		#TODO harmonize
-		MISS = object()
 		if (replace := self.replacement_map.get(node.id, MISS)) is not MISS:
 			return replace
 		else:

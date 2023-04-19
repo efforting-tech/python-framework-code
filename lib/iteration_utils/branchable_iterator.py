@@ -1,7 +1,8 @@
+from ..symbols import register_symbol
 from collections import deque
 
-RAISE_EXCEPTION = object()	#TODO - should be a symbol
-EMPTY = object()
+RAISE_EXCEPTION = register_symbol('internal.action.raise_exception')	#TODO - should be a symbol
+EMPTY = register_symbol('internal.empty')
 
 class branchable_iterator:
 	def __init__(self, source):

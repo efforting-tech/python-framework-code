@@ -2,8 +2,8 @@ from ...text_processing.tokenization import tokenizer, yield_match, yield_classi
 from ...symbols import register_symbol
 from ...text_nodes import text_node
 from ...data_utils import strip_sequence
-from ... import rudimentary_type_system as RTS
-from ...rudimentary_type_system.bases import standard_base
+from ... import type_system as RTS
+from ...type_system.bases import standard_base
 
 import re
 

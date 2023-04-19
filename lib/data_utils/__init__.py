@@ -1,7 +1,9 @@
+from ..symbols import create_symbol
 from collections import Counter
 import sys
 
-MISS = object()
+
+MISS = create_symbol('internal.miss')
 
 #TODO - complementing mutating interface
 class attribute_dict_ro_access:
@@ -80,6 +82,16 @@ class stack:
 		self.updates.update(named_updates)
 		self.previous = None
 
+	def stack(self, **named):
+		return self.__class__(self.target, **named)
+
+	def get(self, key):
+		return self.updates[key]
+
+	def set_and_return(self, key, value):
+		self.updates[key] = value
+		return value
+
 	def __enter__(self):
 		assert self.previous is None
 		self.previous = tuple(self.target.get(key, MISS) for key in self.updates)
@@ -116,28 +128,45 @@ class attribute_stack:
 				setattr(self.target, key, value)
 
 
+
+
 #TODO - write examples for this and explain why this can be useful
 class subscope:
-	to_export = None
+	#TODO - maybe rename?
+	initial_scope = None
+	initial_frame = None
+
 
 	def __enter__(self):
-		assert self.to_export is None
-		self.to_export = dict(sys._getframe(1).f_locals)
+		assert self.initial_scope is None
+		self.initial_scope = dict(sys._getframe(1).f_locals)
+		self.initial_frame = sys._getframe(1)
+
 		return self
 
 	def __exit__(self, et, ev, tb):
-		target = sys._getframe(1).f_locals
+		target = self.initial_frame.f_locals
 		keys = set(target)
 
-		for key, value in self.to_export.items():
+		for key, value in self.initial_scope.items():
 			keys.discard(key)
 			target[key] = value
 
 		for key in keys:	#Discard remaining
 			del target[key]
 
-		self.to_export = None
+		self.initial_scope = None
+
+
+	def get_pending(self, ignore=()):	#Returns things defined in subscope
+		result = dict()
+		pre_existing = set(self.initial_scope) | set(ignore)
+		for key, value in self.initial_frame.f_locals.items():
+			if key not in pre_existing:
+				result[key] = value
+		return result
+
 
 	def export(self, name, value):
-		self.to_export[name] = value
+		self.initial_scope[name] = value
 

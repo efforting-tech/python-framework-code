@@ -1,23 +1,49 @@
-from .. import rudimentary_type_system as RTS
-from ..rudimentary_type_system.bases import public_base
-from ..rudimentary_type_system.features import classmethod_with_specified_settings, method_with_specified_settings
+from .. import type_system as RTS
+from ..type_system.bases import public_base
+from ..type_system.features import classmethod_with_specified_settings, method_with_specified_settings
 from ..rudimentary_features.code_manipulation.templating.pp_context import context
 from ..table_processing.table import table
 from ..text_processing.tokenization import call_processor_for_match, LEAVE_TOKENIZER, SKIP
 from ..text_processing.re_tokenization import re_tokenize, UNMATCHED
 from ..text_processing.re_match_processing import match_iterator
+from ..exceptions import TokenizationUnhandledAction
 
 import sys, re, types
 
 class A:	#Actions - TODO - these should simply be a module
-	from .tokenization import yield_value, enter_tokenizer
+	from .tokenization import yield_value,  enter_tokenizer, yield_from_tokenizer
 
+	class call_function(public_base):
+		function = RTS.positional()
+
+		def take_action_for_re_match(self, processor, text, start, config, match):
+			#C, CX, P, M, T
+			#if len(match.groups)
+			if (g := match.groups()) == 0:
+				[primary_token] = g
+			else:
+				primary_token = match.group()
+
+			return self.function(processor.context, processor.context.accessor, processor, match, primary_token)
 
 
 class improved_tokenizer(public_base):
-	rules = RTS.all_positional(field_type=RTS.SETTING)
-	default_action = RTS.setting()
+	#NOTE - changing to positional in accordance with other rule systems (todo: harmonize)
+	rules = RTS.positional(factory=list, field_type=RTS.SETTING)
+	default_action = RTS.setting(None)
 	last_match = RTS.state(None)
+
+	#NOTE this should be upgraded to also use the conditional action system from priority_translator
+
+	#Figure out where we stand on things that can be instanciated with all_positional but where we may want a fallback - specific fallback for zero args? lots of options, here is one
+	@classmethod_with_specified_settings(RTS.SELF)
+	def create_mutable(cls, config):
+		config._target.update(rules = list())
+		tokenizer = cls._from_config(config)
+		return tokenizer
+
+	def __repr__(self):
+		return f'{self.__class__.__qualname__}({len(self.rules)} rules, default_action={self.default_action!r})'
 
 	@method_with_specified_settings(RTS.SELF)
 	def tokenize(self, text, start=0, level=0, *, config):
@@ -33,7 +59,22 @@ class improved_tokenizer(public_base):
 			if action is UNMATCHED and config.default_action:
 				action = config.default_action
 
-			if action is SKIP:
+			if isinstance(action, A.enter_tokenizer):
+				if action.post_filter:
+					yield action.post_filter(action.tokenizer.process_text(text, self.last_match.end(), level+1))
+				else:
+					yield action.tokenizer.process_text(text, self.last_match.end(), level+1)
+				token_gen = re_tokenize(text, config.rules, action.tokenizer.last_match.end())
+
+			elif isinstance(action, A.yield_from_tokenizer):
+				for item in action.tokenizer.process_text(text, self.last_match.end(), level+1):
+					if action.post_filter:
+						yield action.post_filter(item)
+					else:
+						yield item
+				token_gen = re_tokenize(text, config.rules, action.tokenizer.last_match.end())
+
+			elif action is SKIP:
 				pass
 			elif action is LEAVE_TOKENIZER:
 				if level > 0:
@@ -42,24 +83,38 @@ class improved_tokenizer(public_base):
 					raise Exception(f'Can not leave top level tokenizer {self}')
 
 			elif action is UNMATCHED:
-				raise Exception(f'No action for {match!r} in {self}')
+				raise TokenizationUnhandledAction(self, text, start, level, config, match)
+				#raise Exception(f'No action for {match!r} in {self}')
 
 			else:	#TODO - should check using ABC that this is a proper action
 
 				#TODO - maybe it would be better to instead of matching things here have an API that would also s upport entering a sub tokenizer
 				#		the API would have to have ways to affect the current state, maybe we could create a mutable state object and use in the API.
 
-				match action.take_action(self, text, start, config, match):
+				match action.take_action_for_re_match(self, text, start, config, match):
 					case A.yield_value(value=value):
 						yield value
-					case A.enter_tokenizer(tokenizer=sub_tokenizer):
-						yield sub_tokenizer.process_text(text, self.last_match.end(), level+1)
+					case A.enter_tokenizer(tokenizer=sub_tokenizer, post_filter=post_filter):
+						if post_filter:
+							yield post_filter(sub_tokenizer.process_text(text, self.last_match.end(), level+1))
+						else:
+							yield sub_tokenizer.process_text(text, self.last_match.end(), level+1)
 						token_gen = re_tokenize(text, config.rules, sub_tokenizer.last_match.end())
+					case resulting_action if resulting_action is SKIP:
+						pass
+
+					case _ as action if action is LEAVE_TOKENIZER:	#Yes - this is horrible - we should rewrite this function because it is doing matching in two layers,
+						#Maybe it should be a resolving loop?		(TODO)
+						if level > 0:
+							return
+						else:
+							raise Exception(f'Can not leave top level tokenizer {self}')
+
 					case _ as unhandled:
 						raise Exception(f'The value {unhandled!r} could not be handled')
 
 
-				#yield action.take_action(self, text, start, config, match)
+				#yield action.take_action_for_re_match(self, text, start, config, match)
 
 
 
@@ -68,8 +123,8 @@ class improved_tokenizer(public_base):
 
 class simple_priority_translator(public_base):
 	tokenizer = RTS.positional(factory=improved_tokenizer)
-	context = RTS.setting(factory=context.from_frame, factory_positionals=(sys._getframe(0),), factory_named=dict(update_linecache=True))
-	default_expression = RTS.setting()
+	context = RTS.setting(factory=context.from_frame, factory_positionals=(sys._getframe(0),))
+	default_expression = RTS.setting(None)
 	pattern_processor = RTS.setting(re.compile)
 	post_processor = RTS.setting(tuple)
 
@@ -126,9 +181,10 @@ regex_parser = simple_regex_parser.from_raster(r'''
 
 class bootstrap_processor(public_base):
 	translator = RTS.positional(factory=simple_priority_translator)
-	context = RTS.setting(factory=context.from_frame, factory_positionals=(sys._getframe(0),), factory_named=dict(update_linecache=True))
+	context = RTS.setting(factory=context.from_frame, factory_positionals=(sys._getframe(0),))
 	pattern_processor = RTS.setting(regex_parser)
 
+	#TODO - _context and _processor shoudl be harmonized to C and P, or .. perhaps it should be configurable somewhere?
 	def process_matched_expression(self, match, context, expression):
 		assert expression, f'Encountered empty expression when evaluating match {match} using {self.tokenizer}'
 		return context.eval_expression_dict(expression, dict(_processor=self, _context=context, **match.groupdict()))
@@ -170,7 +226,7 @@ class sub_tokenizer(public_base):
 	tokenizer = RTS.positional()
 	expression = RTS.positional(default=None)
 
-	def take_action(self, tokenizer, text, start, config, match):
+	def take_action_for_re_match(self, tokenizer, text, start, config, match):
 		sub_tokenizer = self.context.eval_expression_dict(self.tokenizer, dict(_context=self.context, M=match_iterator(match), _=match.group(0)))
 		return A.enter_tokenizer(sub_tokenizer)
 
@@ -193,7 +249,7 @@ class return_expression(public_base):
 	def __repr__(self):
 		return f'{self.__class__.__name__}({self.expression!r})'
 
-	def take_action(self, tokenizer, text, start, config, match):
+	def take_action_for_re_match(self, tokenizer, text, start, config, match):
 		return A.yield_value(self.context.eval_expression_dict(self.expression, dict(_context=self.context, M=match_iterator(match), _=match.group(0))))
 
 
@@ -201,7 +257,20 @@ class return_expression(public_base):
 class extended_tokenizer(improved_tokenizer):
 	default_action = RTS.setting(None)
 	post_processor = RTS.setting(tuple)
-	context = RTS.setting(factory=context.from_frame, factory_positionals=(sys._getframe(0),), factory_named=dict(update_linecache=True))
+	context = RTS.setting(factory=context.from_frame, factory_positionals=(sys._getframe(0),))
+
+	def add_contextual_default_function(self, context, body):
+		args = 'C, CX, P, M, T'
+		function = context.create_function2(body, args)
+		self.default_action = A.call_function(function)
+		return self.default_action	#TODO - possibly wrap this to indicate it is a default action? (This is just for metadata/introspection)
+
+	def add_contextual_regex_function(self, context, pattern, body):
+		args = 'C, CX, P, M, T'
+		function = context.create_function2(body, args)
+		rule = (pattern, A.call_function(function))
+		self.rules.append(rule)
+		return rule
 
 	def extend(self, other):
 		self.rules += other.rules
@@ -210,26 +279,33 @@ class extended_tokenizer(improved_tokenizer):
 
 	@method_with_specified_settings(RTS.SELF)
 	def process_text(self, text, start=0, level=0, *, config):
-		return config.post_processor(self.tokenize.call_with_config(config, text, start=start, level=level))
+		return config.post_processor(self.tokenize.call_with_config(config, text, start, level))
 
 	@classmethod_with_specified_settings(table, RTS.SELF)
 	def from_raster(cls, action_processor, raster_table, *, table_settings, processor_settings):
-		return cls.from_table.call_with_config(table_settings, processor_settings, table.from_raster.call_with_config(table_settings, raster_table))
+		return cls.from_table.call_with_config(table_settings, processor_settings, action_processor, table.from_raster.call_with_config(table_settings, raster_table))
+
+	__call__ = process_text
 
 
 	@classmethod_with_specified_settings(table, RTS.SELF)
 	def from_table(cls, action_processor, table_reference, *, table_settings, processor_settings):
 
-		#TODO - do we want to do it like this?
-		default_action = processor_settings._target.pop('default_action', None)
-		rules = processor_settings._target.pop('rules', None) or ()
-		instance = cls(*rules, **processor_settings._target)
+		processor_settings._conditional_process_settings(
+			processors = dict(
+				default_action = action_processor
+			),
+			conditions = dict(
+				default_action = lambda x: bool(x) and bool(x.strip())
+			),
+		)
+
+		instance = cls._from_config(processor_settings)
 
 		#PME = types.MethodType(cls.process_matched_expression, instance)
 		rules = list()
 
-		table_reference = table.from_raster.call_with_config(table_settings, raster_table)
-		for pattern_type, pattern, action in table_reference.strict_iter('type', 'pattern', 'action'):
+		for pattern_type, pattern, action in table_reference.strict_iter.call_with_config(table_settings, 'type', 'pattern', 'action'):
 			#print(pattern, action_processor(action))
 
 			#TODO - actually eval these types in context
@@ -242,16 +318,18 @@ class extended_tokenizer(improved_tokenizer):
 
 		instance.rules += tuple(rules)
 
-		if default_action:	#Only configure default_action if default_expression is configured, this makes errors easier to follow
-
-			#TODO - figure this out!
-			match action_processor(default_action):
-				# case include_tokenizer() as inclusion:
-				# 	print(inclusion.context.eval_expression_dict(inclusion.tokenizer, dict(_context=inclusion.context)))
 
 
-				case _ as default_action:
-					instance.default_action = default_action
+		# if default_action:	#Only configure default_action if default_expression is configured, this makes errors easier to follow
+
+		# 	#TODO - figure this out!
+		# 	match action_processor(default_action):
+		# 		# case include_tokenizer() as inclusion:
+		# 		# 	print(inclusion.context.eval_expression_dict(inclusion.tokenizer, dict(_context=inclusion.context)))
+
+
+		# 		case _ as default_action:
+		# 			instance.default_action = default_action
 
 
 

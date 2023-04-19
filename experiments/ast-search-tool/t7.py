@@ -1,5 +1,5 @@
-from efforting.mvp4 import rudimentary_type_system as RTS
-from efforting.mvp4.rudimentary_type_system.bases import public_base
+from efforting.mvp4 import type_system as RTS
+from efforting.mvp4.type_system.bases import public_base
 from efforting.mvp4.development_utils.introspection.package import load_package
 from efforting.mvp4.text_nodes import text_node
 import ast, tokenize, token as TT, re

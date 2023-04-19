@@ -1,5 +1,5 @@
-from ...rudimentary_type_system.bases import standard_base
-from ...rudimentary_type_system.introspection import get_fields
+from ...type_system.bases import standard_base
+from ...type_system.introspection import get_fields
 
 def introspect(item):
 	match item:

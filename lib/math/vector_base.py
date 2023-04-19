@@ -1,5 +1,5 @@
 from .types import base, UNDEFINED, scalar
-from .. import rudimentary_type_system as RTS
+from .. import type_system as RTS
 from .utils import get_main_math_type
 from .. development_utils import cde #TODO import from proper place
 from . import operations

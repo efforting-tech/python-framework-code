@@ -1,0 +1,9 @@
+
+This is redundant because the dimensional names are also specifying size
+
+	M1 = matrix.empty(4, 4, dimensional_names = dict(row='xyzw', col='XYZW'))
+
+	A better option may be
+
+	matrix.empty(dimensional_names=dict(row='xyzw', col='XYZW'))
+

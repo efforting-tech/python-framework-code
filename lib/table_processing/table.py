@@ -1,7 +1,7 @@
-from .. import rudimentary_type_system as RTS
-from ..rudimentary_type_system.bases import public_base
+from .. import type_system as RTS
+from ..type_system.bases import public_base
 from ..symbols import register_symbol
-from ..rudimentary_type_system.features import method_with_specified_settings, classmethod_with_specified_settings
+from ..type_system.features import method_with_specified_settings, classmethod_with_specified_settings
 from ..string_utils import expand_tabs_and_return_line_iterator, remove_blank_lines
 from ..iteration_utils import sliding_slice
 
@@ -59,7 +59,8 @@ class table(public_base):
 
 	tab_size = RTS.setting(4)
 	min_raster_spacing = RTS.setting(3, description='Minimum spacing required to separate headers in a raster table')
-	strip_raster_cells = RTS.setting(True)
+	strip_raster_cells = RTS.setting(True, description='Calls .strip() on cells If set to true.')
+	strip_columns = RTS.setting(True, description='Calls .strip() on cells in columns. Only matters if strip_raster_cells is set to False.')
 	line_comment_pattern = RTS.setting(None)
 	configured_columns = RTS.setting(None)
 	processing_mode = RTS.setting(PROCESSING.ROW_BY_ROW)
@@ -70,6 +71,8 @@ class table(public_base):
 	process_columns = RTS.setting(ALL)
 	strict_columns = RTS.setting(False)
 
+	multiline_columns = RTS.setting(None)
+	multiline_condition = RTS.setting(None)
 
 
 	def process_column(self, index, filter):
@@ -85,10 +88,23 @@ class table(public_base):
 	#NOTE - this is a good example for configuration
 	@method_with_specified_settings(RTS.SELF)
 	def strict_iter(self, *columns, config):
-		return self.iter_process.call_with_config(config, process_columns=columns, strict_columns=True)
+		if columns:
+			return self.iter_process.call_with_config(config, process_columns=columns, strict_columns=True)
+		else:
+			return self.iter_process.call_with_config(config, process_columns=ALL)
+
+	@method_with_specified_settings(RTS.SELF)
+	def iter_column(self, column, *, config):
+		if isinstance(column, int):
+			column = self.columns[column]
+
+		for [cell] in self.iter_process.call_with_config(config, process_columns=(column,)):
+			yield cell
 
 	@method_with_specified_settings(RTS.SELF)
 	def iter_process(self, *, config):	#TODO this must be renamed to correspond to the processing API family
+
+		#BUG - we are currently passing columns as a dict which is wrong since columns could have conflicting names, or no names for anonymous columns
 
 		if config.process_columns is ALL:
 			process_columns = self.columns
@@ -100,17 +116,59 @@ class table(public_base):
 
 		column_processors = {column: config.column_processors.get(column, lambda x:x) for column in process_columns}
 		column_lut = self.get_column_lut()
+
+		multiline_condition = config.multiline_condition
+		if multiline_columns := config.multiline_columns:
+			multiline_columns = tuple(column_lut.get(c, c) for c in multiline_columns)
+
+		waterfall = multiline_condition and multiline_columns
+		row_instance = config.row_instance
+
 		if config.processing_mode is PROCESSING.ROW_BY_ROW:
 			if config.ditto_columns is ALL:
 				ditto_columns = process_columns
 			else:
 				ditto_columns = config.ditto_columns
 
-			for column in ditto_columns:
-				self.process_column(column, ditto_expansion(config.ditto_mark))
+			local_column_processors = {k: ditto_expansion(config.ditto_mark) for k in ditto_columns}
+			def process_row_dict(d):
+				result = dict()
+				for column, cell in d.items():
+					if lcp := local_column_processors.get(column):
+						cell = lcp(cell)
+					result[column] = cell
 
-			for row in self.rows:
-				yield config.row_instance(**{column: column_processors[column](row[column_lut[column]]) for column in process_columns})
+				return row_instance(**result)
+
+			if waterfall:
+				pending = None
+
+				for row in self.rows:
+					processed_row = [column_processors[column](row[column_lut[column]]) for column in process_columns]
+
+					if multiline_condition.check_table_row(column_lut, processed_row):
+						if pending:
+							for col in multiline_columns:
+								pending[col] += f'\n{processed_row[col]}'
+						else:
+							raise Exception('Pending multiline data before multiline start')
+					else:
+						if pending:
+							yield process_row_dict(dict(zip(process_columns, pending or processed_row)))
+							#yield row_instance(**dict(zip(process_columns, pending or processed_row)))
+						pending = processed_row
+
+				if pending:	#Catch tail
+					#yield row_instance(**dict(zip(process_columns, pending or processed_row)))
+					yield process_row_dict(dict(zip(process_columns, pending or processed_row)))
+
+			else:
+				#for column in ditto_columns:
+					#self.process_column(column, ditto_expansion(config.ditto_mark))
+
+				for row in self.rows:
+					#yield row_instance(**{column: column_processors[column](row[column_lut[column]]) for column in process_columns})
+					yield process_row_dict({column: column_processors[column](row[column_lut[column]]) for column in process_columns})
 
 		else:
 			raise Exception()
@@ -144,16 +202,24 @@ class table(public_base):
 
 
 		if defined_columns := config.configured_columns:
+			raise Exception('Should we really check pending_lines here?')
 			if pending_lines:
 				columns = tuple(iter_columns_from_line(pending_lines[0], config.min_raster_spacing))
 		else:
 			if pending_lines:
 				columns = tuple(iter_columns_from_line(pending_lines[0], config.min_raster_spacing))
+
 				assert len(set(pending_lines[1])) in (0, 1, 2)		#0 = blank lines, 1 = only one symbol, 2 = only two symbols (like dash and space)
+
 				if filter_cells:
 					defined_columns = tuple(filter_cells(pending_lines[0][c:nc]) for c, nc in sliding_slice((*columns, None), 2))
 				else:
 					defined_columns = tuple(pending_lines[0][c:nc] for c, nc in sliding_slice((*columns, None), 2))
+
+				if config.strip_columns and not config.strip_raster_cells:
+					defined_columns = tuple(c.strip() for c in defined_columns)
+
+
 				pending_lines = pending_lines[2:]
 
 		if pending_lines:
@@ -173,6 +239,32 @@ class table(public_base):
 			return key
 		else:
 			return self.get_column_lut()[key]
+
+	def append_row(self, *cells):
+		self.rows.append(cells)
+
+	#Todo - maybe add more granularity for auto extension, maybe even config system
+	def set_cell(self, row, column, value, auto_extend=False):
+		row_count = len(self.rows)
+		col_count = len(self.columns)
+		last_row = row_count - 1
+		last_col = col_count - 1
+
+		if auto_extend:
+
+			if (cols_to_insert := column - last_col) > 0:
+				self.columns.extend((f'column_{f}' for f in range(col_count+1, col_count+cols_to_insert+1)))
+				col_count = len(self.columns)
+
+			if (rows_to_insert := row - last_row) > 0:
+				blank_row = [''] * col_count
+				self.rows.extend([blank_row] * rows_to_insert)
+
+		elif row >= row_count or column >= col_count:
+			raise Exception('Outside of table')
+
+		self.rows[row][column] = value
+
 
 	def __repr__(self):
 		return f'{self.__class__.__qualname__}({len(self.rows)} rows, {len(self.columns)} columns)'

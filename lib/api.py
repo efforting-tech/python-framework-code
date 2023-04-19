@@ -1,6 +1,6 @@
-from . import rudimentary_type_system as RTS
+from . import type_system as RTS
 from . import abstract_base_classes as ABC
-from .rudimentary_type_system.bases import standard_base as base
+from .type_system.bases import standard_base as base
 import types
 
 #DEPRECATED - we should make an api sub package that have both types for api definition but also some definitions

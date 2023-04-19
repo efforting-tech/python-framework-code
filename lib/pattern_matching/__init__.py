@@ -1,12 +1,14 @@
+#TODO - deprecate this in favor of priority_translator
+
 #from . import condition
 
-from .. import rudimentary_type_system as RTS
+from .. import type_system as RTS
 from .. import abstract_base_classes as ABC
 from .. import api
 from ..symbols import register_symbol
 
 from ..iteration_utils.branchable_iterator import branchable_iterator
-from ..rudimentary_type_system.bases import standard_base as base
+from ..type_system.bases import standard_base as base
 
 from collections import abc as cABC
 

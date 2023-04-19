@@ -1,6 +1,8 @@
 import inspect, sys, ast, textwrap
 from .. import rudimentary_type_system as RTS
 from .bases import public_base
+#TODO - support for RTS.ALL for all settings
+
 #from ..data_utils import config_ro_access
 UNDEFINED = object()#TODO symbol
 FIRST_AVAILABLE = object()	#TODO symbol

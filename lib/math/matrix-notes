@@ -1,0 +1,11 @@
+When creating a subselection of a matrix the sub selection can have up to as many dimensions as the matrix has.
+
+The subselection specifies a selection per axis where each selection is a 1D selection (point, closed or open interval)
+
+Example
+
+	M = matrix(dict(row=4, col=4, cell=coordinate_reference('row', 'col')))
+	M.row[3]	M.row[0:2]		M.row[0, 1]
+	M.cell[(0, 2)]
+
+

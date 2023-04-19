@@ -1,4 +1,4 @@
-from .. import rudimentary_type_system as RTS
+from .. import type_system as RTS
 import types
 
 class standard_base:

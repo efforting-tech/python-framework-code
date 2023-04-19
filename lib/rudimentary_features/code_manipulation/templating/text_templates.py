@@ -1,16 +1,17 @@
+from ....symbols import register_symbol
 from .pp_context import context
-from .... import rudimentary_type_system as RTS
+from .... import type_system as RTS
 from ....text_processing.tokenization import tokenizer, yield_matched_text, token_match, yield_value
 from ..text_node_preprocessing import tn_preprocessor
 from ....text_nodes import text_node
 from ....data_utils import stack
-from ....rudimentary_type_system.bases import standard_base
+from ....type_system.bases import standard_base
 from .template_renderer import template_renderer
 from .template_classifications import CL
 
 import re
 
-FROM_TOKENIZER = object()	#TODO symbol
+FROM_TOKENIZER = register_symbol('internal.from_tokenizer')
 
 #Potentially deprecate this in favor of simple_template_renderer derivates
 class pending_text_template(standard_base):

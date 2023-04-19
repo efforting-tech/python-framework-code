@@ -1,0 +1,40 @@
+
+INCLUDE: camera.treedef
+
+CONCEPT: input event
+
+
+
+NOTE: these notes are for sketching purposes
+
+	translation units
+
+		camera control
+		primitive drawing
+		shader utilities
+		error logging
+		rendering
+
+
+	concept linkage
+
+		when a camera is used for rendering a matrix has to be derived from the camera.
+		This matrix must then be used within the vertex shader, typically this might be the projection matrix.
+		Then we may have a per instance matrix (or just position/orientation) so we may render a whole bunch of thigns at once.
+
+		There will be many resources to keep track of such as
+
+			textures
+			vertex buffers
+			shaders and shaderprograms
+			uniforms
+
+
+	inspiration from previous projects
+
+		/home/devilholk/Projects/toys
+		/home/devilholk/Authorative_Repository/Projects/asteroid-like/local_version/ref_code1
+
+		For CUDA: /home/devilholk/Authorative_Repository/Projects/Experiments/cuda_julia
+
+

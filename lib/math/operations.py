@@ -1,6 +1,6 @@
 from .types import unary_operation, nary_operation, operation
 from ..data_utils import subscope
-from .. import rudimentary_type_system as RTS
+from .. import type_system as RTS
 
 #  _   _                       ___                     _   _
 # | | | |_ _  __ _ _ _ _  _   / _ \ _ __  ___ _ _ __ _| |_(_)___ _ _  ___

@@ -1,7 +1,7 @@
-from .. import rudimentary_type_system as RTS
+from .. import type_system as RTS
 from .. import abstract_base_classes as ABC
 
-
+#DEPRECATE in favor of priority_translator
 @ABC.register_class_tree('internal.action')
 class action:
 	__init__ = RTS.initialization.standard_fields

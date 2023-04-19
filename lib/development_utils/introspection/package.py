@@ -1,8 +1,8 @@
 import pkgutil, ast, glob
 from pathlib import Path
 
-from ...rudimentary_type_system.bases import standard_base
-from ... import rudimentary_type_system as RTS
+from ...type_system.bases import standard_base
+from ... import type_system as RTS
 
 class common_interface(standard_base):
 

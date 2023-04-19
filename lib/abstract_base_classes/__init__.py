@@ -1,14 +1,14 @@
 #Primitive Decorator - note, we may have a better way to declare decorators later but probably not before abc is initialized
 
 import types
-from ..symbols.directory import symbol_node, symbol_attribute_access_interface
+from ..symbols import symbol_node, symbol_attribute_access_interface
 from ..exceptions import DataConversionFailed
 from ..function_utils.orchestration import call_sequence
 from ..data_utils.proxy import proxy_resolve
 from collections import defaultdict
 
-from .. import rudimentary_type_system as RTS
-from ..rudimentary_type_system.bases import public_base
+from .. import type_system as RTS
+from ..type_system.bases import public_base
 
 
 #TODO - define a project wide representation specification
@@ -71,7 +71,7 @@ class abc_metadata(public_base):
 
 
 #TO DOCUMENT - explain the relationship between symbol_node, dict and abc_tree_node
-ABC_TREE = symbol_node('abc')
+ABC_TREE = symbol_node(name='abc')
 ABC_DIRECTORY = dict()
 abc = abc_tree_node(ABC_TREE)
 

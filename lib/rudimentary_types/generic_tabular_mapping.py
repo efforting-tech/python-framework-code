@@ -1,10 +1,11 @@
 from ..abstract_base_classes import auto_conversion as A
+from ..symbols import create_symbol
 from collections import namedtuple
 
 
 #TODO create exceptions
 
-AUTO = object()
+AUTO = create_symbol('internal.automatic_keys')
 
 class generic_key:
 	def __init__(self, owner, name, indices, unique, view):

@@ -1,5 +1,5 @@
-from .. import rudimentary_type_system as RTS
-from ..rudimentary_type_system.bases import public_base
+from .. import type_system as RTS
+from ..type_system.bases import public_base
 from ..data_utils import subscope
 from ..symbols import register_symbol
 from .. import abstract_base_classes as abc

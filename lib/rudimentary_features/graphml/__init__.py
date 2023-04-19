@@ -2,8 +2,8 @@ from . import xml_types
 from . import xml_helpers as XH
 from . import xml_templating as XT
 from . import xml_highlevel as XHL
-from ...rudimentary_type_system.bases import standard_base
-from ... import rudimentary_type_system as RTS
+from ...type_system.bases import standard_base
+from ... import type_system as RTS
 from ...rudimentary_types.prefixed_key_registry import prefixed_key_registry
 
 from ... import get_path

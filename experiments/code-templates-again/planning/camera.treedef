@@ -1,0 +1,80 @@
+CONCEPT: camera
+
+	INTRODUCTION
+
+		A camera is used for setting up the projection matrix for rendering.
+		There can be multiple cameras and possibly multiple viewports.
+
+		Cameras can be of different types:
+
+			· Perspective
+			· Orthogonal
+
+	CONCEPT: control
+
+		BRIEF: The camera can be controlled by the keyboard and mouse by connecting the proper event handlers.
+
+		REQUIRED FEATURES:
+
+			fly mode
+			rotate around target
+			rotate around axis
+			zoom
+			reset parameters
+
+	FEATURE: get projection matrix
+		PURPOSE: Returns the projection matrix so that it may be used by a vertex shader
+
+
+	C IMPLEMENTATION
+		HEADER: camera.h
+
+		SOURCE: camera.c
+			RAW INCLUDES:
+				"camera.h"
+				"vector_math.h"
+
+
+
+	CONCEPT: definition
+		BRIEF: These are the parameters and state that goes into defining a camera.
+
+		MODE OF OPERATION: camera mode
+			· Fixed
+				BRIEF: A camera that is attached to a motion cycle is also considered fixed
+				EXAMPLES:
+					· Fixed position
+					· Continuous path
+						· Steady rortation
+						· Pre-recorded flight
+
+			· Free
+				BRIEF: A free camera can still be view locked at some target
+
+		MODE OF OPERATION: view locking
+			NOTE: view locking is per lock vector
+				Currently I have not worked out how to deal with over or under constrained locking. Initially we will only have free camera anyway.
+
+			· No lock
+			· Locked at target
+			· Locked direction
+
+
+		STRUCTURE TABLE: camera
+
+			name			type
+			----			----
+			mode			camera mode
+			position		3d vector
+
+
+
+
+		LIST OF TYPE: lock vectors
+			· Normal
+			· Inverted normal
+			· Up
+			· Down
+			· Left
+			· Right
+

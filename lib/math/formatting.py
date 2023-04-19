@@ -1,6 +1,9 @@
+from ..symbols import register_symbol
+from ..type_system.introspection import get_fields
 from collections.abc import Mapping
-from ..rudimentary_type_system.introspection import get_fields
 import types
+
+MISS = register_symbol('internal.miss')
 
 def space_wrap(item):
 	result = str(item)
@@ -27,7 +30,6 @@ class space_wrapping_object_accessor(Mapping):
 
 
 	def __getitem__(self, key):
-		MISS = object()
 		if key == '_':
 			return self.target
 

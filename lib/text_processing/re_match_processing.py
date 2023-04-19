@@ -1,5 +1,5 @@
-from .. import rudimentary_type_system as RTS
-from ..rudimentary_type_system.bases import public_base
+from .. import type_system as RTS
+from ..type_system.bases import public_base
 
 class match_iterator(public_base):
 	match = RTS.positional()
@@ -23,11 +23,16 @@ class match_iterator(public_base):
 	def text(self):
 		return self.match.group(0)
 
+
+	#No idea why I did it like this
+	# @property
+	# def pending_positional(self):
+	# 	if self._pending_positional is None:
+	# 		self._pending_positional = next(self._positional_group_iterator)
+
+	# 	return self._pending_positional
+
+
 	@property
 	def pending_positional(self):
-		if self._pending_positional is None:
-			self._pending_positional = next(self._positional_group_iterator)
-
-		return self._pending_positional
-
-
+		return next(self._positional_group_iterator)

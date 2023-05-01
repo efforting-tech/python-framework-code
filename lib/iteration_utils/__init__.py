@@ -37,3 +37,9 @@ def iter_max_count(iterator, max_count):
 		yield item
 		if count == max_count:
 			return
+
+def maybe_next(iterator, default=None):
+	try:
+		return next(iterator)
+	except StopIteration:
+		return default

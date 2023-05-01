@@ -4,9 +4,11 @@ from .. import abstract_base_classes as ABC
 from pathlib import Path
 import types
 
+#TODO - move
 def is_generator(i):
 	return isinstance(i, types.GeneratorType)
 
+#TODO move
 def left_shave(line, to_shave):
 	if line.startswith(to_shave):
 		return line[len(to_shave):]

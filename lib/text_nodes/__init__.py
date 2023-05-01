@@ -2,6 +2,10 @@ from .. import type_system as RTS
 from ..type_system.bases import standard_base
 from .. import abstract_base_classes as ABC
 from pathlib import Path
+import types
+
+def is_generator(i):
+	return isinstance(i, types.GeneratorType)
 
 def left_shave(line, to_shave):
 	if line.startswith(to_shave):
@@ -75,7 +79,7 @@ class text_node(standard_base):
 
 	#RQ - methods accepting title should accept title being None
 
-	lines = RTS.field(factory=tuple, read_only=True)
+	lines = RTS.field(factory=list, read_only=True)
 
 	@RTS.cached_property(lines)
 	def title(self):
@@ -94,6 +98,16 @@ class text_node(standard_base):
 	def index_of_first_line_with_contents(self):
 		return self.get_index_of_first_line_with_contents()
 
+	def get_indention_level_of_line_index(self, index):	#TODO - support indention settings
+		return get_indention_level(self.lines[index])
+
+	def get_indention_prefix_of_line_index(self, index):	#TODO - support indention settings
+		return get_indention_prefix(self.lines[index])
+
+	def split_indention_prefix_of_line_index(self, index):
+		prefix = self.get_indention_prefix_of_line_index(index)
+		return prefix, self.lines[index][len(prefix):]
+
 	@classmethod
 	def from_text(cls, text):
 		return cls(tuple(text.split('\n')))
@@ -110,11 +124,14 @@ class text_node(standard_base):
 	def from_title_and_branches(cls, title, branches):
 		if title is None:
 			lines = ()
+			for b in branches:
+				lines += b.lines
+
 		else:
 			lines = (title,)
+			for b in branches:
+				lines += b.indented_copy().lines
 
-		for b in branches:
-			lines += b.indented_copy().lines
 
 		return cls(lines)
 
@@ -140,6 +157,35 @@ class text_node(standard_base):
 				return index
 
 
+
+	#TODO - should we implement write, from_pieces and write_pieces?
+
+	def write(self, text):
+		if isinstance(text, str):
+			ingress, *remaining = text.split('\n')
+		elif isinstance(text, text_node):
+			ingress, *remaining = text.lines
+		else:
+			raise TypeError(text)
+
+		if self.lines:
+			self.lines[-1] += ingress
+
+		self.lines.extend(remaining)
+
+
+	@classmethod
+	def from_pieces(cls, iterator):
+		r = cls()
+		r.write_pieces(iterator)
+		return r
+
+	def write_pieces(self, iterator):
+		for i in iterator:
+			if is_generator(i):
+				self.write_pieces(i)
+			else:
+				self.write(i)
 
 	def iter_nodes(self, include_blanks=False):
 		minimum_indention = get_minimum_indention_level(self.lines)
@@ -199,6 +245,9 @@ class text_node(standard_base):
 		minimum_indention_prefix = get_minimum_indention_prefix(self.lines)
 		skip = len(minimum_indention_prefix)
 		return '\n'.join(line[skip:] if line.strip() else line for line in self.lines)
+
+	def cleaned_copy(self):
+		return self.__class__(self.lines[self.get_index_of_first_line_with_contents():self.get_index_of_last_line_with_contents()]).dedented_copy()
 
 	def dedented_copy(self):
 		prefix = get_minimum_indention_prefix(self.lines)

@@ -1,6 +1,18 @@
 from .pp_context import *
 from ....type_system.bases import public_base
 
+class object_to_dict_interface(standard_base, dict):
+	target = RTS.field()
+
+	def __getitem__(self, key):
+		if (value := getattr(self.target, key, MISS)) is MISS:
+			raise AttributeError(f'{self} have no local or global entry {key!r}.')	#TODO - refine message
+		else:
+			return value
+
+	def __setitem__(self, key, value):
+		setattr(self.target, key, value)
+
 class context_dict_accessor(standard_base, dict):
 	#TODO - ensure that all relevant functions are implemented!
 
@@ -14,6 +26,36 @@ class context_dict_accessor(standard_base, dict):
 
 	def __setitem__(self, key, value):
 		self.context.locals[key] = value
+
+
+# class context_class_accessor(standard_base, dict):
+# 	#TODO - rename to object accessor?
+# 	#TODO - ensure that all relevant functions are implemented!
+
+# 	target = RTS.field()
+
+# 	def __getitem__(self, key):
+# 		print(self, key, self.target)
+# 		if (value := getattr(self.target, key, MISS)) is MISS:
+# 			raise AttributeError(f'{self} have no local or global entry {key!r}.')	#TODO - refine message
+# 		else:
+# 			return value
+
+# 	def __setitem__(self, key, value):
+# 		setattr(self.target, key, value)
+
+# 	def iter_ancestors(self):
+# 		yield self
+
+# 	def get_name(self):
+# 		return self.target.__class__.__qualname__
+
+# 	def get_first(self, *keys):
+# 		for k in keys:
+# 			if value := self.get(k):
+# 				return value
+
+
 
 #TODO - see /home/devilholk/Projects/graph_system_native/take2/t7b.py for imrovements regarding defining the local context for functions using closures
 #ADDITIONAL:	By stacking the "outer" functions there we can create great cus0tom scoping!
@@ -54,12 +96,18 @@ def unique_names_from_generator(gen, prefill=None):
 		return result
 
 
+
+
 class context3(public_base):
 	locals = RTS.positional(factory=dict)
 	name = RTS.positional(default=None)
 	parents = RTS.positional(default=())
 	tracker = RTS.setting(None)
+	global_dict = RTS.setting(None)
 
+	def export(self, named_item):
+		self.set(named_item.__name__, named_item)
+		return named_item
 
 	@property
 	def accessor(self):
@@ -108,9 +156,13 @@ class context3(public_base):
 		else:
 			return self.create_function2(statement)()
 
-	def exec_in_context(self, statement):
+	def exec_in_context(self, statement, **stack_locals):
 		#TODO - possible tracking
-		exec(statement, self.dict_accessor, self.locals)
+		if stack_locals:
+			with self.stack(**stack_locals):
+				exec(statement, self.dict_accessor, self.locals)
+		else:
+			exec(statement, self.dict_accessor, self.locals)
 
 	def iter_ancestors(self):
 		for parent in self.parents:
@@ -176,7 +228,10 @@ class context3(public_base):
 
 
 
-	def create_function2(self, inner_body=None, inner_arguments='', inner_name='function', global_dict=None, creation_function_name = 'create_function'):	#TODO config?
+	#NOTE - one issue now is that inner_name will conflict with globals
+	#		one potential solution is to just use a very obscure inner_name - that is kinda ugly but will work.
+	#		for now we will just change the default to have a leading underscore
+	def create_function2(self, inner_body=None, inner_arguments='', inner_name='_function', creation_function_name = '_create_function'):	#TODO config?
 		ancestors = tuple(self.iter_ancestors_reverse())
 
 		prefill = set()
@@ -210,46 +265,54 @@ class context3(public_base):
 			code = compile(python_code, file_info.file_id, 'exec')
 		else:
 			code = compile(python_code, 'expression', 'exec')
-		exec(code, scope, global_dict)
-		return scope[creation_function_name](*ancestors)
 
-	def create_function(self, inner_body, inner_arguments=''):
-		raise Exception('deprecated')
-		ancestors = tuple(self.iter_ancestors_reverse())
-
-		prefill = set()
-		for a in ancestors:
-			prefill |= set(a.locals)
-
-		names = unique_names_from_generator((a.get_qualified_name_without_period() for a in ancestors), prefill=prefill)
-		creation_function_name = 'create_function'	#TODO config
-		global_dict = None	#TODO config
-		inner_name = 'inner'	#TODO config
-
-		prefill |= set(names)
-
-		#TODO - make sure we are not colliding with locals in any context!
-		context_names = unique_names_from_generator((f'create_{n}' for n in names), prefill=prefill)
-		current_body = f'def {inner_name}({inner_arguments}):\n{indented(inner_body)}'
-		current_return = inner_name
-
-		for cn, n, a in zip(context_names, names, ancestors):
-			scope_prep = '\n'.join(f'{k} = {n}.locals[{k!r}]' for k in a.locals)
-			current_body = f'{scope_prep}\ndef {cn}():\n{indented(current_body)}\n\treturn {current_return}'
-			current_return = f'{cn}()'
-
-		creation_function_arguments = ', '.join(names)
-
-		python_code = f'def {creation_function_name}({creation_function_arguments}):\n{indented(current_body)}\n\treturn {current_return}'
-
-		scope = dict()
-		if tracker := self.get_any_ancestral_tracker():
-			file_info = tracker.register_new_file('expression', python_code)
-			code = compile(python_code, file_info.file_id, 'exec')
+		if self.global_dict is None:
+			exec(code, scope, None)
+			return scope[creation_function_name](*ancestors)
 		else:
-			code = compile(python_code, 'expression', 'exec')
-		exec(code, scope, global_dict)
-		return scope[creation_function_name](*ancestors)
+			exec(code, self.global_dict, scope)
+			return scope[creation_function_name](*ancestors)
+
+
+			#print(self.global_dict.keys())
+
+	# def create_function(self, inner_body, inner_arguments=''):
+	# 	raise Exception('deprecated')
+	# 	ancestors = tuple(self.iter_ancestors_reverse())
+
+	# 	prefill = set()
+	# 	for a in ancestors:
+	# 		prefill |= set(a.locals)
+
+	# 	names = unique_names_from_generator((a.get_qualified_name_without_period() for a in ancestors), prefill=prefill)
+	# 	creation_function_name = 'create_function'	#TODO config
+	# 	global_dict = None	#TODO config
+	# 	inner_name = 'inner'	#TODO config
+
+	# 	prefill |= set(names)
+
+	# 	#TODO - make sure we are not colliding with locals in any context!
+	# 	context_names = unique_names_from_generator((f'create_{n}' for n in names), prefill=prefill)
+	# 	current_body = f'def {inner_name}({inner_arguments}):\n{indented(inner_body)}'
+	# 	current_return = inner_name
+
+	# 	for cn, n, a in zip(context_names, names, ancestors):
+	# 		scope_prep = '\n'.join(f'{k} = {n}.locals[{k!r}]' for k in a.locals)
+	# 		current_body = f'{scope_prep}\ndef {cn}():\n{indented(current_body)}\n\treturn {current_return}'
+	# 		current_return = f'{cn}()'
+
+	# 	creation_function_arguments = ', '.join(names)
+
+	# 	python_code = f'def {creation_function_name}({creation_function_arguments}):\n{indented(current_body)}\n\treturn {current_return}'
+
+	# 	scope = dict()
+	# 	if tracker := self.get_any_ancestral_tracker():
+	# 		file_info = tracker.register_new_file('expression', python_code)
+	# 		code = compile(python_code, file_info.file_id, 'exec')
+	# 	else:
+	# 		code = compile(python_code, 'expression', 'exec')
+	# 	exec(code, scope, global_dict)
+	# 	return scope[creation_function_name](*ancestors)
 
 		#TODO - future improvement
 		#	Consider the following context

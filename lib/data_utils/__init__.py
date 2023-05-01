@@ -170,3 +170,21 @@ class subscope:
 	def export(self, name, value):
 		self.initial_scope[name] = value
 
+
+#TODO - explain why we keep reference to target AND id of target in docs
+class identity_reference:
+	def __init__(self, target):
+		self.target = target
+		self.target_id = id(target)
+
+	def __hash__(self):
+		return self.target_id
+
+	def __eq__(self, other):
+		if isinstance(other, identity_reference):
+			return self.target_id == other.target_id
+		else:
+			return self.target_id == id(other)
+
+	def __repr__(self):
+		return f'<{self.__class__.__name__} to {self.target!r}>'

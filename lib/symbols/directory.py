@@ -1,4 +1,4 @@
-from ..rudimentary_type_system import field, initialization, factory_self_reference as fsr
+from ..type_system import field, initialization, factory_self_reference as fsr
 from ..rudimentary_types.data_path import data_path
 from ..data_utils.proxy import register_class_tree_proxy_resolution
 

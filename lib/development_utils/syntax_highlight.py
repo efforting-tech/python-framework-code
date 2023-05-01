@@ -43,8 +43,8 @@ def get_highlighted_terminal_from_text(text, language='python3'):
 	return highlight(text, lexer, formatter(**formatter_settings))
 
 
-def print_code(code, start_line=1):
+def print_code(code, lexer='python3', start_line=1):
 	formatter, formatter_settings = ANSI_formatter
 	fmt = formatter(**formatter_settings)
 	fmt._lineno = start_line - 1 	#Ugly hack because some formatters in pygments doesn't allow to specify first line number in the constructor.
-	print(highlight(code, get_lexer_by_name('python3', tabsize=4), fmt))
+	print(highlight(code, get_lexer_by_name(lexer, tabsize=4), fmt))

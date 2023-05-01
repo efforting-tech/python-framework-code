@@ -89,6 +89,16 @@ class mnemonic_tree_processor(improved_text_node_processor):
 		self.rules.append(rule)
 		return rule
 
+	def add_contextual_regex_function(self, context, regex, body):
+
+		#(C=processor.context, CX=processor.context.accessor, P=processor, M=M, N=node, **M.named)
+		pattern = re.compile(rf'^{regex}$')
+		args = ', '.join(('C', 'CX', 'P', 'M', 'N', *pattern.groupindex))
+		function = context.create_function2(body, args)
+		rule = (pattern, A.call_function_wpcam(function))
+		self.rules.append(rule)
+		return rule
+
 	def add_contextual_default_function(self, context, body):
 
 		args = ', '.join(('C', 'CX', 'P', 'M', 'N'))
@@ -114,12 +124,29 @@ class mnemonic_tree_processor(improved_text_node_processor):
 
 			return attribute_dict_ro_access(stacked)
 
+
+
+	def process_tree_in_sub_context(self, sub_processor, body, /, **stacked):
+		#TBD - should we work on stacked dicts or stacked contexts?
+		sub_context = self.context.stacked_context(**stacked)
+		with attribute_stack(sub_processor, context=sub_context):
+			return sub_context, sub_processor.process_tree(body)
+
+
+
 	def sub_process_tree(self, sub_processor, body, /, **stacked):
 		#TBD - should we work on stacked dicts or stacked contexts?
 		context = self.context
 		with context.stack(**stacked):
 			with attribute_stack(sub_processor, context=context):
 				return sub_processor.process_tree(body)
+
+	def sub_process_node(self, sub_processor, body, /, **stacked):
+		#TBD - should we work on stacked dicts or stacked contexts?
+		context = self.context
+		with context.stack(**stacked):
+			with attribute_stack(sub_processor, context=context):
+				return sub_processor.process_node(body)
 
 	@classmethod_with_specified_settings(RTS.SELF, table)
 	def from_raster_table2(cls, raster_table, *, config, table_config):

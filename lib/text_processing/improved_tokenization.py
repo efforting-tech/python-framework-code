@@ -3,15 +3,16 @@ from ..type_system.bases import public_base
 from ..type_system.features import classmethod_with_specified_settings, method_with_specified_settings
 from ..rudimentary_features.code_manipulation.templating.pp_context import context
 from ..table_processing.table import table
-from ..text_processing.tokenization import call_processor_for_match, LEAVE_TOKENIZER, SKIP
+from ..text_processing.tokenization import call_processor_for_match, SKIP, leave_tokenizer
 from ..text_processing.re_tokenization import re_tokenize, UNMATCHED
 from ..text_processing.re_match_processing import match_iterator
 from ..exceptions import TokenizationUnhandledAction
+from ..iteration_utils.branchable_iterator import branchable_iterator
 
 import sys, re, types
 
 class A:	#Actions - TODO - these should simply be a module
-	from .tokenization import yield_value,  enter_tokenizer, yield_from_tokenizer
+	from .tokenization import yield_value,  enter_tokenizer, yield_from_tokenizer, yield_match_and_value, leave_tokenizer
 
 	class call_function(public_base):
 		function = RTS.positional()
@@ -26,12 +27,21 @@ class A:	#Actions - TODO - these should simply be a module
 
 			return self.function(processor.context, processor.context.accessor, processor, match, primary_token)
 
+	class call_function_wpcam(public_base):	#with_processor_context_and_match
+		function = RTS.positional()
+
+		def take_action_for_re_match(self, processor, text, start, config, match):
+			M = match_iterator(match)
+			return self.function(C=processor.context, CX=processor.context.accessor, P=processor, M=M, T=text, **M.named)
+
+
 
 class improved_tokenizer(public_base):
 	#NOTE - changing to positional in accordance with other rule systems (todo: harmonize)
 	rules = RTS.positional(factory=list, field_type=RTS.SETTING)
 	default_action = RTS.setting(None)
 	last_match = RTS.state(None)
+	push_back_tokens = RTS.state(factory=list)
 
 	#NOTE this should be upgraded to also use the conditional action system from priority_translator
 
@@ -47,7 +57,7 @@ class improved_tokenizer(public_base):
 
 	@method_with_specified_settings(RTS.SELF)
 	def tokenize(self, text, start=0, level=0, *, config):
-		token_gen = re_tokenize(text, config.rules, start)
+		token_gen = branchable_iterator(re_tokenize(text, config.rules, start))
 		while True:
 			try:
 				action, match = next(token_gen)
@@ -60,10 +70,17 @@ class improved_tokenizer(public_base):
 				action = config.default_action
 
 			if isinstance(action, A.enter_tokenizer):
-				if action.post_filter:
-					yield action.post_filter(action.tokenizer.process_text(text, self.last_match.end(), level+1))
-				else:
-					yield action.tokenizer.process_text(text, self.last_match.end(), level+1)
+				pbt = list()
+				with attribute_stack(action.tokenizer, push_back_tokens=pbt):
+					if action.post_filter:
+						yield action.post_filter(action.tokenizer.process_text(text, self.last_match.end(), level+1))
+					else:
+						yield action.tokenizer.process_text(text, self.last_match.end(), level+1)
+
+				if pbt:
+					raise NotImplementedError("This feature is not implemented yet")	#TODO - implement feature (if this is a good idea)
+
+
 				token_gen = re_tokenize(text, config.rules, action.tokenizer.last_match.end())
 
 			elif isinstance(action, A.yield_from_tokenizer):
@@ -74,9 +91,20 @@ class improved_tokenizer(public_base):
 						yield item
 				token_gen = re_tokenize(text, config.rules, action.tokenizer.last_match.end())
 
+			elif isinstance(action, A.yield_value):
+					yield action.value
+
+			elif isinstance(action, A.yield_match_and_value):
+					yield match, action.value
+
 			elif action is SKIP:
 				pass
-			elif action is LEAVE_TOKENIZER:
+			elif isinstance(action, A.leave_tokenizer):
+
+				if action.push_back:
+					raise NotImplementedError("This feature is not implemented yet")	#TODO - implement feature
+
+
 				if level > 0:
 					return
 				else:
@@ -88,7 +116,7 @@ class improved_tokenizer(public_base):
 
 			else:	#TODO - should check using ABC that this is a proper action
 
-				#TODO - maybe it would be better to instead of matching things here have an API that would also s upport entering a sub tokenizer
+				#TODO - maybe it would be better to instead of matching things here have an API that would also support entering a sub tokenizer
 				#		the API would have to have ways to affect the current state, maybe we could create a mutable state object and use in the API.
 
 				match action.take_action_for_re_match(self, text, start, config, match):
@@ -103,7 +131,12 @@ class improved_tokenizer(public_base):
 					case resulting_action if resulting_action is SKIP:
 						pass
 
-					case _ as action if action is LEAVE_TOKENIZER:	#Yes - this is horrible - we should rewrite this function because it is doing matching in two layers,
+					case leave_tokenizer(push_back=push_back):
+
+						if push_back:	#TODO - should we use this?
+							self.push_back_tokens.append((action, match))
+
+
 						#Maybe it should be a resolving loop?		(TODO)
 						if level > 0:
 							return
@@ -272,6 +305,21 @@ class extended_tokenizer(improved_tokenizer):
 		self.rules.append(rule)
 		return rule
 
+
+	def add_contextual_mnemonic_function(self, context, mnemonic, body):
+		from . import command_pattern_processor	#This is because of a circular import - we need to tidy up a bit in how we import things so that we don't have this issue.
+
+		#TODO - figure out a nicer way to deal with out dependencies, perhaps one way is that we add advanced interfaces later on so that the bootstrap sequence simply do not make use of later advanced features
+
+		mnemonic_pattern = command_pattern_processor.command_pattern_processor.process_text(mnemonic.strip())	#TODO - configurable?
+		pattern = re.compile(mnemonic_pattern.to_pattern(), re.I)
+
+		args = ', '.join(('C', 'CX', 'P', 'M', 'T', *(c.name for c in mnemonic_pattern.iter_captures())))
+		function = context.create_function2(body, args)
+		rule = (pattern, A.call_function_wpcam(function))
+		self.rules.append(rule)
+		return rule
+
 	def extend(self, other):
 		self.rules += other.rules
 		if not self.default_action:
@@ -342,7 +390,7 @@ bootstrap_action_processor_table = table.from_raster(r'''
 	pattern									expression
 	-------									----------
 	enter {tokenizer} as {expression}		sub_tokenizer(_context, tokenizer, expression)
-	leave									LEAVE_TOKENIZER
+	leave									leave_tokenizer()
 	return {expression}						return_expression(_context, expression)
 	skip									SKIP
 
@@ -353,7 +401,7 @@ bootstrap_action_processor_table = table.from_raster(r'''
 
 
 bootstrap_action_processor_context = context.selectively_create_from_this_frame(
-	*'sub_tokenizer LEAVE_TOKENIZER return_expression SKIP bootstrap_processor'.split()
+	*'sub_tokenizer leave_tokenizer return_expression SKIP bootstrap_processor'.split()
 )
 
 

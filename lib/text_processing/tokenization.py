@@ -15,10 +15,12 @@ from .re_tokenization import re_tokenize, SKIP, UNMATCHED
 
 
 
-LEAVE_TOKENIZER = register_symbol('internal.text.tokenizer.action.leave_tokenizer')
+# LEAVE_TOKENIZER = register_symbol('internal.text.tokenizer.action.leave_tokenizer')
 
-def leave_tokenizer():
-	return LEAVE_TOKENIZER
+# def leave_tokenizer():
+# 	return LEAVE_TOKENIZER
+
+
 
 def skip():
 	return SKIP
@@ -46,6 +48,10 @@ def extract_positionals_and_keyword_arguments_from_match(match):
 @ABC.register_class_tree('text.tokenizer.action')
 class action(public_base):
 	pass
+
+
+class leave_tokenizer(action):
+	push_back = RTS.positional(default=False)	#This is used to tell the tokenizer to put the last thing back, this is essentially a way to implement a positive lookahead
 
 
 class call_processor_for_match(action):
@@ -77,9 +83,9 @@ class yield_value(action_result):
 
 # 	#TODO: __repr__ = field_based_representation('{self.classification}')
 
-# class yield_match_and_value(action):
-# 	classification = RTS.positional()
-# 	value = RTS.positional()
+class yield_match_and_value(action):
+#	classification = RTS.positional()
+	value = RTS.positional()
 
 
 # class yield_matched_text(action):
@@ -207,7 +213,7 @@ class tokenizer(public_base):
 				sub_result, last_sub_match = action.tokenizer.inner_tokenize(text, match.end())
 				token_gen = re_tokenize(text, self.rules, last_sub_match.end())
 				result.append(token_match(action.classification, sub_result))
-			elif action is LEAVE_TOKENIZER:
+			elif isinstance(action, leave_tokenizer):
 				raise Exception('top level')
 			else:
 				raise Exception(action)

@@ -1,0 +1,201 @@
+
+define tree processor: tokenizer_subtokenizer_configurator
+	note: Maybe we should not call this filter
+	mnemonic: post filter[:] {expression...}
+		CX.pending_action.post_filter = C.eval_as_function(expression)
+
+	mnemonic: post filter[:]
+		CX.pending_action.post_filter = C.create_function2(N.body.text, 'V')
+
+
+define tree processor: tokenizer_definition
+	mnemonic: default[:]
+		TT = CX.pending_tokenizer
+		return TT.add_contextual_default_function(C, N.body.text)
+
+	mnemonic: post processor[:] {expression...}
+		CX.pending_tokenizer.post_processor = C.eval_as_function(expression)
+
+	mnemonic: post processor[:]
+		CX.pending_tokenizer.post_processor = C.create_function2(N.body.text, 'V')
+
+	group: special
+		mnemonic: mnemonic[:] {mnemonic...}
+			TT = CX.pending_tokenizer
+			return TT.add_contextual_mnemonic_function(C, mnemonic, N.body.text)
+
+		mnemonic: space[:]
+			TT = CX.pending_tokenizer
+			return TT.add_contextual_regex_function(C, re.compile(r'\s+'), N.body.text)
+
+		mnemonic: word[:]
+			TT = CX.pending_tokenizer
+			return TT.add_contextual_regex_function(C, re.compile(r'\w+'), N.body.text)
+
+	group: literal
+
+		mnemonic: literal[:] {value...}
+			TT = CX.pending_tokenizer
+			return TT.add_contextual_regex_function(C, re.compile(re.escape(value)), N.body.text)
+
+		mnemonic: python literal[:] {value...}
+			TT = CX.pending_tokenizer
+			return TT.add_contextual_regex_function(C, re.compile(re.escape(C.eval_as_function(value))), N.body.text)
+
+	group: regex
+
+		mnemonic: regex[:] {value...}
+			TT = CX.pending_tokenizer
+			return TT.add_contextual_regex_function(C, re.compile(value), N.body.text)
+
+		mnemonic: python regex[:] {value...}
+			TT = CX.pending_tokenizer
+			return TT.add_contextual_regex_function(C, re.compile(C.eval_as_function(value)), N.body.text)
+
+		mnemonic: ignore regex[:] {value...}
+			TT = CX.pending_tokenizer
+			rule = (re.compile(value), TA.skip())
+			TT.rules.append(rule)	#TODO - define some API func for this, our rules may later have metadata
+
+		mnemonic: ignore python regex[:] {value...}
+			TT = CX.pending_tokenizer
+			rule = (re.compile(C.eval_as_function(value)), TA.skip())
+			TT.rules.append(rule)	#TODO - define some API func for this, our rules may later have metadata
+
+
+	group: enter
+		mnemonic: enter {.target} on literal[:] {value...}
+			sub_tokenizer = C.require(target)
+			action = TA.enter_tokenizer(sub_tokenizer)
+			TT = CX.pending_tokenizer
+			rule = (re.compile(re.escape(value)), action)
+			TT.rules.append(rule)	#TODO - define some API func for this, our rules may later have metadata
+
+			P.process_tree_extended(tokenizer_subtokenizer_configurator, N.body, pending_tokenizer=sub_tokenizer, pending_action=action)
+
+			return rule
+
+		mnemonic: enter {.target} on regex[:] {value...}
+			sub_tokenizer = C.require(target)
+			action = TA.enter_tokenizer(sub_tokenizer)
+			TT = CX.pending_tokenizer
+			rule = (re.compile(value), action)
+			TT.rules.append(rule)	#TODO - define some API func for this, our rules may later have metadata
+
+			P.process_tree_extended(tokenizer_subtokenizer_configurator, N.body, pending_tokenizer=sub_tokenizer, pending_action=action)
+
+			return rule
+
+		mnemonic: enter {.target} on python literal[:] {value...}
+			sub_tokenizer = C.require(target)
+			action = TA.enter_tokenizer(sub_tokenizer)
+			TT = CX.pending_tokenizer
+			rule = (re.compile(re.escape(C.eval_as_function(value))), action)
+			TT.rules.append(rule)	#TODO - define some API func for this, our rules may later have metadata
+
+			P.process_tree_extended(tokenizer_subtokenizer_configurator, N.body, pending_tokenizer=sub_tokenizer, pending_action=action)
+
+			return rule
+
+		mnemonic: enter {.target} on python regex[:] {value...}
+			sub_tokenizer = C.require(target)
+			action = TA.enter_tokenizer(sub_tokenizer)
+			TT = CX.pending_tokenizer
+			rule = (re.compile(C.eval_as_function(value)), action)
+			TT.rules.append(rule)	#TODO - define some API func for this, our rules may later have metadata
+
+			P.process_tree_extended(tokenizer_subtokenizer_configurator, N.body, pending_tokenizer=sub_tokenizer, pending_action=action)
+
+			return rule
+
+	group: yield_from
+		mnemonic: yield from {.target} on literal[:] {value...}
+			sub_tokenizer = C.require(target)
+			action = TA.yield_from_tokenizer(sub_tokenizer)
+			TT = CX.pending_tokenizer
+			rule = (re.compile(re.escape(value)), action)
+			TT.rules.append(rule)	#TODO - define some API func for this, our rules may later have metadata
+
+			P.process_tree_extended(tokenizer_subtokenizer_configurator, N.body, pending_tokenizer=sub_tokenizer, pending_action=action)
+
+			return rule
+
+		mnemonic: yield from {.target} on regex[:] {value...}
+			sub_tokenizer = C.require(target)
+			action = TA.yield_from_tokenizer(sub_tokenizer)
+			TT = CX.pending_tokenizer
+			rule = (re.compile(value), action)
+			TT.rules.append(rule)	#TODO - define some API func for this, our rules may later have metadata
+
+			P.process_tree_extended(tokenizer_subtokenizer_configurator, N.body, pending_tokenizer=sub_tokenizer, pending_action=action)
+
+			return rule
+
+		mnemonic: yield from {.target} on python literal[:] {value...}
+			sub_tokenizer = C.require(target)
+			action = TA.yield_from_tokenizer(sub_tokenizer)
+			TT = CX.pending_tokenizer
+			rule = (re.compile(re.escape(C.eval_as_function(value))), action)
+			TT.rules.append(rule)	#TODO - define some API func for this, our rules may later have metadata
+
+			P.process_tree_extended(tokenizer_subtokenizer_configurator, N.body, pending_tokenizer=sub_tokenizer, pending_action=action)
+
+			return rule
+
+		mnemonic: yield from {.target} on python regex[:] {value...}
+			sub_tokenizer = C.require(target)
+			action = TA.yield_from_tokenizer(sub_tokenizer)
+			TT = CX.pending_tokenizer
+			rule = (re.compile(C.eval_as_function(value)), action)
+			TT.rules.append(rule)	#TODO - define some API func for this, our rules may later have metadata
+
+			P.process_tree_extended(tokenizer_subtokenizer_configurator, N.body, pending_tokenizer=sub_tokenizer, pending_action=action)
+
+			return rule
+
+
+
+
+	group: leave
+
+		note:
+			many things here should fail if there is a body
+
+		group: literal
+			mnemonic: leave on literal[:] {value...}
+				TT = CX.pending_tokenizer
+				rule = (re.compile(re.escape(value)), TA.leave_tokenizer())
+				TT.rules.append(rule)	#TODO - define some API func for this, our rules may later have metadata
+				return rule
+
+			mnemonic: leave on python literal[:] {value...}
+				TT = CX.pending_tokenizer
+				rule = (re.compile(re.escape(C.eval_as_function(value))), TA.leave_tokenizer())
+				TT.rules.append(rule)	#TODO - define some API func for this, our rules may later have metadata
+				return rule
+
+		group: regex
+			mnemonic: leave on regex[:] {value...}
+				TT = CX.pending_tokenizer
+				rule = (re.compile(value), TA.leave_tokenizer())
+				TT.rules.append(rule)	#TODO - define some API func for this, our rules may later have metadata
+				return rule
+
+			mnemonic: leave on python regex[:] {value...}
+				TT = CX.pending_tokenizer
+				rule = (re.compile(C.eval_as_function(value)), TA.leave_tokenizer())
+				TT.rules.append(rule)	#TODO - define some API func for this, our rules may later have metadata
+				return rule
+
+extend processors by common_processor: tokenizer_definition
+
+amend processor:
+	mnemonic: define tokenizer[:] {.name}
+		result = P.process_tree_extended(tokenizer_definition, N.body, pending_tokenizer=extended_tokenizer())
+		C.set(name, result.pending_tokenizer)
+
+	mnemonic: extend tokenizers by {.extension}: {targets...}
+		source_tokenizer = C.require(extension)
+		for target_tokenizer in map(C.require, F.csl(targets)):
+			target_tokenizer.rules.extend(source_tokenizer.rules)
+

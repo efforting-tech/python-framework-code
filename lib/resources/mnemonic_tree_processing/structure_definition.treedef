@@ -1,0 +1,80 @@
+
+
+define tree processor: factory_expression_processor
+
+	mnemonic: §{expression...}
+		#We resolve the result instantly but since we can only return factories, we stick it in a lambda for now
+		#later on we should of course return a default value, or maybe the field irtself?
+		#TODO: this tree should return a value that MIGHT be a factory or a value
+		result = P.sub_process_node(CX.literal_definition_processor, text_node.from_title_and_body(expression.strip(), N.body))
+		return lambda: result
+
+	default:
+		return C.create_function2(f'return {M.text}')
+
+note: currently we will always return lazy functions - later on we may want to not do this to be able to catch errors early.
+		we also want to extend the define structures thing to be more in line with the rest of the type system
+		this should be done before we do too many things that use it as is since we may have to redefine our syntax a bit
+
+define tree processor: structure_definition
+	mnemonic: · {name} {factory_expression...}
+		resolved_expression = P.sub_process_node(factory_expression_processor, text_node.from_title_and_body(factory_expression, N.body), pending_name=name)
+		CX.pending_structure_fields[name] = RTS.positional(factory=resolved_expression)
+
+	mnemonic: · {name}
+		CX.pending_structure_fields[name] = RTS.positional()
+
+	mnemonic: interfaces {interfaces...}
+
+		match C.eval_as_function(interfaces):
+			case tuple() as expr:
+				for base in expr:
+					CX.pending_structure_interfaces.append(base)
+			case type() as base:
+				CX.pending_structure_interfaces.append(base)
+
+	mnemonic: def {name}
+		CX.pending_structure_fields[name] = C.create_function2(N.body.text, 'self', name)
+
+	mnemonic: def {name}({arguments...}):
+		CX.pending_structure_fields[name] = C.create_function2(N.body.text, arguments, name)
+
+	mnemonic: prop {name}
+		CX.pending_structure_fields[name] = property(C.create_function2(N.body.text, 'self', name))
+
+	mnemonic: prop {name}({arguments...}):
+		CX.pending_structure_fields[name] = property(C.create_function2(N.body.text, arguments, name))
+
+	mnemonic: prop {name} {expression...}
+		assert not N.body.has_contents
+		CX.pending_structure_fields[name] = property(C.create_function2(f'return {expression}', 'self', name))
+
+
+amend processor:
+
+	mnemonic: define structures[:]
+		for title, body in F.iter_title_body(N):
+			result = P.process_tree_extended(structure_definition, body, pending_structure_fields = dict(), pending_structure_bases=list(), pending_structure_interfaces=list())
+
+			if result.pending_structure_bases:
+				bases = tuple(result.pending_structure_bases)
+			else:
+				bases = (public_base,)
+
+			if result.pending_structure_interfaces:
+				bases += tuple(result.pending_structure_interfaces)
+
+			C.set(title, type(title, bases, result.pending_structure_fields))
+
+
+note: Maybe we should put these somewhere else?
+define structures:
+	group
+		· name
+		· members		list()
+
+amend processor: processor_def2
+	mnemonic: group[:] {.name}
+		#Currently we don't do anything with the group but later we should add some metadata to the rules which should not just be tuples (TODO)
+		members = P.process_tree(N.body)
+		return group(name, members)

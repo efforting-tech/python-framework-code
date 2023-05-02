@@ -1,0 +1,134 @@
+group: templates
+
+	define structures:
+		template
+			· name		None
+			· body		list()
+
+		placeholder
+			· id
+
+		expression
+			· value
+
+		literal_value
+			· value
+
+		template_body
+			· title		None
+			· body		list()
+
+		template_line
+			· pieces	list()
+
+	define tokenizer: template_placeholder_tokenizer
+		leave on literal: »
+
+		regex: \s*([\w\.]+)\s*
+			return TA.yield_value(T)
+
+	define tokenizer: template_expression_tokenizer
+		leave on literal: »
+
+		default:
+			return TA.yield_value(T)
+
+
+	define tokenizer: template_tokenizer
+
+		literal: ««
+			return TA.yield_value(literal_value('«'))
+
+		literal: »»
+			return TA.yield_value(literal_value('»'))
+
+		enter template_placeholder_tokenizer on literal: «@
+			post filter:
+				return placeholder(single_item(V))
+
+		enter template_expression_tokenizer on literal: «
+			post filter:
+				return expression(single_item(V))
+
+		default:
+			return TA.yield_value(literal_value(T))
+
+		post processor:
+			return template_line(tuple(V))
+
+	define tree processor: template_processor
+
+		mnemonic: «@{name...}»
+			#I don't remember the purpose of the special place holder
+			warn('place holder ignoring body')
+			return placeholder(name.strip())
+
+		mnemonic: «{name...}»
+			return placeholder(name.strip())
+
+		default:
+			title = template_tokenizer(N.title)
+			return template_body(title, P.process_tree(N.body))
+
+	amend processor:
+		mnemonic: define template[:] {.name}
+			new_template = template(name)
+			new_template.body.extend(P.sub_process_tree(template_processor, N.body, pending_template = new_template))
+			C.set(name, new_template)
+			return new_template
+
+	amend processor: literal_definition_processor
+		mnemonic: template[:]
+
+			#BUG - currently literal_definition_processor will be using the current globals and not the correct globals from where it was defined
+			#		this means it will not be able to access `template´ or `template_processor´
+			#		workaround for now is to use full path but we should really fix this
+
+			new_template = CX.templates.template(CX.pending_name)
+			new_template.body.extend(P.sub_process_tree(CX.templates.template_processor, N.body, pending_template = new_template))
+			return new_template
+
+
+	define item processor: dump
+		type identity: template
+			yield f'Template {I.name!r}'
+			for item in I.body:
+				yield from (f'   {l}' for l in P(item))
+
+		type identity: template_body
+			yield I.title
+			for item in I.body:
+				yield from (f'   {l}' for l in P(item))
+
+
+	define item processor: render
+		type identity: template
+			return text_node.from_branches(*map(P, I.body))
+
+		type identity: template_body
+			branches = (b for b in map(P, I.body) if b is not SKIP)
+			title = P(I.title)
+			if title is not SKIP:
+				return text_node.from_title_and_body(''.join(title), text_node.from_branches(*branches))
+			else:
+				return text_node.from_branches(text_node.from_branches(*branches))
+
+		type identity: template_line
+			line = tuple(map(P, I.pieces))
+			if set(line) == {SKIP}:
+				return SKIP
+			return ''.join(i for i in line if i is not SKIP)	#TODO - check other places we should check this
+
+		type identity: literal_value
+			return I.value
+
+		type identity: expression
+			return P.render_context.eval_as_function(I.value)
+
+		type identity: placeholder
+			# The place holder has some more post processing for now - we need to specify exactly what we want though
+			result = P.render_context.eval_as_function(I.id)
+			if isinstance(result, str):
+				return text_node.from_text(result)
+			else:
+				return result

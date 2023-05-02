@@ -1,0 +1,34 @@
+amend processor:
+	mnemonic: process file[:] {path...}
+		return P.process_path(path)
+
+	mnemonic: def {name}
+		C.set(name, C.create_function2(N.body.text, '', name))
+
+	mnemonic: def {name}({arguments...}):
+		C.set(name, C.create_function2(N.body.text, arguments, name))
+
+
+process file: mnemonic_processing.treedef
+process file: structure_definition.treedef
+
+define structures:
+	group_result
+		· value
+		· context
+
+		prop accessor
+			return self.context.accessor
+
+amend processor:
+	mnemonic: group[:] {.name}
+		sub_context, result = P.process_tree_in_sub_context(P, N.body)
+		C.set(name, group_result(result, sub_context).accessor)
+
+note: this is for processing anonymous literal definitions
+define tree processor: literal_definition_processor
+
+
+process file: item_processing.treedef
+process file: tokenization.treedef
+process file: templates.treedef

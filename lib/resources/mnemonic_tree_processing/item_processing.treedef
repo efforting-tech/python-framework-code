@@ -1,0 +1,53 @@
+define tree processor: define_generic_item_processor
+	mnemonic: type identity[:] {expression...}
+		target_type = C.eval_as_function(expression)
+
+		if isinstance(target_type, tuple):
+			for sub_item in target_type:
+				condition = PM.type_identity(sub_item)
+				CX.target_processor.add_contextual_conditional_function(C, condition, N.body.text)
+		else:
+			condition = PM.type_identity(target_type)
+			CX.target_processor.add_contextual_conditional_function(C, condition, N.body.text)
+
+			#NOTE - previously we would bind C and CX but this is wrong
+			#		we should do the same we do with mnemonic_tree_processor
+			#		this means:
+			#			1 - implement API for the target_processor to create the action so we don't need to do it here
+			#			2 - deprecate any other ways of doing it
+			#CX.target_processor.on_type_identity(target_type)(functools.partial(C.create_bound_function_from_snippet(N.body.text, 'C', 'CX', 'P', 'I'), C, CX))	#blargh2
+
+
+	mnemonic: instance of[:] {expression...}
+		#TODO - we should have a generic helper function here since the only thing different is often what member of PM we will use for the condition.
+		target_type = C.eval_as_function(expression)
+
+		if isinstance(target_type, tuple):
+			for sub_item in target_type:
+				condition = PM.instance_of(sub_item)
+				CX.target_processor.add_contextual_conditional_function(C, condition, N.body.text)
+		else:
+			condition = PM.instance_of(target_type)
+			CX.target_processor.add_contextual_conditional_function(C, condition, N.body.text)
+
+			#NOTE - previously we would bind C and CX but this is wrong
+			#		we should do the same we do with mnemonic_tree_processor
+			#		this means:
+			#			1 - implement API for the target_processor to create the action so we don't need to do it here
+			#			2 - deprecate any other ways of doing it
+			#CX.target_processor.on_type_identity(target_type)(functools.partial(C.create_bound_function_from_snippet(N.body.text, 'C', 'CX', 'P', 'I'), C, CX))	#blargh2
+
+
+
+
+	mnemonic: default[:]
+		CX.target_processor.add_contextual_default_function(C, N.body.text)
+
+extend processors by common_processor: define_generic_item_processor
+
+amend processor:
+
+	mnemonic: define item processor[:] {.name}
+		#TBD - should generic_processor have a sub context or the current context?
+		result = P.process_tree_extended(define_generic_item_processor, N.body, target_processor = generic_processor(context=C))
+		C.set(name, result.target_processor)

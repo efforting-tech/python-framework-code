@@ -1,0 +1,66 @@
+define tree processor: common_processor
+	mnemonic: note[:]
+		pass
+
+	mnemonic: note[:] {text...}
+		pass
+
+define tree processor: table_configuration_processor
+	mnemonic: process columns[:] {column_list...}
+		#NOTE - currently column processors only take the cell as argument but it would make more sense to also include information about the table and row
+		#		so we should define a reasonable API for this and add helpers for the cases were we want "simple" per cell processing
+		#		but for now we will only use the one variable V for the value
+		function = functools.partial(C.create_function2(N.body.text, 'C, CX, V'), C, CX)
+		for column in F.csl(column_list):
+			CX.config.column_processors[column] = function
+
+	mnemonic: enable ditto expansion on columns[:] {columns...}
+		CX.config.ditto_columns += F.csl(columns)
+
+	mnemonic: do not strip raster cells
+		CX.config.strip_raster_cells = False
+
+	mnemonic: strip raster cells
+		CX.config.strip_raster_cells = True
+
+	mnemonic: set multiline columns[:] {columns...}
+		CX.config.multiline_columns = F.csl(columns)
+
+	mnemonic: set multiline condition[:] {expression...}
+		CX.config.multiline_condition = C.eval_as_function(expression)
+
+extend processors by common_processor: processor_def2, generic_main_processor2, table_configuration_processor
+
+
+amend processor:
+	mnemonic: process tree using[:] {.name}
+		return C.get(name).process_tree(N.body)
+
+	mnemonic: amend processor from file[:] {path...}
+		#TODO - look into if this can use the extended syntax
+		with attribute_stack(processor_def2, target_processor=P):
+			processor_def2.process_path(path)
+
+	mnemonic: amend processor {.name} from file[:] {path...}
+		#TODO - look into if this can use the extended syntax
+		with attribute_stack(processor_def2, target_processor=C.get(name)):
+			processor_def2.process_path(path)
+
+	note: Later on we will want to make sure to set by path but for now we assume it is a single identifier
+
+	mnemonic: define tree[:] {.name}
+		C.set(name, N.body.dedented_copy())
+
+	mnemonic: define table configuration[:] {.name}
+
+		#NOTE - currently we do not have a good way of representing configuration of various objects such as tables.
+		#		maybe we should actually use a blank table for now
+		result = P.process_tree_extended(table_configuration_processor, N.body, config=table())
+		C.set(name, result.config)
+
+	mnemonic: define table[:] {.name} using configuration {.config}
+		conf = F.get_settings_from_instance(C.get(config))
+		C.set(name, table.from_raster(N.body.text, **conf))
+
+	mnemonic: define table[:] {.name}
+		C.set(name, table.from_raster(N.body.text))

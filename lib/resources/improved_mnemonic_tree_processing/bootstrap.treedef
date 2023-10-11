@@ -1,0 +1,50 @@
+amend processor: define_tree_processor
+	mnemonic: pending[:]
+		import warnings
+		warnings.warn(f'There are {len(node.body)} pending patterns for {processor}')
+
+amend processor:
+	mnemonic: note[:]
+		pass
+
+	mnemonic: note[:] {expression...}
+		pass
+
+	mnemonic: process file with processor {expression...?}[:] {filename...}
+		return config.context.eval(expression).process_path.call_with_config(config, filename)
+
+	mnemonic: process with processor {expression...?}[:]
+		return config.context.eval(expression).process_tree.call_with_config(config, node.body)
+
+
+	mnemonic: process file[:] {filename...}
+		return processor.process_path.call_with_config(config, filename)
+
+	mnemonic: execute[:]
+		config.context.exec(node.body.text)
+
+	mnemonic: help
+		for mnemonic in sorted(r.condition.condition.mnemonic for r in main_processor.rules):
+			print(mnemonic)
+
+note:
+	We are putting a lot of stuff in this one namespace, maybe we should do this differently.
+	It would be nice to have as clear as possible user namespace and then have all the "built in" stuff in a single namespace.
+	We could of course have some "reserved" names for this.
+
+	I need to think more about this because there will always be a lot of local things in handlers, like the config, node and so on.
+	So maybe it is ok that we "pollute" the namespace, but maybe at least the processors should live in one namespace since we might get a lot of those.
+	In fact we may want to have a tree for those things.
+
+execute:
+	import warnings
+	warnings.simplefilter("ignore")
+
+process file: data_containers.treedef
+process file: shell_stuff.treedef
+process file: orchestration.treedef
+process file: tokenization.treedef
+process file: code_templates.treedef
+process file: structures.treedef
+process file: item_processing.treedef
+

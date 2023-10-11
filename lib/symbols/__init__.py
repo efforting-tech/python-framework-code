@@ -37,7 +37,7 @@ class symbol_node(pre_rts_type):
 			if pending := ptr.children.get(piece):
 				ptr = pending
 			else:
-				raise Exception()
+				raise Exception(f'Required symbol {path!r} not found in {self!r}.')
 
 		return ptr
 

@@ -1,0 +1,123 @@
+execute:
+	def create_priority_translator_handler(config, node, capture_names, function_name):
+		from ...text_nodes import text_node
+		from ...type_system.features import method_with_specified_settings
+		from ... import type_system as TS
+
+
+
+		#Acquire references to current context and an accessor for it
+		ctx = config.context
+
+		#Make sure parameters are not overlapping with capture names and prepare parameters
+		parameters = 'processor', 'config', 'item'
+		assert not (set(capture_names) & set(parameters))
+		if capture_names:
+			parameters += ('*', *capture_names)
+
+		#Create text representation of arguments and prepare the python code for the handler function
+		arguments = ', '.join(parameters)
+		python_code = text_node.from_title_and_body(f'def {function_name}({arguments}):', node.body.dedented_copy()).text
+
+		#Create a sub context for defining the handler to avoid name clashing or namespace pollution
+		sc = ctx.sub_context()
+		sc.exec(python_code)
+		#Process the new function using the @method_with_specified_settings(RTS.SELF) decorator
+		new_function = method_with_specified_settings(TS.SELF)(sc.require(function_name))
+
+		return new_function
+
+tree processor: define_generic_item_processor
+	mnemonic: include[:] {expression...}
+		target_processor = config.context.accessor.target_processor
+		target_processor.rules.extend(config.context.eval(expression).rules)
+
+	mnemonic: type identity[:] {expression...}
+		from ...improved_mnemonic_tree_processor import conditions as C
+		from ...improved_mnemonic_tree_processor import actions as A
+		target_type = config.context.eval(expression)
+		target_processor = config.context.accessor.target_processor
+
+		if isinstance(target_type, tuple):
+			for sub_item in target_type:
+				condition = C.matches_type_identity(sub_item)
+				#TODO target_processor.add_contextual_conditional_function(config.context, condition, node.body.text)
+		else:
+			condition = C.matches_type_identity(target_type)
+			new_function = create_priority_translator_handler(config, node, (), 'process_type_identity')
+			target_processor.add_rule(condition, A.bind_and_call_function_with_processor_config_and_item(new_function))
+
+
+
+	mnemonic: instance of[:] {expression...}
+		#TODO - we should have a generic helper function here since the only thing different is often what member of PM we will use for the condition.
+		from ...improved_mnemonic_tree_processor import conditions as C
+		from ...improved_mnemonic_tree_processor import actions as A
+
+		target_type = config.context.eval(expression)
+		target_processor = config.context.accessor.target_processor
+
+		if isinstance(target_type, tuple):
+			for sub_item in target_type:
+				condition = C.instance_of(sub_item)
+				#TODO target_processor.add_contextual_conditional_function(config.context, condition, node.body.text)
+		else:
+			condition = C.instance_of(target_type)
+			#TODO target_processor.add_contextual_conditional_function(config.context, condition, node.body.text)
+
+		new_function = create_priority_translator_handler(config, node, (), 'process_instance_of')
+		target_processor.add_rule(condition, A.bind_and_call_function_with_processor_config_and_item(new_function))
+
+
+	mnemonic: identity[:] {expression...}
+		#TODO - we should have a generic helper function here since the only thing different is often what member of PM we will use for the condition.
+		from ...improved_mnemonic_tree_processor import conditions as C
+		from ...improved_mnemonic_tree_processor import actions as A
+
+		target_type = config.context.eval(expression)
+		target_processor = config.context.accessor.target_processor
+
+		if isinstance(target_type, tuple):
+			for sub_item in target_type:
+				condition = C.matches_identity(sub_item)
+				#TODO target_processor.add_contextual_conditional_function(config.context, condition, node.body.text)
+		else:
+			condition = C.matches_identity(target_type)
+			#TODO target_processor.add_contextual_conditional_function(config.context, condition, node.body.text)
+
+		new_function = create_priority_translator_handler(config, node, (), 'process_instance_of')
+		target_processor.add_rule(condition, A.bind_and_call_function_with_processor_config_and_item(new_function))
+
+
+	mnemonic: default[:]
+		target_processor = config.context.accessor.target_processor
+		target_processor.add_contextual_default_function(config.context, node.body.text)
+
+note:
+	extend processors by common_processor: define_generic_item_processor
+
+
+amend processor:
+
+
+
+	mnemonic: circular graph tolerant item processor[:] {.name}
+		#TBD - should generic_processor have a sub context or the current context?
+		from ...data_utils.priority_translator import circular_graph_tolerant_priority_translator
+		from ...text_nodes import text_node
+		class circular_graph_tolerant_item_processor(circular_graph_tolerant_priority_translator):
+			def prepare_item_cache(self, idref):
+				return text_node.from_text(object.__repr__(idref.target))
+
+		target_processor = circular_graph_tolerant_item_processor()
+		sc = config.context.sub_context(target_processor = target_processor)
+		define_generic_item_processor.process_tree.call_with_config(config, node.body, context=sc)
+		config.context.set(name, target_processor)
+
+	mnemonic: item processor[:] {.name}
+		#TBD - should generic_processor have a sub context or the current context?
+		from ...data_utils.priority_translator import priority_translator
+		target_processor = priority_translator()
+		sc = config.context.sub_context(target_processor = target_processor)
+		define_generic_item_processor.process_tree.call_with_config(config, node.body, context=sc)
+		config.context.set(name, target_processor)

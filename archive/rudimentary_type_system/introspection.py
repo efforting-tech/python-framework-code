@@ -17,3 +17,12 @@ def get_public_fields(target):
 				field_names[item.name] = item
 
 	return field_names
+
+def get_public_positional_fields(target):
+	field_names = dict()
+	for base in reversed(target.mro()):
+		for item in base.__dict__.values():
+			if isinstance(item, field) and not item.name.startswith('_') and item.positional:
+				field_names[item.name] = item
+
+	return field_names

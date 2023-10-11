@@ -1,3 +1,5 @@
+from itertools import takewhile as take_while
+
 MISS = object()	#TODO symbol
 #TODO - harmonize more from /home/devilholk/Projects/efforting-mvp-2/library/iter_utils.py
 def sliding_slice(sequence, size):
@@ -43,3 +45,11 @@ def maybe_next(iterator, default=None):
 		return next(iterator)
 	except StopIteration:
 		return default
+
+def take_while_consequtive(predicate, source):
+	iterator = iter(source)
+	for i in iterator:
+		if predicate(i):
+			yield i
+			yield from take_while(predicate, iterator)
+			break

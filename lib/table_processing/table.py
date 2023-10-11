@@ -5,6 +5,8 @@ from ..type_system.features import method_with_specified_settings, classmethod_w
 from ..string_utils import expand_tabs_and_return_line_iterator, remove_blank_lines
 from ..iteration_utils import sliding_slice
 
+from pathlib import Path
+
 import textwrap, re
 from collections import defaultdict
 
@@ -59,8 +61,16 @@ class table(public_base):
 
 	tab_size = RTS.setting(4)
 	min_raster_spacing = RTS.setting(3, description='Minimum spacing required to separate headers in a raster table')
-	strip_raster_cells = RTS.setting(True, description='Calls .strip() on cells If set to true.')
+	strip_raster_cells = RTS.setting(True, description='Calls .strip() on cells If set to true when loading raster table.')
+	strip_csv_cells = RTS.setting(True, description='Calls .strip() on cells If set to true when loading CSV.')
 	strip_columns = RTS.setting(True, description='Calls .strip() on cells in columns. Only matters if strip_raster_cells is set to False.')
+	csv_inner_escape_sequences = RTS.setting((('\\\\', '\\'), ('\\,', ',')))
+	csv_outer_escape_sequences = RTS.setting((('\\\\', '\\'), ('\\,', ',')))
+	csv_quotation = RTS.setting(None)
+
+	csv_column_line = RTS.setting(1)
+	csv_delimiter = RTS.setting(',')
+
 	line_comment_pattern = RTS.setting(None)
 	configured_columns = RTS.setting(None)
 	processing_mode = RTS.setting(PROCESSING.ROW_BY_ROW)
@@ -100,6 +110,15 @@ class table(public_base):
 
 		for [cell] in self.iter_process.call_with_config(config, process_columns=(column,)):
 			yield cell
+
+
+	@method_with_specified_settings(RTS.SELF)
+	def to_csv_file(self, path, overwrite=False, *, config):
+		with Path(path).open('w' if overwrite else 'x') as outfile:
+			print(self.csv_join_row.call_with_config(config, self.columns), file=outfile)
+			for row in self.rows:
+				print(self.csv_join_row.call_with_config(config, row), file=outfile)
+
 
 	@method_with_specified_settings(RTS.SELF)
 	def iter_process(self, *, config):	#TODO this must be renamed to correspond to the processing API family
@@ -173,6 +192,132 @@ class table(public_base):
 		else:
 			raise Exception()
 
+
+	@method_with_specified_settings(RTS.SELF)
+	def csv_join_row(self, row, *, config):
+
+		from ..text_processing.tokenization import tokenizer, yield_matched_text, yield_value, token_match
+		from ..text_processing.re_tokenization import literal_re_pattern#, SKIP
+		#from ..symbols import register_symbol
+
+		if config.csv_quotation:
+			qin, qout = config.csv_quotation
+
+			inner_tokenizer = tokenizer()
+			inner_tokenizer.default_action = yield_matched_text()
+
+			def join_inner_pieces(p):
+				result = str()
+
+				for i in p:
+					match i:
+						case token_match():
+							result += i.value
+
+				return result
+
+			if config.csv_inner_escape_sequences:
+				for escape_from, escape_to in config.csv_inner_escape_sequences:
+					inner_tokenizer.rules.append((literal_re_pattern(escape_to), yield_value(escape_from)))
+
+			return config.csv_delimiter.join(f'{qin}{join_inner_pieces(inner_tokenizer.tokenize(item))}{qout}' for item in row)
+
+		else:
+			raise NotImplementedError("This feature is not implemented yet")	#TODO - implement feature
+
+
+
+	#TODO - potential huge speedup is to reuse the state once we set it up, we should have a way to give multiple lines
+	@method_with_specified_settings(RTS.SELF)
+	def csv_split_line(cls, line, allow_empty=False, *, config):
+
+		from ..text_processing.tokenization import tokenizer, enter_tokenizer, yield_value, leave_tokenizer, yield_matched_text, token_match
+		from ..text_processing.re_tokenization import literal_re_pattern, SKIP
+		from ..symbols import register_symbol
+		DELIMITER = register_symbol('internal.delimiter')	#TODO - harmonize
+		outer_tokenizer = tokenizer()
+		outer_tokenizer.default_action = yield_matched_text()
+
+		if config.csv_quotation:
+			inner_tokenizer = tokenizer()
+			inner_tokenizer.default_action = yield_matched_text()
+
+			def join_inner_pieces(p):
+				result = str()
+
+				for i in p:
+					match i:
+						case token_match():
+							result += i.value
+
+				return result
+
+			qin, qout = config.csv_quotation
+			outer_tokenizer.rules.append((literal_re_pattern(qin), enter_tokenizer(inner_tokenizer, post_filter=join_inner_pieces)))
+
+			if config.csv_inner_escape_sequences:
+				for escape_from, escape_to in config.csv_inner_escape_sequences:
+					outer_tokenizer.rules.append((literal_re_pattern(escape_from), yield_value(escape_to)))
+
+			inner_tokenizer.rules.append((literal_re_pattern(qout), leave_tokenizer()))
+
+
+		if config.csv_outer_escape_sequences:
+			for escape_from, escape_to in config.csv_outer_escape_sequences:
+				outer_tokenizer.rules.append((literal_re_pattern(escape_from), yield_value(escape_to)))
+
+		outer_tokenizer.rules.append((literal_re_pattern(config.csv_delimiter), yield_value(DELIMITER)))
+		outer_tokenizer.rules.append((re.compile('\s+'), SKIP))
+
+
+		pending_column = str()
+		result = list()
+		for c in outer_tokenizer.tokenize(line):
+			match c:
+				case token_match(value=str()):
+					pending_column += c.value
+
+				case token_match() if c.value is DELIMITER:
+					assert allow_empty or pending_column
+					result.append(pending_column)
+					pending_column = str()
+
+
+				case _ as unhandled:
+					raise Exception(f'The value {unhandled!r} could not be handled')
+
+
+		if pending_column:
+			result.append(pending_column)
+
+
+		return result
+
+
+	@method_with_specified_settings(RTS.SELF)
+	def from_csv_file(cls, path, *, config):
+
+		if config.strip_csv_cells:
+			filter_cells = str.strip
+		else:
+			filter_cells = None
+
+		with Path(path).open('r') as infile:
+			pending_rows = tuple(r.rstrip('\r\n') for r in infile)
+
+
+
+		if defined_columns := config.configured_columns:
+			raise NotImplementedError("This feature is not implemented yet")	#TODO - implement feature
+		else:
+			columns = cls.csv_split_line.call_with_config(config, pending_rows[config.csv_column_line - 1])
+
+		result = cls(columns)
+
+		for line in pending_rows[config.csv_column_line:]:
+			result.append_row(*cls.csv_split_line.call_with_config(config, line, True))
+
+		return result
 
 
 	@method_with_specified_settings(RTS.SELF)

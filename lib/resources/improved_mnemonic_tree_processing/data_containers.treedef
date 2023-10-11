@@ -1,0 +1,85 @@
+amend processor:
+	mnemonic: text tree with comments delimited by {delimiter...?}[:] {name...}
+		literal_delimiter = eval(delimiter)
+		config.context.set(name, text_node([l.rsplit(literal_delimiter, 1)[0] for l in node.body.dedented_copy().lines]))
+
+	mnemonic: text tree[:] {name...}
+		config.context.set(name, node.body.dedented_copy())
+
+	mnemonic: text lines[:] {name...}
+		config.context.set(name, node.body.dedented_copy().lines)
+
+	mnemonic: text block[:] {name...}
+		config.context.set(name, node.body.text)
+
+	mnemonic: stringio block[:] {name...}
+		import io
+		config.context.set(name, io.StringIO(node.body.text))
+
+	mnemonic: raster table[:] {name...}
+		from ...table_processing.table import table
+		config.context.set(name, table.from_raster(node.body.text))
+
+	mnemonic: json block[:] {name...}
+		import json
+		config.context.set(name, json.loads(node.body.text))
+
+
+	mnemonic: xml block[:] {name...}
+		#TODO - move to use lxml?
+
+		from ...rudimentary_features.graphml.xml_rules import main
+		from ...rudimentary_features.graphml.xml_tokenizer import tokenizer
+		t = tokenizer(main)
+		t.process(node.body.text)
+		config.context.set(name, t.element.pop())
+
+	mnemonic: xml minidom block[:] {name...}
+		from xml.dom.minidom import parseString
+		config.context.set(name, parseString(node.body.text))
+
+	mnemonic: html block[:] {name...}
+		from lxml.html import fromstring
+		#from xml.dom.minidom import parseString		#Doesn't seem to be a neat built in feature for html5
+		config.context.set(name, fromstring(node.body.text))
+
+
+	mnemonic: symbol tree[:] {name...}
+		from ...symbols import symbol_node, symbol_tree_node
+		result = symbol_node(name=name)
+
+		def check_node(target, n):
+			for sn in n.iter_nodes():
+				check_node(target.create_symbol(sn.title), sn.body)
+
+		check_node(result, node.body)
+		config.context.set(name, symbol_tree_node(result))
+		return result
+
+	mnemonic: symbols[:]
+		from ...symbols import symbol_node, symbol_tree_node
+		#TODO - assert no body!
+		for sn in node.body.iter_nodes():
+			name = sn.title
+			config.context.set(name, symbol_tree_node(symbol_node(name=name)))
+
+
+
+	mnemonic: sub context[:] {name...}
+		sub_context = config.context.advanced_sub_context(name=f'{config.context.name}/{name}')
+		processor.process_tree(node.body, context=sub_context)
+		config.context.set(name, sub_context)
+
+	mnemonic: namespace[:] {name...}
+		#Namespace will be a new context
+		from . import context as context_type
+		sub_context = context_type(name=name)
+		processor.process_tree(node.body, context=sub_context)
+		config.context.set(name, sub_context.accessor)
+
+	mnemonic: sub namespace[:] {name...}
+		from . import context as context_type
+		sub_context = config.context.sub_context()
+		sub_context.name = name
+		processor.process_tree(node.body, context=sub_context)
+		config.context.set(name, sub_context.accessor)

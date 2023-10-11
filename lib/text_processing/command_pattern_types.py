@@ -64,6 +64,25 @@ class specified_capture(public_base):
 	capture = RTS.positional()
 	options = RTS.all_positional()
 
+	# def to_string(self):
+	# 	return f'{{{self.name}:{self.options}}}'
+
+	def to_pattern(self, context=None):
+		#TODO - This is hacky and ugly and just to get it working
+		#TODO - here we are not able to specify post processing but we should probably have a way of doing that
+		match self.options:
+			case (option('int'),):
+				if context is None:
+					return rf'(?P<{self.capture.name}>\d+)'
+				else:
+					return rf'(?P<{context.register_capture(self, self.capture.name)}>\d+)'
+
+			case _ as unhandled:
+				raise Exception(f'The value {unhandled!r} could not be handled')
+
+
+
+
 class remaining_words(capture):
 	greedy = RTS.setting(True)
 
@@ -139,3 +158,6 @@ class sequential_pattern(public_base):
 	def iter_captures(self):
 		for sub_item in self.sequence:
 			yield from sub_item.iter_captures()
+
+def is_literal(i):
+	return isinstance(i, literal_text)

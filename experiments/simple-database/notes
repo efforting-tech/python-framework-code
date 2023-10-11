@@ -1,0 +1,15 @@
+
+Name				Data Type			`is_ordered` Property	`has_distinctness` Property		`is_mapping` Property
+----				---------			---------------------	---------------------------		---------------------
+ordered_set			Ordered Set			True					True							False
+unordered_set		Unordered Set		False					True							False
+ordered_dict		Ordered Dict		True					True							True
+unordered_dict		Unordered Dict		False					True							True
+list				List				True					False							False
+set					Set					False					True							False
+bag					Bag					False					False							False
+
+
+
+
+ordered_set, unordered_set, ordered_dict, unordered_dict, list, set, bag

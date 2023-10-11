@@ -139,7 +139,7 @@ class improved_text_node_processor(public_base):
 			if self.default_action:
 				return self.default_action.take_action(self, node, unconditional_match(node.title))
 			else:
-				raise Exception(node.title)
+				raise Exception(f'Processor {self.name!r} ({hex(id(self))}) is not able to process the node {node.title!r}')
 
 	def process_tree_iteratively(self, tree):
 		for node in tree.iter_nodes(include_blanks=self.include_blanks):

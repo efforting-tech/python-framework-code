@@ -1,3 +1,4 @@
+import keyword
 #TODO - harmonize stuff from /home/devilholk/Projects/efforting-mvp-2/library/string_utils.py
 def expand_tabs_in_line(line, tab_width=4):
 	result = ''
@@ -30,3 +31,27 @@ def str_check_prefix(to_check, prefix, silent=False):
 
 	if to_check.startswith(prefix):
 		return to_check[len(prefix):]
+
+
+
+def to_identifier(iterable, default='anonymous'):
+	result = ''
+	for i in iterable:
+		if result and not result.endswith('_'):
+			result += '_'
+
+		for c in i:
+			if c == '_':
+				if result and not result.endswith('_'):
+					result += '_'
+			elif c.isidentifier():
+				result += c
+			else:
+				if result and not result.endswith('_'):
+					result += '_'
+	if result:
+		while keyword.iskeyword(result):
+			result += '_'
+		return result
+	else:
+		return default

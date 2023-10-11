@@ -2,7 +2,7 @@ from .. import type_system as RTS
 from ..type_system.bases import public_base	#we should check where standard_base needs to be turned into public_base
 from .. import abstract_base_classes as ABC
 from ..symbols import register_symbol
-from .re_tokenization import re_tokenize, SKIP, UNMATCHED
+from .re_tokenization import re_tokenize, SKIP, UNMATCHED, unconditional_match
 
 #IMPORTANT TODO - we should harmonize the re_tokenization and tokenization stuff to be compatible with PM
 
@@ -68,8 +68,8 @@ class action_result(public_base):
 	pass
 
 class yield_value(action_result):
-	#classification = RTS.positional()	#DEPRECATED
 	value = RTS.positional()
+	#classification = RTS.positional(default=None)	#DEPRECATED (Or is it?)
 
 
 
@@ -88,8 +88,8 @@ class yield_match_and_value(action):
 	value = RTS.positional()
 
 
-# class yield_matched_text(action):
-# 	classification = RTS.positional()
+class yield_matched_text(action):
+	classification = RTS.positional(default=None)
 
 
 # 	#TODO: __repr__ = field_based_representation('{self.classification}')
@@ -101,7 +101,8 @@ class yield_match_and_value(action):
 
 class enter_tokenizer(action):
 	tokenizer = RTS.positional()
-	post_filter = RTS.positional(default=None)
+	classification = RTS.positional(default=None)
+	post_filter = RTS.positional(default=None)	#TODO - rename to post_processor?
 
 class yield_from_tokenizer(action):
 	tokenizer = RTS.positional()
@@ -115,13 +116,13 @@ class yield_from_tokenizer(action):
 
 
 
-# @ABC.register_class_tree('text.tokenizer.match')
-# class match(standard_base):
-# 	pass
+@ABC.register_class_tree('text.tokenizer.match')
+class match(public_base):
+	pass
 
-# class token_match(match):
-# 	classification = RTS.positional()
-# 	match = RTS.positional()
+class token_match(match):
+	value = RTS.positional()
+	match = RTS.positional()
 
 
 # 	#TODO: __repr__ = field_based_representation('{self.classification}, {self.match!r}')
@@ -182,7 +183,7 @@ class tokenizer(public_base):
 	# 			raise Exception(action)
 
 
-	def tokenize(self, text, start=0):
+	def tokenize(self, text, start=0, is_top_level=True):
 		token_gen = re_tokenize(text, self.rules, start)
 		result = list()
 		while True:
@@ -198,23 +199,30 @@ class tokenizer(public_base):
 			# 	result.append(token_match(action.classification, match))
 			# elif isinstance(action, yield_classification):
 			# 	result.append(token_match(action.classification, None))
-			# elif isinstance(action, yield_value):
-			# 	result.append(token_match(action.classification, action.value))
+			if isinstance(action, yield_value):
+				result.append(token_match(action.value, match))
 			# elif isinstance(action, yield_match_and_value):
 			# 	result.append(token_value_match(action.classification, match, action.value))
-			# elif isinstance(action, yield_matched_text):
-			# 	assert 0 <= match.re.groups <= 1
-			# 	result.append(token_match(action.classification, match.group(match.re.groups)))
+			elif isinstance(action, yield_matched_text):
+				assert 0 <= match.re.groups <= 1
+				result.append(token_match(match.group(match.re.groups), match))
 			# elif isinstance(action, call_processor_for_match):
 			# 	result.append(token_value_match(action.classification, match, action.processor(match, *action.additional_positionals, **action.named)))
-			if isinstance(action, call_processor_for_match):
+			elif isinstance(action, call_processor_for_match):
 				print(action)
 			elif isinstance(action, enter_tokenizer):
-				sub_result, last_sub_match = action.tokenizer.inner_tokenize(text, match.end())
+				#sub_result, last_sub_match = action.tokenizer.inner_tokenize(text, match.end())
+				sub_result, last_sub_match = action.tokenizer.tokenize(text, match.end(), is_top_level=False)
 				token_gen = re_tokenize(text, self.rules, last_sub_match.end())
-				result.append(token_match(action.classification, sub_result))
+				if action.post_filter:
+					sub_result = action.post_filter(sub_result)
+
+				result.append(token_match(sub_result, unconditional_match(text, match.start(), last_sub_match.end())))
 			elif isinstance(action, leave_tokenizer):
-				raise Exception('top level')
+				if is_top_level:
+					raise Exception('top level')
+				else:
+					return result, match
 			else:
 				raise Exception(action)
 

@@ -1,6 +1,16 @@
 class base_key_registry:
 	pass
 
+class integer_key_allocator:
+	#TODO - we should rename these things a bit, this one is only the allocator
+	def __init__(self, start=0):
+		self.pending = start
+
+	def allocate(self):
+		id = self.pending
+		self.pending += 1
+		return id
+
 class integer_key_registry(base_key_registry):
 	def __init__(self, start=0):
 		self.pending = start

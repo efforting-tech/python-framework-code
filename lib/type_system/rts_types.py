@@ -69,7 +69,6 @@ class field(pre_rts_type):
 			else:
 				return v
 
-
 		positionals = (transform_value(p) for p in (self.factory_positionals or ()))
 		named = {name: transform_value(value) for name, value in (self.factory_named or {}).items()}
 		return self.factory(*positionals, **named)

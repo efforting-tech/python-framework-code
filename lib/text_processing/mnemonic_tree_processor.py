@@ -30,6 +30,7 @@ class mnemonic_tree_processor(improved_text_node_processor):
 	#TODO - we should harmonize the various ways we interpret mnemonics into patterns and such so we don't duplicate so much
 	rules = RTS.factory(list)
 	name = RTS.setting(None)
+	development_mode = RTS.setting(False)
 	#post_processor = RTS.setting(lambda x: T.document(*x))
 
 	#@method_with_specified_settings(RTS.ALL)	#NOT implemented yet, explicitly define
@@ -84,6 +85,13 @@ class mnemonic_tree_processor(improved_text_node_processor):
 		#(C=processor.context, CX=processor.context.accessor, P=processor, M=M, N=node, **M.named)
 
 		args = ', '.join(('C', 'CX', 'P', 'M', 'N', *(c.name for c in mnemonic_pattern.iter_captures())))
+
+		if self.development_mode:
+			if not body:
+				body = 'print("DEV MODE MATCH")'
+		else:
+			assert body
+
 		function = context.create_function2(body, args)
 		rule = (re.compile(rf'^{mnemonic_pattern.to_pattern()}$', re.I), A.call_function_wpcam(function))
 		self.rules.append(rule)
@@ -102,6 +110,13 @@ class mnemonic_tree_processor(improved_text_node_processor):
 	def add_contextual_default_function(self, context, body):
 
 		args = ', '.join(('C', 'CX', 'P', 'M', 'N'))
+
+		if self.development_mode:
+			if not body:
+				body = 'print("DEV MODE MATCH")'
+		else:
+			assert body
+
 		function = context.create_function2(body, args)
 		self.default_action = A.call_function_wpcam(function)
 		return self.default_action

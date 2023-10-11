@@ -206,8 +206,8 @@ class bound_configurable_classmethod(public_base):
 
 	@property
 	def __name__(self):
-		target = self.instance or self.owner
-		return target.__name__
+		return self.function.__qualname__
+
 
 	def __get__(self, instance, owner):	#Never called but required
 			# https://github.com/python/cpython/blob/3adb23a17d25e36bd80874e860835182d851623f/Lib/inspect.py#L320

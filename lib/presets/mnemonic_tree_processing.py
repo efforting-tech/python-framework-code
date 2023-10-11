@@ -86,6 +86,8 @@ processor_def2 = mnemonic_tree_processor.from_raster_table2('''
 											sub_context = TP.context.stacked_context(P=TP, C=TP.context, CX=TP.context.accessor)
 											return TP.add_contextual_regex_function(sub_context, regex, N.body.text)
 
+	debug:									C.exec_in_context(N.body.text, C=C, CX=CX, P=P, F=F)
+
 	default:								TP = P.target_processor
 											sub_context = TP.context.stacked_context(P=TP, C=TP.context, CX=TP.context.accessor)
 											return TP.add_contextual_default_function(sub_context, N.body.text)

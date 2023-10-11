@@ -1,0 +1,3 @@
+[submodule "experiments/code-templates-yet-again"]
+	path = experiments/code-templates-yet-again
+	url = github.com:Mikael-Lovqvist/code-synthesis-experiment-2.git

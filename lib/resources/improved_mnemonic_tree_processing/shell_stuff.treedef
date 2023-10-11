@@ -1,0 +1,19 @@
+execute:
+	import subprocess
+
+amend processor:
+	mnemonic: capture shell command as {name}: {command...}
+		config.context.set(name, subprocess.run(command, shell=True, capture_output=True))
+
+	mnemonic: process text using shell command and store as {name}: {command...}
+		config.context.set(name, subprocess.run(command, shell=True, capture_output=True, input=bytes(node.body.text, 'utf-8')))
+
+	mnemonic: strictly capture shell command as {name}: {command...}
+		result = subprocess.run(command, shell=True, capture_output=True)
+		assert result.returncode == 0
+		config.context.set(name, result)
+
+	mnemonic: strictly process text using shell command and store as {name}: {command...}
+		result = subprocess.run(command, shell=True, capture_output=True, input=bytes(node.body.text, 'utf-8'))
+		assert result.returncode == 0
+		config.context.set(name, result)

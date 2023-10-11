@@ -1,0 +1,4 @@
+amend processor:
+	mnemonic: register text file as {name} with filename[:] {filename...}
+		config.context.set(name, T.text_file(filename, node.body.text))
+

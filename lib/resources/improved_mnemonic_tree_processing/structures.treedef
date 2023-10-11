@@ -1,0 +1,191 @@
+execute:
+	from ...improved_code_synthesis import python as P
+
+tree processor: define_structure
+	mnemonic: · {name} {factory_expression...}
+		ts = config.context.require('target_structure')
+		assert name not in ts.members	#TODO - call a function instead so that it can do checks and addition
+		ts.members[name] = P.structure_member(name, factory_expression)
+
+	mnemonic: · {name}
+		ts = config.context.require('target_structure')
+		assert name not in ts.members
+		ts.members[name] = P.structure_member(name)
+
+	mnemonic: tree processor[:] {name}
+		ts = config.context.require('target_structure')
+		assert name not in ts.members
+		ctx = config.context
+		new_processor = improved_text_node_processor(name=name, context=ctx)
+		define_tree_processor.process_tree(node.body, context=ctx.sub_context(target_processor=new_processor))
+		ts.members[name] = new_processor
+
+	mnemonic: all positional[:] {name}
+		ts = config.context.require('target_structure')
+		assert name not in ts.members
+		ts.members[name] = P.structure_member(name, all_positionals=True)
+
+	mnemonic: def {name}({arguments...})[:]
+		ts = config.context.require('target_structure')
+		assert name not in ts.members
+		ts.members[name] = P.structure_function(name, arguments, node.body.dedented_copy())
+
+	mnemonic: class method {name}({arguments...})[:]
+		ts = config.context.require('target_structure')
+		assert name not in ts.members
+		ts.members[name] = P.structure_function(name, arguments, node.body.dedented_copy(), decorator_list=('@classmethod',))	#HACK - we should of course use proper references (which of course makes it harder when generating code). We may decide on a different solution alltogether though.
+
+	mnemonic: property {name}({arguments...})[:]
+		import builtins
+		ts = config.context.require('target_structure')
+		assert name not in ts.members
+		ts.members[name] = P.structure_function(name, arguments, node.body.dedented_copy(), decorator_list=('@property',))	#HACK - we should of course use proper references (which of course makes it harder when generating code). We may decide on a different solution alltogether though.
+
+
+	pending:
+		mnemonic: interfaces {interfaces...}
+		mnemonic: def {name}
+		mnemonic: prop {name}
+		mnemonic: prop {name}({arguments...}):
+		mnemonic: prop {name} {expression...}
+
+amend processor:
+	mnemonic: define structure[:] {name...}
+		new_structure = P.structure(name)
+		define_structure.process_tree(node.body, context=config.context.sub_context(target_structure=new_structure))
+
+		config.context.set(name, new_structure)
+		return new_structure
+
+	mnemonic: create structure[:] {name}({bases...?})
+		#TODO - create common function
+		ctx = config.context
+		from ...type_system.bases import public_base
+		from ... import type_system as RTS
+		from ...text_nodes import text_node
+		new_structure = P.structure(name)
+		define_structure.process_tree(node.body, context=config.context.sub_context(target_structure=new_structure))
+
+
+		scope = dict(_ts_source_ = new_structure, __module__=None)	#TODO - support module better
+		for member in new_structure.members.values():
+			match member:
+				case P.structure_member():
+					if member.definition:
+						scope[member.name] = RTS.positional(factory=ctx.eval, factory_positionals=(member.definition,))
+					else:
+						scope[member.name] = RTS.positional()
+
+
+				case P.structure_function():
+					if member.decorator_list:
+						#TODO - support actual references?
+						#HACK - this is just for making properties for now
+						dl = '\n'.join(member.decorator_list) + '\n'
+					else:
+						dl = ''
+
+					pycode = text_node.from_title_and_body(f'{dl}def {member.name}({member.arguments}):', member.function_body).text
+
+					sc = ctx.sub_context()
+					sc.exec(pycode)
+					scope[member.name] = sc.require(member.name)
+
+				case _ as unhandled:
+					raise Exception(f'The value {unhandled!r} could not be handled')
+
+		new_bases = ctx.eval(f'({bases},)')
+		new_type = type(name, new_bases, scope)
+		config.context.set(name, new_type)
+		return new_type
+
+	mnemonic: create structure[:] {name}
+		#BUG - this function is named `create´ rather than `create_structure´
+		#TODO - metadata support
+		#§ metadata
+		#	intent: define and create python type	??
+		#TODO - create common function
+		ctx = config.context
+		from ...type_system.bases import public_base
+		from ... import type_system as RTS
+		from ...text_nodes import text_node
+		new_structure = P.structure(name)
+		define_structure.process_tree(node.body, context=config.context.sub_context(target_structure=new_structure))
+
+		# TODO: § include scope_processor
+
+		scope = dict(_ts_source_ = new_structure, __module__=None)	#TODO - support module better
+		for member in new_structure.members.values():
+			match member:
+				case P.structure_member():
+					if member.definition:
+						scope[member.name] = RTS.positional(factory=ctx.eval, factory_positionals=(member.definition,))
+					else:
+						scope[member.name] = RTS.positional()
+
+				case P.structure_function():
+
+					if member.decorator_list:
+						#TODO - support actual references?
+						#HACK - this is just for making properties for now
+						dl = '\n'.join(member.decorator_list) + '\n'
+					else:
+						dl = ''
+
+
+					pycode = text_node.from_title_and_body(f'{dl}def {member.name}({member.arguments}):', member.function_body).text
+
+					sc = ctx.sub_context()
+					sc.exec(pycode)
+					scope[member.name] = sc.require(member.name)
+
+				case improved_text_node_processor():
+					scope[member.name] = member
+
+				case _ as unhandled:
+					raise Exception(f'The value {unhandled!r} could not be handled')
+
+		new_type = type(name, (public_base,), scope)
+		config.context.set(name, new_type)
+		return new_type
+
+
+	mnemonic: convert structure to efforting type system[:] {name}
+		#TODO - metadata support
+		#§ metadata
+		#	intent: define and create python type	??
+
+		#TODO - create common function
+		ctx = config.context
+		from ...type_system.bases import public_base
+		from ... import type_system as RTS
+		from ...text_nodes import text_node
+		new_structure = P.structure(name)
+		define_structure.process_tree(node.body, context=config.context.sub_context(target_structure=new_structure))
+
+		# TODO: § include scope_processor
+
+		result = list()
+		for member in new_structure.members.values():
+			match member:
+				case P.structure_member():
+					if member.definition:
+						result.append(text_node.from_text(f'{member.name} = TS.positional(factory=eval, factory_positionals=({member.definition!r},))'))
+					else:
+						result.append(text_node.from_text(f'{member.name} = TS.positional()'))
+
+				case P.structure_function():
+					if result:
+						result.append(text_node.from_text(''))
+
+					#if member.decorator_list:
+						#decorators = f'\n'.join(member.decorator_list)
+
+					result.append(text_node.from_title_and_body(f'def {member.name}({member.arguments}):', member.function_body))
+
+
+				case _ as unhandled:
+					raise Exception(f'The value {unhandled!r} could not be handled')
+
+
+		return text_node.from_title_and_branches(f'class {new_structure.name}(public_base),', result)

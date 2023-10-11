@@ -79,24 +79,34 @@ class text_node(standard_base):
 	#It would be nice with a liberal type that doesn't use any caching but instead allows mutating fields
 	#or is we just solve the cache invalidation issue - two options.
 
+	#Currently we will actually allow mutation and just hope we donä't get a cached property impact.
+	#TODO - address this issue! ↑↑↑
+
 	#RQ - methods accepting title should accept title being None
 
-	lines = RTS.field(factory=list, read_only=True)
+	def __iadd__(self, other):
+		self.lines += other.lines
+		return self
 
-	@RTS.cached_property(lines)
+	lines = RTS.field(factory=list, read_only=False)
+
+	#@RTS.cached_property(lines)
+	@property
 	def title(self):
 		if flc := self.first_line_with_contents:
 			return flc.strip()
 
 		#Note that the title is the first line no matter of its indention
 
-	@RTS.cached_property(lines)
+	#@RTS.cached_property(lines)
+	@property
 	def first_line_with_contents(self):
 		flc = self.index_of_first_line_with_contents
 		if flc is not None:
 			return self.lines[flc]
 
-	@RTS.cached_property(lines)
+	#@RTS.cached_property(lines)
+	@property
 	def index_of_first_line_with_contents(self):
 		return self.get_index_of_first_line_with_contents()
 
@@ -115,6 +125,10 @@ class text_node(standard_base):
 		return cls(tuple(text.split('\n')))
 
 	@classmethod
+	def from_match(cls, match):
+		return cls(tuple(match.group().split('\n')))
+
+	@classmethod
 	def from_path(cls, path):
 		return cls.from_text(Path(path).read_text())
 
@@ -127,7 +141,7 @@ class text_node(standard_base):
 		if title is None:
 			lines = ()
 			for b in branches:
-				lines += b.lines
+				lines += tuple(b.lines)
 
 		else:
 			lines = (title,)
@@ -172,6 +186,8 @@ class text_node(standard_base):
 
 		if self.lines:
 			self.lines[-1] += ingress
+		else:
+			self.lines.append(ingress)
 
 		self.lines.extend(remaining)
 
@@ -233,15 +249,18 @@ class text_node(standard_base):
 		else:
 			return self.__class__(self.lines[slc:last_index_with_content+1])
 
-	@RTS.cached_property(lines)
+	#@RTS.cached_property(lines)
+	@property
 	def body(self):
 		return self.get_body(False)
 
-	@RTS.cached_property(lines)
+	#@RTS.cached_property(lines)
+	@property
 	def has_contents(self):
 		return bool(self.text.strip())
 
-	@RTS.cached_property(lines)
+	#@RTS.cached_property(lines)
+	@property
 	def text(self):
 		#Assumes automatic dedention
 		minimum_indention_prefix = get_minimum_indention_prefix(self.lines)
@@ -261,3 +280,6 @@ class text_node(standard_base):
 
 	def indented_copy(self, prefix='\t'):
 		return self.__class__(tuple(f'{prefix}{l}' for l in self.lines))
+
+	def __len__(self):
+		return len(tuple(self.iter_nodes()))

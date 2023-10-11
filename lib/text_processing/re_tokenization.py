@@ -35,7 +35,7 @@ def re_tokenize(text, matchers, start=0, include_unmatched=True, unmatched=UNMAT
 
 			if head.group() and include_unmatched:
 				if unmatched is RAISE_EXCEPTION:
-					raise Exception()
+					raise Exception(f'Unexpected head: {head.group()!r}')
 				yield unmatched, head
 
 			if pending_best_action is not SKIP:
@@ -49,7 +49,7 @@ def re_tokenize(text, matchers, start=0, include_unmatched=True, unmatched=UNMAT
 			tail = unconditional_match(text, pos)
 			if tail.group() and include_unmatched:
 				if unmatched is RAISE_EXCEPTION:
-					raise Exception()
+					raise Exception(f'Unexpected tail: {tail.group()!r}')
 				yield unmatched, tail
 
 			break

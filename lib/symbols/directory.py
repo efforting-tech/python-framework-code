@@ -82,6 +82,12 @@ class symbol_node:
 				return f'{self.__class__.__name__}({hex(id(self.root))} (root))'
 
 
+class symbol_value_node(symbol_node):
+	value = field(default=None)
+
+
+
+#TODO - make a more generalized version of this, or split up in interface for the reference comparison
 #Note - this one does not automatically add symbols, read only that will raise exceptions
 @register_class_tree_proxy_resolution('_target')
 class symbol_attribute_access_interface:

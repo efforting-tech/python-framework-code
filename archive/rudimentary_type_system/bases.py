@@ -1,4 +1,5 @@
 from .. import type_system as RTS
+from .introspection import get_public_positional_fields
 import types
 
 class standard_base:

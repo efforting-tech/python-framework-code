@@ -38,6 +38,17 @@ class abc_tree_node(symbol_attribute_access_interface, type):
 					return True
 			return False
 
+	def __subclasscheck__(self, other):
+		#TO DOCUMENT explain proxyresolve
+		entry = ABC_DIRECTORY[self]
+		if issubclass(proxy_resolve(other), entry.specific_types):
+			return True
+		else:
+			for condition in entry.subclass_conditions:
+				if condition(other):
+					return True
+			return False
+
 	#TO DECIDE - do we want this for the data conversion feature? Should we define an API for it? We must define the feature data conversion (feature DC)
 	def _auto_convert(self, value):
 		if isinstance(value, self):
@@ -61,6 +72,7 @@ class abc_tree_node(symbol_attribute_access_interface, type):
 class abc_metadata(public_base):
 	symbol = RTS.positional()
 	conditions = RTS.factory(tuple)
+	subclass_conditions = RTS.factory(tuple)	#TODO - implement this
 	#TO-DECIDE - do we want to store specific_types in some different way or is tuple fine?
 	specific_types = RTS.factory(tuple)	#we need tuple when calling isinstance but set would make more sense otherwise
 	auto_conversions = RTS.factory(list)

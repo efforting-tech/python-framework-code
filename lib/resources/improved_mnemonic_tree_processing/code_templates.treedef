@@ -1,0 +1,190 @@
+execute:
+	from ... import improved_templating as T
+	#TODO - would be nicer if this was confined to a local context
+
+
+note:
+	In a template `§ execute´ will execute at definition and not at rendering.
+	This also affects how `§ for` loops are treated
+
+	TODO: improve template system and make context handling more clear
+
+
+amend processor:
+	mnemonic: code template[:] {name...}
+		ctx = config.context
+		result = T.code_template(name, None, ctx)
+		ctx.set(name, result)
+
+		result.contents = tuple(template_body_processor.process_tree(node.body, include_blanks=True, context=ctx.sub_context(target_template=result)))
+
+		return result
+
+
+	mnemonic: template for {processor_name}[:] {mnemonic...}
+		ctx = config.context
+		from .. import conditions as C
+		from .. import actions as A
+		from ...string_utils import to_identifier
+		from ...iteration_utils import take_while_consequtive
+		from ...text_processing import command_pattern_types as CPT
+
+		target_processor = ctx.eval(processor_name)
+
+		condition = C.matches_mnemonic(mnemonic)
+		capture_names = tuple(c.name for c in condition.mnemonic_captures)
+
+		#Figure out function name based on text literals in the mnemonic pattern
+		#TODO - we should make a function that does this
+		function_name = to_identifier(i.text for i in take_while_consequtive(CPT.is_literal, (j for j in condition.mnemonic_pattern.sequence if not isinstance(j, CPT.required_space)))).strip('_')
+
+		template = T.code_template(function_name, None, ctx)
+		template.contents = tuple(template_body_processor.process_tree(node.body, include_blanks=True, context=ctx.sub_context(target_template=template, target_processor=target_processor)))
+
+		def invoke_template(processor, node, arguments):
+			positional, named = arguments
+			#NOTE - maybe we should be able to specify sub processing of body?
+			assert not positional
+			return target_processor.process_tree(template.render(None, __node__=node, __processor__=processor, **named))# + processor.process_tree(node.body)
+
+		target_processor.add_rule(C.title_condition(condition), A.call_function_with_processor_node_and_regex_match(invoke_template))
+
+
+		#ctx = config.context
+		#ctx.set(name, result)
+
+
+		#return result
+
+	mnemonic: template[:] {mnemonic...}
+		ctx = config.context
+		from .. import conditions as C
+		from .. import actions as A
+		from ...string_utils import to_identifier
+		from ...iteration_utils import take_while_consequtive
+		from ...text_processing import command_pattern_types as CPT
+
+		condition = C.matches_mnemonic(mnemonic)
+		capture_names = tuple(c.name for c in condition.mnemonic_captures)
+
+		#Figure out function name based on text literals in the mnemonic pattern
+		#TODO - we should make a function that does this
+		function_name = to_identifier(i.text for i in take_while_consequtive(CPT.is_literal, (j for j in condition.mnemonic_pattern.sequence if not isinstance(j, CPT.required_space)))).strip('_')
+
+		template = T.code_template(function_name, None, ctx)
+		template.contents = tuple(template_body_processor.process_tree(node.body, include_blanks=True, context=ctx.sub_context(target_template=template, target_processor=target_processor)))
+
+
+		def invoke_template(processor, node, arguments):
+			positional, named = arguments
+			#NOTE - maybe we should be able to specify sub processing of body?
+			return target_processor.process_tree(template.render(None, __node__=node, __processor__=processor, **named))# + processor.process_tree(node.body)
+
+		target_processor.add_rule(C.title_condition(condition), A.call_function_with_processor_node_and_regex_match(invoke_template))
+
+
+		#ctx = config.context
+		#ctx.set(name, result)
+
+
+		#return result
+
+
+tree processor: template_processor
+
+	mnemonic: sentinel
+		from .. import actions as A
+		return A.skip
+
+	mnemonic: blank
+		return ''
+
+	mnemonic: emit[:] {expression...}
+		ctx = config.context
+		return ctx.eval(expression)
+
+	mnemonic: indented
+		ctx = config.context
+		return T.indented(template_body_processor.process_tree.call_with_config(config, node.body))
+
+	mnemonic: insert body
+		from .. import actions as A
+		return A.insert_body
+
+	mnemonic: execute[:]
+		ctx = config.context
+
+		result = list()
+		def emit(text):
+			result.append(text)
+
+		ctx.sub_context(emit=emit, config=config, node=node, processor=processor).exec(node.body.text)
+
+		return result
+
+
+	mnemonic: for {expression...?}[:]
+		#Note - we should not do this here but rather when evaluating
+		#TODO - make sure we use call_with_config in all places we should
+		return T.for_loop(expression, T.code_template(None, tuple(template_body_processor.process_tree.call_with_config(config, node.body))))
+
+		#NOTE - we used maybe-render but apparently we didn't have a proper way to define the for loop so it was not good
+
+		#TODO - get rid of this
+		ctx = config.context
+		body = T.code_template(None, tuple(template_body_processor.process_tree(node.body, context=ctx, include_blanks=True)))
+
+		render_context = ctx.sub_context()
+
+		result = list()
+		def process():
+			#print('PROCESS', body.contents)
+			result.append(body.maybe_render(render_context))
+
+		render_context.update(_process = process)
+		render_context.exec(f'for {expression}:\n\t_process()')
+
+		return result
+
+	mnemonic: if {expression...?}[:]
+		return T.conditional(expression, template_body_processor.process_tree.call_with_config(config, node.body))
+
+	mnemonic: else[:]
+		raise NotImplementedError('See module improved_templating for more details')
+		#return T.conditional_else(template_body_processor.process_tree.call_with_config(config, node.body))
+
+
+	mnemonic: strict switch {expression...?}[:]
+		pending_switch = T.switch(expression)
+		sc = config.context.sub_context(pending_switch=pending_switch)
+		switch_body_processor.process_tree(node.body, context=sc)
+		return pending_switch
+
+tree processor: switch_body_processor
+	mnemonic: case {expression...?}[:]
+		if not (pending_switch := config.context.require('pending_switch')):
+			raise Exception('Case without switch')
+
+		sc = config.context.sub_context(pending_switch=None)
+		body = T.code_template(None, tuple(template_body_processor.process_tree(node.body, context=sc, include_blanks=True)))
+		item = T.switch_branch(expression, node.body.dedented_copy())
+		pending_switch.branches.append(item)
+		return item
+
+
+
+tree processor: template_body_processor
+	mnemonic: § {pattern...}
+		from ...text_nodes import text_node
+		return tuple(template_processor.process_tree(text_node.from_title_and_body(pattern, node.body), context=config.context))
+
+	default:
+		ctx = config.context
+
+		body = tuple(processor.process_tree(node.body, context=ctx, include_blanks=True))
+		if node.title is not None:
+			return T.template_tree(T.template_tokenizer.process_text(node.title).tokens, body)
+		elif body:
+			return T.template_tree(None, body)
+		else:
+			return ''

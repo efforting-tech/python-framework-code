@@ -1,3 +1,4 @@
+#ISSUE - there is another improved_tokenizer. We need to turn this chaos into order!
 from .. import type_system as RTS
 from ..type_system.bases import public_base
 from ..type_system.features import classmethod_with_specified_settings, method_with_specified_settings
@@ -8,6 +9,7 @@ from ..text_processing.re_tokenization import re_tokenize, UNMATCHED
 from ..text_processing.re_match_processing import match_iterator
 from ..exceptions import TokenizationUnhandledAction
 from ..iteration_utils.branchable_iterator import branchable_iterator
+from ..data_utils import attribute_stack
 
 import sys, re, types
 

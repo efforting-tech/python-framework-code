@@ -1,0 +1,74 @@
+
+tree processor: template_processor
+	mnemonic: render template[:] {name...}
+		ast_stack = config.context.accessor.ast_stack
+		ast_stack.append(T.render_template_by_name(name))
+
+	mnemonic: for {expression...?}[:]
+		ast_stack = config.context.accessor.ast_stack
+		ast_sub_stack = list()
+		template_body_processor.process_tree(node.body, context=config.context.sub_context(ast_stack=ast_sub_stack))
+		ast_stack.append(T.for_loop(expression, T.template_sequence(ast_sub_stack)))
+
+	mnemonic: execute[:]
+		ast_stack = config.context.accessor.ast_stack
+		code = compile(node.body.text, '<template_execute_body>', 'exec')
+		ast_stack.append(T.execute(code))
+
+	mnemonic: blank[:]
+		assert not node.body.has_contents
+		ast_stack = config.context.accessor.ast_stack
+		ast_stack.append(T.blank_line)
+
+	mnemonic: if {expression...?}[:]
+		ast_stack = config.context.accessor.ast_stack
+		ast_sub_stack = list()
+		template_body_processor.process_tree(node.body, context=config.context.sub_context(ast_stack=ast_sub_stack))
+		ast_stack.append(T.conditional(expression, T.template_sequence(ast_sub_stack)))
+
+	mnemonic: elif {expression...?}[:]
+		ast_stack = config.context.accessor.ast_stack
+		ast_sub_stack = list()
+		previous = ast_stack[-1]
+
+		assert isinstance(previous, T.conditional)
+		template_body_processor.process_tree(node.body, context=config.context.sub_context(ast_stack=ast_sub_stack))
+		previous.append_chain(T.conditional(expression, T.template_sequence(ast_sub_stack)))
+
+	mnemonic: else[:]
+		ast_stack = config.context.accessor.ast_stack
+		ast_sub_stack = list()
+		previous = ast_stack[-1]
+
+		assert isinstance(previous, T.conditional)
+		template_body_processor.process_tree(node.body, context=config.context.sub_context(ast_stack=ast_sub_stack))
+		previous.append_chain(T.unconditional(T.template_sequence(ast_sub_stack)))
+
+
+
+
+tree processor: template_body_processor
+	mnemonic: \§{expression...?}
+		ast_stack = config.context.accessor.ast_stack
+		ast_sub_stack = list()
+		processor.process_tree(node.body, context=config.context.sub_context(ast_stack=ast_sub_stack), include_blanks=True)
+		body = T.template_sequence(ast_sub_stack)
+		ast_stack.append(T.template_tree(T.template_tokenizer.process_text(f'§{expression}').tokens, body))
+
+
+	mnemonic: § {pattern...}
+		ast_stack = config.context.accessor.ast_stack
+		template_processor.process_tree(text_node.from_title_and_body(pattern, node.body), context=config.context.sub_context(ast_stack=ast_stack))
+
+	default:
+		ast_stack = config.context.accessor.ast_stack
+		ast_sub_stack = list()
+		processor.process_tree(node.body, context=config.context.sub_context(ast_stack=ast_sub_stack), include_blanks=True)
+		body = T.template_sequence(ast_sub_stack)
+		if node.title is not None:
+			ast_stack.append(T.template_tree(T.template_tokenizer.process_text(node.title).tokens, body))
+		elif body:
+			ast_stack.append(T.template_tree(None, body))
+		else:
+			ast_stack.append(T.template_tree(None, None))
+

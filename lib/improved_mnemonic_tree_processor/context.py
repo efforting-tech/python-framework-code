@@ -105,6 +105,16 @@ class context(public_base):
 	name = RTS.positional(default=None, field_type=RTS.SETTING)
 	parents = RTS.positional(default=())
 
+	def export(self, names=None):
+		frame = sys._getframe(1)	#TODO - all places with _getframe should have stack offset parameter
+		if names is None:
+			items = self.locals
+		else:
+			items = {key: self.locals[key] for key in names}
+
+		frame.f_locals.update(items)
+
+
 	@classmethod_with_specified_settings(RTS.SELF)	#TODO - other classmethods here
 	def from_this_frame(cls, stack_offset=0, *, config):
 		frame = sys._getframe(stack_offset + 2)	#NOTE - +2 because decorator adds one

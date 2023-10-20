@@ -235,7 +235,14 @@ class improved_text_node_processor(public_base):
 			case A.call_function_with_processor_node_and_regex_match(function):
 				positional = (get_match_as_arguments(match),)
 				positional += resolve_positionals(action.additional_positional)
+
 				return function(self, match.item, *positional, **action.additional_named)
+
+			case A.call_function_with_config_processor_node_and_regex_match(function):
+				positional = (get_match_as_arguments(match),)
+				positional += resolve_positionals(action.additional_positional)
+
+				return function(config, self, match.item, *positional, **action.additional_named)
 
 			case A.call_function_with_node_and_regex_args(function):
 				positional, named = get_match_as_arguments(match)

@@ -69,6 +69,10 @@ class call_function_with_processor_node_and_regex_match(public_base):
 	additional_positional = RTS.optional_factory(tuple)
 	additional_named = RTS.optional_factory(dict)
 
+class call_function_with_config_processor_node_and_regex_match(public_base):
+	function = RTS.positional()
+	additional_positional = RTS.optional_factory(tuple)
+	additional_named = RTS.optional_factory(dict)
 
 class bind_and_call_function_with_processor_config_and_regex_args(public_base):
 	function = RTS.positional()

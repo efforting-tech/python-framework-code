@@ -6,9 +6,11 @@ from ..symbols import register_multiple_symbols
 UNMATCHED, RAISE_EXCEPTION, SKIP = register_multiple_symbols(*'internal.unmatched internal.action.raise_exception internal.skip'.split())	#TODO allow any old string
 
 
-hacky_pattern = re.compile('.*', re.S)	#This is because we can't create match objects ourselves
+hacky_pattern_str = re.compile('.*', re.S)	#This is because we can't create match objects ourselves
+hacky_pattern_bytes = re.compile(b'.*', re.S)	#This is because we can't create match objects ourselves
+
 def unconditional_match(text, start=0, end=None):
-	return hacky_pattern.match(text[:end], start)
+	return hacky_pattern_str.match(text[:end], start)
 
 def literal_re_pattern(x):
 	return re.compile(re.escape(x))

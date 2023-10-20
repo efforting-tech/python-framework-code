@@ -25,7 +25,7 @@ class F:
 			yield n.title, n.body.dedented_copy()
 
 	def csl(text):
-		return tuple(t.strip() for t in text.split(','))
+		return tuple(u for u in (t.strip() for t in text.split(',')) if u)
 
 	from ..type_system.features import get_settings, get_settings_from_instance
 	from ..text_processing.mnemonic_tree_processor import check_cell_in_column, is_empty

@@ -8,11 +8,7 @@ from ..improved_mnemonic_tree_processor.context import context, reference
 from ..improved_mnemonic_tree_processor import actions as A
 
 from ..type_system.features import method_with_specified_settings
-from ..text_processing.re_tokenization import unconditional_match, hacky_pattern
-
-def potential_match(text, start=0, end=None):
-	if text[start:end]:
-		return hacky_pattern.match(text[:end], start)
+from ..text_processing.re_tokenization import unconditional_match, hacky_pattern_str, hacky_pattern_bytes
 
 
 class continue_at_position(public_base):
@@ -36,6 +32,15 @@ class tokenization_result(public_base):
 	last_pos = RTS.state(None)
 	tail_pos = RTS.state(None)
 
+	@property
+	def has_contents(self):
+		return (
+			(self.first_pos is not None)
+			or (self.last_pos is not None)
+			or (self.tail_pos is not None)
+			or bool(self.tokens)
+		)
+
 	def join(self, separator=''):
 		def get_value(v):
 			match v:
@@ -49,6 +54,7 @@ class tokenization_result(public_base):
 
 		return separator.join(map(get_value, self.tokens))
 
+	#Do we need both flavors of append? TODO: Motivate or clean up
 	def append(self, match, value):
 		self.tokens.append(value)
 		if self.first_pos is None:
@@ -56,39 +62,76 @@ class tokenization_result(public_base):
 
 		self.last_pos = match.end()
 
+		if isinstance(value, tokenization_result):
+			self.tail_pos = value.tail_pos
+
+	def append_sub_result(self, sub_result):
+		if sub_result.has_contents:
+			self.tokens.append(sub_result)
+			if self.first_pos is None:
+				self.first_pos = sub_result.first_pos
+
+			self.last_pos = sub_result.last_pos
+			self.tail_pos = sub_result.tail_pos
+
+
 class improved_tokenizer(public_base):
 	rules = RTS.optional_factory(list)
 	context = RTS.setting(factory=context.from_this_frame, factory_positionals=(3,), factory_named=dict(name='default_context'))	#Why 3? Will it change? Is this a terrible practice?
 	default_action = RTS.setting(None)
 	name = RTS.setting(None)		#Should possibly not be config though
+	must_leave = RTS.setting(False)
+	hacky_pattern = RTS.setting(hacky_pattern_str)
 
 	def add_rule(self, condition, action):
 		self.rules.append(rule(condition, action))
 
+	def potential_match(self, text, start=0, end=None):
+		if text[start:end]:
+			return self.hacky_pattern.match(text[:end], start)
+
+
+	@method_with_specified_settings(RTS.SELF)
+	def exhaust_text(self, text, start=0, *, config):
+		pos = start
+		result = tokenization_result(self, text, pos)
+		while True:
+			sub_result = self.process_text.call_with_config(config, text, pos)
+			result.append_sub_result(sub_result)
+
+			if sub_result.tail_pos is not None and sub_result.tail_pos < len(text):
+				pos = sub_result.tail_pos + 1
+			else:
+				return result
 
 	@method_with_specified_settings(RTS.SELF)
 	def process_text(self, text, start=0, *, config):
-
 		result = tokenization_result(self, text, start)
 		pending_action = None
 
-		def check_sub_result(match, sub_result):
+		def process_sub_result(match, sub_result):
 			nonlocal pending_action
 			match sub_result:
 				case A.enter_sub_tokenizer_after():
 					pending_action = sub_result
-					return True
 
 				case A.leave_tokenizer_after:
 					result.tail_pos = match.end()
 					pending_action = A.break_loop
-					return True
+
+				case A.leave_tokenizer_before:
+					result.tail_pos = match.start()
+					pending_action = A.break_loop
 
 				case A.skip:
-					return True	#Just swallow
+					pass	#Just swallow
+
+				case tuple():
+					for sub_sub_result in sub_result:
+						process_sub_result(match, sub_sub_result)
 
 				case _:
-					return False
+					result.append(match, sub_result)
 
 
 		def take_action(action, match):
@@ -128,23 +171,21 @@ class improved_tokenizer(public_base):
 					named.update(resolve_named(action.additional_named))
 
 					sub_result = action.function(self, config, match, **named)
-					if not check_sub_result(match, sub_result):
-						result.append(match, sub_result)
+					process_sub_result(match, sub_result)
 
 
 				case A.call_function_with_regex_match():
 					from ..text_processing.tokenization import extract_positionals_and_keyword_arguments_from_match
 					from ..improved_mnemonic_tree_processor.tree_node_processing import process_positionals, process_named, resolve_positionals, resolve_named
 					sub_result = action.function(self, config, match)
-					if not check_sub_result(match, sub_result):
-						result.append(match, sub_result)
+					process_sub_result(match, sub_result)
+
 
 				case A.call_function_with_regex_match_and_text():
 					from ..text_processing.tokenization import extract_positionals_and_keyword_arguments_from_match
 					from ..improved_mnemonic_tree_processor.tree_node_processing import process_positionals, process_named, resolve_positionals, resolve_named
 					sub_result = action.function(self, config, match, match.group())
-					if not check_sub_result(match, sub_result):
-						result.append(match, sub_result)
+					process_sub_result(match, sub_result)
 
 				case tuple():
 					for sub_action in action:
@@ -176,7 +217,7 @@ class improved_tokenizer(public_base):
 					pending_action = continue_at_position(pending_position)
 
 				#check for head
-				if head := potential_match(text, pos, closest_match.start()):
+				if head := self.potential_match(text, pos, closest_match.start()):
 					if not self.default_action:
 						raise Exception(head)
 
@@ -187,7 +228,7 @@ class improved_tokenizer(public_base):
 
 			else:
 				#check for tail
-				if tail := potential_match(text, pos):
+				if tail := self.potential_match(text, pos):
 					if not self.default_action:
 						raise Exception(tail)
 
@@ -199,12 +240,10 @@ class improved_tokenizer(public_base):
 				case continue_at_position(pending_pos):
 					pos = result.tail_pos = pending_pos
 
-
 				case A.enter_sub_tokenizer_after():
 					assert not pending_action.pre_action
 					#assert not pending_action.post_action
-					sub_result = pending_action.tokenizer.process_text.call_with_config(config, text, pending_position)
-
+					sub_result = pending_action.tokenizer.process_text.call_with_config(config, text, pending_position, must_leave=True)
 
 					if sub_result.tail_pos is None or (sub_result.last_pos is not None and sub_result.last_pos > sub_result.tail_pos):
 						raise Exception(f'Reached end before proper exit of {pending_action.tokenizer}')
@@ -213,16 +252,16 @@ class improved_tokenizer(public_base):
 						result.append(closest_match, pending_action.post_action(sub_result))
 					else:
 						result.append(closest_match, sub_result)
+
 					pos = result.pos = sub_result.tail_pos
 
-
-
 				case A.break_loop:
-					break
+					return result
 
 				case _ as unhandled:
 					raise Exception(f'The value {unhandled!r} could not be handled')
 
-
+		if config.must_leave:
+			raise Exception(f'Reached end before proper exit of {self}')
 
 		return result

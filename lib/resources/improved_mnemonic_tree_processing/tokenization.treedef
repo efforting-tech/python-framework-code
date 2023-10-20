@@ -11,6 +11,95 @@ tree processor: tokenizer_action
 		from .. import actions as A
 		return A.skip
 
+	mnemonic: return processed match: {callable...}
+		from .. import actions as A
+		return A.return_processed_match(config.context.eval(callable))
+
+	mnemonic: return value: {expression...}
+		from .. import actions as A
+		return A.return_value(config.context.eval(expression))
+
+
+note: TODO: make common byte/str handler?
+
+tree processor: define_ascii_tokenizer
+	mnemonic: regular expression table[:]
+		from ...table_processing.table import table
+		from .. import conditions as C
+		target_tokenizer = config.context.require('target_tokenizer')
+
+		t = table.from_raster(node.body.text)
+		for pattern, action in t.strict_iter('pattern', 'action'):
+			target_tokenizer.add_rule(C.matches_regex(bytes(pattern, 'ascii')), tokenizer_action.process_text(action))
+
+
+	mnemonic: regex function expression[:] {expression...}
+
+		from .. import conditions as C
+		from .. import actions as A
+		from ...text_nodes import text_node
+		from ...string_utils import to_identifier
+		from ...iteration_utils import take_while_consequtive
+		from ...text_processing import command_pattern_types as CPT
+		from ...type_system.features import method_with_specified_settings
+		from ... import type_system as RTS
+
+		condition = C.matches_regex(config.context.eval(expression))
+		capture_names = tuple(condition.regex_captures)
+		function_name = 'regex_function'	#Hard to get from regex so we leave that for later
+
+		#Acquire references to current context and an accessor for it
+		ctx, cx = config.context, config.context.accessor
+
+		#Make sure parameters are not overlapping with capture names and prepare parameters
+		parameters = 'tokenizer', 'config', 'match'
+		assert not (set(capture_names) & set(parameters))
+		if capture_names:
+			parameters += ('*', *capture_names)
+
+		#Create text representation of arguments and prepare the python code for the handler function
+		arguments = ', '.join(parameters)
+		python_code = text_node.from_title_and_body(f'def {function_name}({arguments}):', node.body.dedented_copy()).text
+
+		#Create a sub context for defining the handler to avoid name clashing or namespace pollution
+		sc = ctx.sub_context()
+		sc.exec(python_code)
+
+		new_function = sc.require(function_name)
+		#Add the new rule for the target tokenizer
+		cx.target_tokenizer.add_rule(condition, A.call_function_using_regex_match_as_arguments(new_function))
+
+
+	mnemonic: unmatched function[:]
+
+		from .. import conditions as C
+		from .. import actions as A
+		from ...text_nodes import text_node
+		from ...string_utils import to_identifier
+		from ...iteration_utils import take_while_consequtive
+		from ...text_processing import command_pattern_types as CPT
+		from ...type_system.features import method_with_specified_settings
+		from ... import type_system as RTS
+
+		function_name = 'unmatched_function'
+
+		#Acquire references to current context and an accessor for it
+		ctx, cx = config.context, config.context.accessor
+
+		parameters = 'tokenizer', 'config', 'match', 'text'
+
+		#Create text representation of arguments and prepare the python code for the handler function
+		arguments = ', '.join(parameters)
+		python_code = text_node.from_title_and_body(f'def {function_name}({arguments}):', node.body.dedented_copy()).text
+
+		#Create a sub context for defining the handler to avoid name clashing or namespace pollution
+		sc = ctx.sub_context()
+		sc.exec(python_code)
+
+		new_function = sc.require(function_name)
+		#Add the new rule for the target tokenizer
+		cx.target_tokenizer.default_action = A.call_function_with_regex_match_and_text(new_function)
+
 
 tree processor: define_tokenizer
 	mnemonic: regular expression table[:]
@@ -38,7 +127,7 @@ tree processor: define_tokenizer
 		from ...type_system.features import method_with_specified_settings
 		from ... import type_system as RTS
 
-		condition = C.matches_mnemonic(mnemonic)
+		condition = C.matches_inline_mnemonic(mnemonic)
 		capture_names = tuple(c.name for c in condition.mnemonic_captures)
 		function_name = to_identifier(i.text for i in take_while_consequtive(CPT.is_literal, condition.mnemonic_pattern.sequence))
 
@@ -173,5 +262,14 @@ amend processor:
 		new_tokenizer = improved_tokenizer(name=name)
 
 		define_tokenizer.process_tree(node.body, context=config.context.sub_context(target_tokenizer=new_tokenizer))
+
+		config.context.set(name, new_tokenizer)
+
+	mnemonic: ascii tokenizer[:] {name...}
+		from ...improved_tokenizer import improved_tokenizer
+		from ...text_processing.re_tokenization import hacky_pattern_bytes
+		new_tokenizer = improved_tokenizer(name=name, hacky_pattern=hacky_pattern_bytes)
+
+		define_ascii_tokenizer.process_tree(node.body, context=config.context.sub_context(target_tokenizer=new_tokenizer))
 
 		config.context.set(name, new_tokenizer)

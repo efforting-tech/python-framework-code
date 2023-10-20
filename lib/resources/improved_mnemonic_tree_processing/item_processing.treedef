@@ -57,13 +57,16 @@ tree processor: define_generic_item_processor
 		target_type = config.context.eval(expression)
 		target_processor = config.context.accessor.target_processor
 
-		if isinstance(target_type, tuple):
-			for sub_item in target_type:
-				condition = C.instance_of(sub_item)
+		if False:	#TODO - we are just putting the tuple in the instance_of for now - we need to decide if this is correct or if we should set things up differently, maye multiple positional arguments for instance_op?
+			if isinstance(target_type, tuple):
+				for sub_item in target_type:
+					condition = C.instance_of(sub_item)
+					#TODO target_processor.add_contextual_conditional_function(config.context, condition, node.body.text)
+			else:
+				condition = C.instance_of(target_type)
 				#TODO target_processor.add_contextual_conditional_function(config.context, condition, node.body.text)
 		else:
 			condition = C.instance_of(target_type)
-			#TODO target_processor.add_contextual_conditional_function(config.context, condition, node.body.text)
 
 		new_function = create_priority_translator_handler(config, node, (), 'process_instance_of')
 		target_processor.add_rule(condition, A.bind_and_call_function_with_processor_config_and_item(new_function))

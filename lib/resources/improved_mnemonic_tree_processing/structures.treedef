@@ -42,6 +42,13 @@ tree processor: define_structure
 		ts.members[name] = P.structure_function(name, arguments, node.body.dedented_copy(), decorator_list=('@property',))	#HACK - we should of course use proper references (which of course makes it harder when generating code). We may decide on a different solution alltogether though.
 
 
+	mnemonic: property {name}[:]
+		import builtins
+		ts = config.context.require('target_structure')
+		assert name not in ts.members
+		ts.members[name] = P.structure_function(name, 'self', node.body.dedented_copy(), decorator_list=('@property',))	#HACK - we should of course use proper references (which of course makes it harder when generating code). We may decide on a different solution alltogether though.
+
+
 	pending:
 		mnemonic: interfaces {interfaces...}
 		mnemonic: def {name}

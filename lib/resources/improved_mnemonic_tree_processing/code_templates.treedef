@@ -41,13 +41,16 @@ amend processor:
 		template = T.code_template(function_name, None, ctx)
 		template.contents = tuple(template_body_processor.process_tree(node.body, include_blanks=True, context=ctx.sub_context(target_template=template, target_processor=target_processor)))
 
-		def invoke_template(processor, node, arguments):
+		def invoke_template(config, processor, node, arguments):
 			positional, named = arguments
 			#NOTE - maybe we should be able to specify sub processing of body?
 			assert not positional
-			return target_processor.process_tree(template.render(None, __node__=node, __processor__=processor, **named))# + processor.process_tree(node.body)
 
-		target_processor.add_rule(C.title_condition(condition), A.call_function_with_processor_node_and_regex_match(invoke_template))
+			return target_processor.process_tree.call_with_config(config, template.render(None, __node__=node, __processor__=processor, **named))
+
+			#return target_processor.process_tree(template.render(None, __node__=node, __processor__=processor, **named))# + processor.process_tree(node.body)
+
+		target_processor.add_rule(C.title_condition(condition), A.call_function_with_config_processor_node_and_regex_match(invoke_template))
 
 
 		#ctx = config.context
@@ -109,7 +112,7 @@ tree processor: template_processor
 
 	mnemonic: insert body
 		from .. import actions as A
-		return A.insert_body
+		return T.insert_body(node.body)
 
 	mnemonic: execute[:]
 		ctx = config.context

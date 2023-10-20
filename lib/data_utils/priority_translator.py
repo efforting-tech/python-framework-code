@@ -69,6 +69,10 @@ class priority_translator(public_base):
 		self.rules.append(conditional_action(condition, action))
 
 	@method_with_specified_settings(RTS.SELF)
+	def process_sequence(self, sequence, *, config):
+		return tuple(self.process_item.call_with_config(config, item) for item in sequence)
+
+	@method_with_specified_settings(RTS.SELF)
 	def process_item(self, item, *, config):
 
 		def take_action(action, match):
@@ -84,7 +88,7 @@ class priority_translator(public_base):
 
 
 		for rule in self.rules:
-			if match := rule.condition.match(item):
+			if match := rule.condition.check_match(item):
 				return take_action(rule.action, match)
 
 		if self.default_action:
@@ -136,7 +140,7 @@ class collecting_translator(priority_translator):
 
 
 		for rule in self.rules:	#TODO - we should harmonize all the rule systems and perhaps also use a rule type for the rules rather than tuple of cond/act, we should also harmonize take_action_for_item, perhaps to (processor, rule, match, item)
-			if match := rule.condition.match(item):
+			if match := rule.condition.check_match(item):
 				process_subresult(rule.action.take_action_for_item(self, rule, match, item))
 
 		if self.default_action:

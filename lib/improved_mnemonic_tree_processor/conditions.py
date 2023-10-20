@@ -99,3 +99,29 @@ class matches_mnemonic(public_base, match_interface):
 	def check_match(self, item):
 		if isinstance(item, str) and (match := self.regex_pattern.match(item)):
 			return M.matched_regex(self, match)
+
+class matches_inline_mnemonic(public_base, match_interface):	#Difference here is that we don't force ^ and $ into the regex_pattern
+	mnemonic = RTS.positional(read_only=True)
+
+	@RTS.cached_property(mnemonic)
+	def mnemonic_pattern(self):
+		return command_pattern_processor(self.mnemonic)
+
+	@RTS.cached_property(mnemonic)
+	def regex_pattern(self):
+		return re.compile(f'{self.mnemonic_pattern.to_pattern()}')
+
+	@RTS.cached_property(mnemonic)
+	def mnemonic_captures(self):
+		return tuple(self.mnemonic_pattern.iter_captures())
+
+	@RTS.cached_property(mnemonic)
+	def regex_captures(self):
+		return tuple(self.regex_pattern.groupindex)
+
+	def search(self, text, pos=0):
+		return self.regex_pattern.search(text, pos)
+
+	def check_match(self, item):
+		if isinstance(item, str) and (match := self.regex_pattern.match(item)):
+			return M.matched_regex(self, match)

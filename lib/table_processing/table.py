@@ -121,6 +121,51 @@ class table(public_base):
 
 
 	@method_with_specified_settings(RTS.SELF)
+	def get_row(self, index, *, config):
+		#BUG - we are currently passing columns as a dict which is wrong since columns could have conflicting names, or no names for anonymous columns
+
+		if config.process_columns is ALL:
+			process_columns = self.columns
+		else:
+			process_columns = config.process_columns
+
+		if config.strict_columns:
+			assert len(set(self.columns) & set(process_columns)) == len(set(self.columns)), f'Table has unexpected column configuration. Has columns {self.columns}, expected: {process_columns}'
+
+		column_processors = {column: config.column_processors.get(column, lambda x:x) for column in process_columns}
+		column_lut = self.get_column_lut()
+
+		multiline_condition = config.multiline_condition
+		if multiline_columns := config.multiline_columns:
+			multiline_columns = tuple(column_lut.get(c, c) for c in multiline_columns)
+
+		waterfall = multiline_condition and multiline_columns
+		row_instance = config.row_instance
+
+		if config.processing_mode is PROCESSING.ROW_BY_ROW:
+			if config.ditto_columns is ALL:
+				ditto_columns = process_columns
+			else:
+				ditto_columns = config.ditto_columns
+
+			local_column_processors = {k: ditto_expansion(config.ditto_mark) for k in ditto_columns}
+			def process_row_dict(d):
+				result = dict()
+				for column, cell in d.items():
+					if lcp := local_column_processors.get(column):
+						cell = lcp(cell)
+					result[column] = cell
+
+				return row_instance(**result)
+
+			row = self.rows[index]
+			return process_row_dict({column: column_processors[column](row[column_lut[column]]) for column in process_columns})
+
+		else:
+			raise Exception()
+
+
+	@method_with_specified_settings(RTS.SELF)
 	def iter_process(self, *, config):	#TODO this must be renamed to correspond to the processing API family
 
 		#BUG - we are currently passing columns as a dict which is wrong since columns could have conflicting names, or no names for anonymous columns

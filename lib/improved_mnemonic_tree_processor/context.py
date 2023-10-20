@@ -25,6 +25,9 @@ class context_accessor(public_base):
 		else:
 			return f'{self.__class__.__qualname__}({hex(id(self._context))})'
 
+	def __iter__(self):
+		return self._context.deep_iter_items()
+
 
 
 
@@ -259,4 +262,10 @@ class context(public_base):
 		else:
 			return f'{self.__class__.__qualname__}({hex(id(self))})'
 
-
+def namespace(*pos, **locals):
+	if pos:
+		[name] = pos
+	else:
+		name = None
+	ctx = context(locals, name=name)
+	return ctx.accessor

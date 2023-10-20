@@ -21,6 +21,9 @@ class conditional(public_base):
 class indented(public_base):
 	sub_template = RTS.positional()
 
+class insert_body(public_base):
+	body = RTS.positional()
+
 class conditional_else(public_base):
 	sub_template = RTS.positional()
 
@@ -280,6 +283,8 @@ class code_template(public_base):
 				case indented():
 					return _render(item.sub_template).indented_copy()
 
+				case insert_body():
+					return context.accessor.__node__.body.dedented_copy()
 
 				case _ as unhandled:
 					raise Exception(f'The value {unhandled!r} could not be handled')

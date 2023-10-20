@@ -29,6 +29,10 @@ class for_loop(public_base):
 class execute(public_base):
 	code = RTS.positional()
 
+class call_function(public_base):
+	function = RTS.positional()
+	signature = RTS.positional()
+
 class conditional(public_base):
 	test = RTS.positional()
 	sub_template = RTS.positional()
@@ -55,6 +59,11 @@ class placeholder(public_base):
 
 class sequence(public_base):
 	sequence = RTS.all_positional()
+
+class meta_info(public_base):
+	body = RTS.positional()
+	name = RTS.positional(default=None)
+	signature = RTS.positional(default=())
 
 class template_tree(public_base):
 	title = RTS.positional(default=None)

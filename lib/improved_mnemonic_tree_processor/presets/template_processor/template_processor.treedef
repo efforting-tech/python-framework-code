@@ -20,6 +20,16 @@ tree processor: template_processor
 		ast_stack = config.context.accessor.ast_stack
 		ast_stack.append(T.blank_line)
 
+	mnemonic: note[:] {info...?}
+		pass
+
+	mnemonic: indented[:]
+		ast_stack = config.context.accessor.ast_stack
+		ast_sub_stack = list()
+		template_body_processor.process_tree(node.body, context=config.context.sub_context(ast_stack=ast_sub_stack))
+		ast_stack.append(T.indented(T.template_sequence(ast_sub_stack)))
+
+
 	mnemonic: if {expression...?}[:]
 		ast_stack = config.context.accessor.ast_stack
 		ast_sub_stack = list()

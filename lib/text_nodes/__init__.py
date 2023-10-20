@@ -198,12 +198,27 @@ class text_node(standard_base):
 		r.write_pieces(iterator)
 		return r
 
+	@classmethod
+	def from_blocks(cls, iterator):
+		r = cls()
+		r.write_blocks(iterator)
+		return r
+
 	def write_pieces(self, iterator):
 		for i in iterator:
 			if is_generator(i):
 				self.write_pieces(i)
 			else:
 				self.write(i)
+
+	def write_blocks(self, iterator):
+		for i in iterator:
+			if is_generator(i):
+				self.write_blocks(i)
+			else:
+				self += i
+
+
 
 	def iter_nodes(self, include_blanks=False):
 		minimum_indention = get_minimum_indention_level(self.lines)

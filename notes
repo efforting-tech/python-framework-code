@@ -1,0 +1,43 @@
+This is MVP6.
+
+Starting point:
+	Depends on a few unrelesed efforting features.
+	Somewhat inconsistent code standard.
+
+	Current dependencies:
+
+		efforting
+			efforting.mvp4
+			efforting.mvp5
+
+		text-experiment (~/Projects/efforting.tech/Experiments/improved-text-handling)
+			ansi_styles
+			document
+			document_settings
+			indention
+			str_utils
+			structures
+			text
+			text_styling
+			text_terminal_formatting
+			text_terminal_styles
+			text_tree
+			text_utils
+
+		builtins
+			colorsys
+			unicodedata
+
+
+Goals:
+	Define a code standard.
+	No dependencies of other unreleased efforting features.
+
+Strategy:
+	Add features and refine structure.
+	First feature to add will be the text feature from ~/Projects/efforting.tech/Experiments/improved-text-handling
+
+
+Tools:
+	Enumerate dependencies
+		/home/devilholk/Projects/efforting.tech/Experiments/improved-text-handling/t6.py

@@ -3,6 +3,8 @@ from efforting.mvp6.document.settings.indention import Indention_Mode
 
 #TODO - use testing framework - be more comprehensive
 
+
+
 doc = document.create_line_listing_document_from_str('''
 \tHello World!
 \t\tHow are you today?
@@ -17,14 +19,14 @@ doc.document_settings.indention_mode = Indention_Mode.Spaces
 assert doc.to_str() == '\n    Hello World!\n        How are you today?\n'
 
 doc.document_settings.indention_string = '+'
-doc.document_settings.indention_mode = Indention_Mode.CustomString
+doc.document_settings.indention_mode = Indention_Mode.Custom.String
 assert doc.to_str() == '\n+Hello World!\n++How are you today?\n'
 
 def custom_indent(text, level):
 	return f'[{level}] - {text!r}'
 
 doc.document_settings.format_indent = custom_indent
-doc.document_settings.indention_mode = Indention_Mode.CustomFunction
+doc.document_settings.indention_mode = Indention_Mode.Custom.Function
 
 assert doc.to_str() == (
 	"[0] - ''\n"

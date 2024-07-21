@@ -1,7 +1,3 @@
-#TODO - provide local record/structure system
-from efforting.mvp5.lazy_resources import acquire as acquire
-TS, Public_Base = acquire('TS, TS_pb')
-
 from . import Line_View, Line_Listing
 
 class Text_Tree(Line_View):

@@ -15,7 +15,7 @@ t2 = create_record('t2', ('more_things',), bases=(test,))
 
 
 print(t2(123, 456, 2).setting)
-exit()
+
 
 q = t2('hello', 'yo', 5, info='hello')
 
@@ -28,3 +28,8 @@ print(q.setting)
 
 print(*iter_type_members(type(q)))
 print(*iter_instance_members_and_values(q))
+
+
+define_simple_record('factory', 'function', positional=symbol.argument.all.positional, wee=symbol.argument.all.named, wee2=symbol.argument.all.named)
+
+print(factory(int, 1, 2, 3, stuff=123, things=456).wee2)

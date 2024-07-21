@@ -1,11 +1,9 @@
-#TODO - provide local record/structure system
-from efforting.mvp5.lazy_resources import acquire as acquire
-TS, Public_Base = acquire('TS, TS_pb')
-
+from ..record.base.public import Structure
+from ..record import member as M
 from .settings import Default_Document_Settings
 
-class Hierarchial_Entry(Public_Base):
-	parent = TS.named(default=None)
+class Hierarchial_Entry(Structure):
+	parent = M.named(default=None)
 
 	@property
 	def root(self):
@@ -26,7 +24,7 @@ class Hierarchial_Entry(Public_Base):
 		else:
 			return Default_Document_Settings
 
-class Text_Match(Public_Base):
-	source = TS.positional()
-	token = TS.positional()
-	match = TS.positional()
+class Text_Match(Structure):
+	source = M.positional()
+	token = M.positional()
+	match = M.positional()

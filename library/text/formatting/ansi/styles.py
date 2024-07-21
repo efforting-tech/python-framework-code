@@ -1,11 +1,10 @@
-#TODO - provide local record/structure system
-from efforting.mvp5.lazy_resources import acquire
-TS, Public_Base = acquire('TS, TS_pb')
+from ....record.base.public import Structure
+from ....record import member as M
 
-class ANSI_Style(Public_Base):
-	bgc_lut = TS.positional(factory=dict)
-	fgc_lut = TS.positional(factory=dict)
-	flag_lut = TS.positional(factory=dict)
+class ANSI_Style(Structure):
+	bgc_lut = M.positional(factory=dict)
+	fgc_lut = M.positional(factory=dict)
+	flag_lut = M.positional(factory=dict)
 
 default = ANSI_Style(
 	bgc_lut = {

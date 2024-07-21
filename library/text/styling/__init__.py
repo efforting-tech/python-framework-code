@@ -1,30 +1,27 @@
 #Improved formatting system
 import colorsys
+from ...record.base.public import Structure
+from ...record import member as M
 
-#TODO - provide local record/structure system
-from efforting.mvp5.lazy_resources import acquire
-TS, Public_Base = acquire('TS, TS_pb')
-
-
-class HSV(Public_Base):
-	hue = TS.positional()
-	saturation = TS.positional()
-	value = TS.positional()
+class HSV(Structure):
+	hue = M.positional()
+	saturation = M.positional()
+	value = M.positional()
 
 	def to_rgb(self):
 		return RGB(*colorsys.hsv_to_rgb(self.hue, self.saturation, self.value))
 
-class RGB(Public_Base):
-	red = TS.positional()
-	green = TS.positional()
-	blue = TS.positional()
+class RGB(Structure):
+	red = M.positional()
+	green = M.positional()
+	blue = M.positional()
 
 	def to_integers(self, bit_depth=8):
 		return tuple(int(c * ((1 << bit_depth) - 1)) for c in (self.red, self.green, self.blue))
 
-class Stylized_Span(Public_Base):
-	style = TS.positional(default=None)
-	text = TS.positional(factory=list)		#Note that text can be strings or sequences of other stylized items
+class Stylized_Span(Structure):
+	style = M.positional(default=None)
+	text = M.positional(factory=list)		#Note that text can be strings or sequences of other stylized items
 
 	def setup_list(self):
 		match self.text:
@@ -63,14 +60,14 @@ class Stylized_Span(Public_Base):
 			self.text.append(text)
 
 
-class Style(Public_Base):
-	name = TS.positional()
-	push = TS.positional(factory=list)
-	pop = TS.positional(factory=list)
+class Style(Structure):
+	name = M.positional()
+	push = M.positional(factory=list)
+	pop = M.positional(factory=list)
 
-class Style_Manager(Public_Base):
-	name = TS.positional(default=None)
-	lut = TS.positional(factory=dict)
+class Style_Manager(Structure):
+	name = M.positional(default=None)
+	lut = M.positional(factory=dict)
 
 	def define_style(self, name, push=(), pop=()):
 		self.lut[name] = Style(name, push, pop)
@@ -92,33 +89,33 @@ class Style_Manager(Public_Base):
 
 
 class Filter:
-	class function(Public_Base):
-		function = TS.positional()
+	class function(Structure):
+		function = M.positional()
 
 		def __call__(self, text):
 			return self.function(text)
 
 class Event:
-	class push(Public_Base):
-		stack = TS.positional()
-		value = TS.positional()
+	class push(Structure):
+		stack = M.positional()
+		value = M.positional()
 
-	class pop(Public_Base):
-		stack = TS.positional()
+	class pop(Structure):
+		stack = M.positional()
 
-class State_Heap(Public_Base):
-	lut = TS.all_named()
+class State_Heap(Structure):
+	lut = M.all_named()
 
 	def get_state(self):
 		return {key: stack.value for key, stack in self.lut.items()}
 
-class State_Span(Public_Base):
-	state = TS.positional()
-	text = TS.positional(default='')
+class State_Span(Structure):
+	state = M.positional()
+	text = M.positional(default='')
 
-class Filter_Stack(Public_Base):
-	name = TS.positional(default=None)
-	stack = TS.positional(factory=list)
+class Filter_Stack(Structure):
+	name = M.positional(default=None)
+	stack = M.positional(factory=list)
 
 	@property
 	def value(self):
@@ -130,9 +127,9 @@ class Filter_Stack(Public_Base):
 	def pop(self):
 		self.stack.pop(-1)
 
-class Flag_Stack(Public_Base):
-	name = TS.positional(default=None)
-	stack = TS.positional(factory=set)
+class Flag_Stack(Structure):
+	name = M.positional(default=None)
+	stack = M.positional(factory=set)
 
 	@property
 	def value(self):
@@ -144,10 +141,10 @@ class Flag_Stack(Public_Base):
 	def pop(self):
 		self.stack.discard(value)
 
-class State_Stack(Public_Base):
-	name = TS.positional(default=None)
-	default = TS.positional(default=None)
-	stack = TS.positional(factory=list)
+class State_Stack(Structure):
+	name = M.positional(default=None)
+	default = M.positional(default=None)
+	stack = M.positional(factory=list)
 
 	@property
 	def value(self):

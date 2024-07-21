@@ -5,6 +5,8 @@ _root =_SF.Symbol(__name__.rsplit('.')[-1])
 _root._set_auto_graft_here()
 _SF.register_symbols_at_target(_root, '''
 
+	miss
+
  	target.instance
 
 	indention.mode.Tabs
@@ -12,6 +14,9 @@ _SF.register_symbols_at_target(_root, '''
 	indention.mode.Custom.String
 	indention.mode.Custom.Function
 
+	argument.all.positional
+	argument.all.named
+	argument.positional_or_named
 
 
 ''')

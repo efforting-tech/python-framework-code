@@ -2,19 +2,16 @@ from ..document.structures import Hierarchial_Entry
 from ..text.interface import Text_Interface
 #TODO - these should not be in settings
 from ..document.settings.indention import get_line_with_indent, format_line_with_indent
-
-
-#TODO - provide local record/structure system
-from efforting.mvp5.lazy_resources import acquire as acquire
-TS, Public_Base = acquire('TS, TS_pb')
+from ..record.base.public import Structure
+from ..record import member as M
 
 
 #TODO - move items to abstract types or specific interfaces as much as possible
 COPY = object()
 
 class Line(Hierarchial_Entry):
-	indent = TS.named(default=None)
-	text = TS.named(default=None)
+	indent = M.named(default=None)
+	text = M.named(default=None)
 
 	def copy(self, indent=COPY, text=COPY, parent=COPY):
 		return type(self)(
@@ -116,13 +113,13 @@ class Abstract_Line_Listing(Hierarchial_Entry, Text_Interface):
 	def casted_copy(self, new_type):
 		#TODO - rewrite __getitem__ so that it uses a slicing method that can pass along view_type. This way we don't need to do the dirty __class__ hack
 		copy = self[:]
-		copy.__class__ = new_type
+		object.__setattr__(copy, '__class__', new_type)
 		return copy
 
 
 class Line_View(Abstract_Line_Listing):
-	first_index = TS.positional(default=None)
-	last_index = TS.positional(default=None)
+	first_index = M.positional(default=None)
+	last_index = M.positional(default=None)
 
 	@property
 	def first_row(self):
@@ -146,8 +143,8 @@ class Line_View(Abstract_Line_Listing):
 Line_View.view_type = Line_View
 
 class Line_Listing(Abstract_Line_Listing):
-	lines = TS.named(factory=list)
-	first_row = TS.named(default=1)
+	lines = M.named(factory=list)
+	first_row = M.named(default=1)
 
 	view_type = Line_View
 

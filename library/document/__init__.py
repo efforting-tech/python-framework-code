@@ -1,13 +1,12 @@
-#TODO - provide local record/structure system
-from efforting.mvp5.lazy_resources import acquire as acquire
-TS, Public_Base = acquire('TS, TS_pb')
+from ..record.base.public import Structure
+from ..record import member as M
 
 from ..text import Line_Listing
 from .settings import Document_Settings
 from ..text.tree import Text_Tree
 
-class Document(Public_Base):
-	settings = TS.named(factory=Document_Settings)
+class Document(Structure):
+	settings = M.named(factory=Document_Settings)
 
 	@property
 	def document(self):

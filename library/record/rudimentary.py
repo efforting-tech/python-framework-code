@@ -1,6 +1,12 @@
 from itertools import chain
 import sys
 from .factory import Evaluate_In_Scope
+from .. import symbol
+from ..abc import Abstract_Factory, Abstract_Data_Descriptor
+
+
+#BUG - one can specify all.named/positional more than once
+#BUG - one can assign init even in situations where init won't be utilized
 
 #TODO - we may want to put all exceptions in one place later and possibly name them better
 class No_Such_Member_Exception(AttributeError):
@@ -16,30 +22,26 @@ class Member_Not_Set_Exception(AttributeError):
 		cn = f'{owner.__module__}.{owner.__qualname__}' #TODO - use utility function for formatting class name
 		super().__init__(f'The member {member!r} of the {cn!r} instance 0x{id(target):x} is not set.')
 
+#TODO - should TD_LUT be used? - we should probably have some sort of common interface for introspection. the TD_LUT idea is ok but we should remove it from rudimentary and make it its own thing
+#	though maybe we should do this via data descriptors
+#TD_LUT = dict()
 
-TD_LUT = dict()
 
-class Type_Definition:
-	def __init__(self, name, positional, named, bases):
-		self.name = name
-		self.positional = positional
-		self.named = named
-		self.bases = bases
+# class Type_Definition:
+# 	def __init__(self, name, positional, named, bases):
+# 		self.name = name
+# 		self.positional = positional
+# 		self.named = named
+# 		self.bases = bases
 
-def iter_positional(target_type):
+
+def iter_names(target_type):
 		bo = tuple(reversed(target_type.mro()))
 		for base in bo:
-			if td := TD_LUT.get(base):
-				if td.positional:
-					yield from td.positional
+			for dd in base.__dict__.values():
+				if isinstance(dd, Abstract_Data_Descriptor):
+					yield dd.name
 
-
-def iter_named(target_type):
-		bo = tuple(reversed(target_type.mro()))
-		for base in bo:
-			if td := TD_LUT.get(base):
-				if td.named:
-					yield from td.named
 
 def iter_type_members(target_type):
 	for n in chain(iter_positional(target_type), iter_named(target_type)):
@@ -53,30 +55,47 @@ class Abstract_Record:
 	def __init__(self, *positional, **named):
 		positional = list(positional)
 		#bo = tuple(reversed(type(self).mro()))
-		positional_names = tuple(iter_positional(type(self)))
-		named_names = tuple(iter_named(type(self)))
 
-		for n in positional_names:
-			if not positional:
-				break
+		original_named = dict(named)
+		names = tuple(iter_names(type(self)))
 
-			setattr(self, n, positional.pop(0))
-
-		for n, v in named.items():
-			assert not hasattr(self, n)	#TODO - proper exception
-			setattr(self, n, v)
-
-		assert not positional #TODO - proper exception
-
-		for n in chain(positional_names, named_names):
+		for n in names:
 			dd = getattr(type(self), n).descriptor
 
-			if not hasattr(self, n):
-				if dd.init:
-					dd.init(dd, self)
+			if dd.kind is symbol.argument.all.positional:
+				setattr(self, n, tuple(positional))
+				positional.clear()
+
+			elif dd.kind is symbol.argument.all.named:
+				setattr(self, n, dict(named))
+				named.clear()
+
+			elif dd.kind is symbol.argument.positional_or_named:
+				if positional:
+
+					#TODO - we should make sure we are compatible with python kinds of pos, pos/name, name_only
+					if n in named:
+						setattr(self, n, named.pop(n))
+					else:
+						setattr(self, n, positional.pop(0))
+
+					#assert n not in original_named	#TODO - figure out if we need original here or not
+					#setattr(self, n, positional.pop(0))
+				elif n in named:
+					setattr(self, n, named.pop(n))
+				else:
+					match dd.init:
+						case Abstract_Factory():
+							dd.init(dd, self)
+						case nothing if nothing is None:
+							setattr(self, n, None)
+
+						case unhandled:
+							raise Exception(unhandled)	#TODO - proper exception
 
 			assert (not dd.required) or hasattr(self, n)	#TODO - proper exception
 
+		assert not positional #TODO - proper exception
 
 
 	def __setattr__(self, name, value):
@@ -106,11 +125,12 @@ class Bound_Data_Descriptor:
 		cn = f'{self.owner.__module__}.{self.owner.__qualname__}' #TODO - use utility function for formatting class name
 		return f'<Member {self.descriptor.name!r} of class {cn!r}>'
 
-class Data_Descriptor:
-	def __init__(self, name, init=None, required=False):
+class Data_Descriptor(Abstract_Data_Descriptor):
+	def __init__(self, name, init=None, required=False, kind=symbol.argument.positional_or_named):
 		self.name = name
 		self.init = init
 		self.required = required
+		self.kind = kind
 
 	def __get__(self, instance, owner):
 		if instance is None:
@@ -130,24 +150,37 @@ class Data_Descriptor:
 		except KeyError as ke:
 			raise Member_Not_Set_Exception(instance, self.name) from ke
 
-def create_record(name, positional=None, named=None, bases=None, evaluation_scope=None, local_updates=None):
-	scope = dict()
+def create_record(name, positional=None, named=None, bases=None, evaluation_scope=None, local_updates=None, prepared_scope=None):
+	scope = prepared_scope if prepared_scope is not None else dict()
 
 	if positional:
 		for member in positional:
 			scope[member] = Data_Descriptor(member, required=True)
 
 	if named:
-		for member, init in named.items():
-			scope[member] = Data_Descriptor(member, Evaluate_In_Scope(init, evaluation_scope, local_updates))
+		for member, init_or_kind in named.items():
+			if isinstance(init_or_kind, str):
+				scope[member] = Data_Descriptor(member, Evaluate_In_Scope(init_or_kind, evaluation_scope, local_updates))
+			elif init_or_kind in symbol.argument.all:
+				scope[member] = Data_Descriptor(member, kind=init_or_kind)
+			elif init_or_kind is None:
+				scope[member] = Data_Descriptor(member)
+			else:
+				raise Exception()
 
 	type_bases = (Abstract_Record,) if not bases else bases
 	result = type(name, type_bases, scope)
-	TD_LUT[result] = Type_Definition(name, positional, named, bases)
+	#TD_LUT[result] = Type_Definition(name, positional, named, bases)
 	return result
 
 def define_simple_record(name, *positional, **named):
 	target_scope = sys._getframe(1).f_locals
 
 	assert name not in target_scope	#TODO - proper exception
-	target_scope[name] = create_record(name, positional, named, evaluation_scope=target_scope)
+	target_scope[name] = create_record(name, positional, named, evaluation_scope=target_scope, prepared_scope=dict(__module__=target_scope['__name__']))
+
+def define_record(name, positional=None, named=None, bases=None, evaluation_scope=None, local_updates=None):
+	target_scope = sys._getframe(1).f_locals
+
+	assert name not in target_scope	#TODO - proper exception
+	target_scope[name] = create_record(name, positional, named, bases=bases, evaluation_scope=target_scope, local_updates=local_updates, prepared_scope=dict(__module__=target_scope['__name__']))

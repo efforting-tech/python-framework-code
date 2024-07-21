@@ -37,6 +37,16 @@ class Symbol:
 		self._parent = parent
 		self._auto_graft = auto_graft
 
+	def __contains__(self, sub_item):
+		path_start = len(self._path) + 1
+		choices = {s._path[path_start:]:s for s in self._iter_children(True, True)}
+		if isinstance(sub_item, str):
+			return sub_item in choices.keys()
+		elif isinstance(sub_item, Symbol):
+			return sub_item in choices.values()
+
+
+
 	def _set_auto_graft_here(self, stack_adjustment=0):
 		self._auto_graft = sys._getframe(stack_adjustment + 1).f_locals
 

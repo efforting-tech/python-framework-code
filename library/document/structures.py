@@ -1,6 +1,13 @@
 from ..record.base.public import Structure
 from ..record import member as M
-from .settings import Default_Document_Settings
+from .settings import Default_Document_Settings, Document_Settings
+
+class Document(Structure):
+	settings = M.named(factory=Document_Settings)
+
+	@property
+	def document(self):
+		return self
 
 class Hierarchial_Entry(Structure):
 	parent = M.named(default=None)
@@ -24,6 +31,7 @@ class Hierarchial_Entry(Structure):
 		else:
 			return Default_Document_Settings
 
+#TODO - should probably not be in this location
 class Text_Match(Structure):
 	source = M.positional()
 	token = M.positional()

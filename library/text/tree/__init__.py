@@ -1,4 +1,4 @@
-from . import Line_View, Line_Listing
+from .. import Line_View, Line_Listing
 
 class Text_Tree(Line_View):
 	@classmethod

@@ -18,6 +18,28 @@ _SF.register_symbols_at_target(_root, '''
 	argument.all.named
 	argument.positional_or_named
 
+	text.token.default
+	text.token.text
+	text.token.whitespace
+	text.token.word
+	text.token.literal
+
+
+	text.token.left_curly_bracket
+	text.token.right_curly_bracket
+	text.token.colon
+	text.token.left_square_bracket
+	text.token.right_square_bracket
+	text.token.left_double_arrows
+	text.token.right_double_arrows
+	text.token.left_paranthesis
+	text.token.right_paranthesis
+
+	raise_exception
+
+	action.exit_sub_parser
+	action.yield_match
+	action.yield_token
 
 ''')
 

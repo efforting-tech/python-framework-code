@@ -1,14 +1,15 @@
-from efforting.mvp6.record.base.public import Structure
-import efforting.mvp6.record.member as M
-from efforting.mvp6.record.member import utils as MU
+class test_abc(Test):
+	from efforting.mvp6.record.base.public import Structure
+	import efforting.mvp6.record.member as M
+	from efforting.mvp6.record.member import utils as MU
 
-from efforting.mvp6 import ABC
+	from efforting.mvp6 import ABC
 
 
-class Test(Structure):
-	stuff = M.positional(factory=list)
-	#thing = M.positional(factory=MU.factory(list, (1, 2, 3)))
+	class Test(Structure):
+		stuff = M.positional(factory=list)
+		#thing = M.positional(factory=MU.factory(list, (1, 2, 3)))
 
-print(Test.stuff.descriptor.init)
+	assert isinstance(Test.stuff.descriptor.init, ABC.Factory)
 
-print(Test().stuff)
+	assert Test().stuff == []

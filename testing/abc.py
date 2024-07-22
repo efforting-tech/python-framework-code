@@ -1,9 +1,7 @@
-from efforting.mvp6 import ABC
+class test_abc(Test):
+	from efforting.mvp6 import ABC
 
+	class stuff(ABC.Factory):
+		pass
 
-class stuff(ABC.Factory):
-	pass
-
-print(stuff)
-
-print(issubclass(stuff, ABC.Factory))
+	assert(issubclass(stuff, ABC.Factory))

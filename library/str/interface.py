@@ -1,3 +1,6 @@
+import re
+from ..document.structures import Text_Match
+
 class String_Interface:
 	def regex_tokenize(self, token_patterns, start_pos=0):
 		pattern_list = list()
@@ -31,7 +34,7 @@ class String_Interface:
 			best_candidate = None
 			for key, pattern in pattern_list:
 				if match := pattern.search(text, pos):
-					pending_candidate = text_match(self, key, match)
+					pending_candidate = Text_Match(self, key, match)
 
 					if best_candidate is None or (pending_candidate.match.start() < best_candidate.match.start()):
 						best_candidate = pending_candidate
@@ -42,7 +45,7 @@ class String_Interface:
 				head = text[pos:best_candidate.match.start()]
 				if head:
 					if default_pattern:
-						yield text_match(self, default_pattern, re.compile(r'.*', re.DOTALL).match(text[:best_candidate.match.start()], pos))	#Create unconditional match object by matching everything
+						yield Text_Match(self, default_pattern, re.compile(r'.*', re.DOTALL).match(text[:best_candidate.match.start()], pos))	#Create unconditional match object by matching everything
 					else:
 						raise Exception()
 
@@ -55,7 +58,7 @@ class String_Interface:
 		tail = text[pos:]
 		if tail:
 			if default_pattern:
-				yield text_match(self, default_pattern, re.compile(r'.*', re.DOTALL).match(text, pos))	#Create unconditional match object by matching everything
+				yield Text_Match(self, default_pattern, re.compile(r'.*', re.DOTALL).match(text, pos))	#Create unconditional match object by matching everything
 			else:
 				raise Exception()
 

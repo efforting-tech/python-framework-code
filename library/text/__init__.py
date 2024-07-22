@@ -9,6 +9,26 @@ from .. import ABC
 #TODO - move items to abstract types or specific interfaces as much as possible
 COPY = object()
 
+
+
+
+def calculate_indices_from_slice(s, fi, li):
+	if s.start is None:
+		start = fi
+	elif s.start < 0:
+		start = li + s.start
+	else:
+		start = fi + s.start
+
+	if s.stop is None:
+		stop = li
+	elif s.stop < 0:
+		stop = li + s.stop
+	else:
+		stop = fi + s.stop
+
+	return start, stop
+
 class Line(Hierarchial_Entry, ABC.Text.Line):
 	indent = M.named(default=None)
 	text = M.named(default=None)
@@ -67,24 +87,6 @@ class Line(Hierarchial_Entry, ABC.Text.Line):
 	def clear_indention(self):
 		self.indent = None
 
-
-
-def calculate_indices_from_slice(s, fi, li):
-	if s.start is None:
-		start = fi
-	elif s.start < 0:
-		start = li + s.start
-	else:
-		start = fi + s.start
-
-	if s.stop is None:
-		stop = li
-	elif s.stop < 0:
-		stop = li + s.stop
-	else:
-		stop = fi + s.stop
-
-	return start, stop
 
 class Abstract_Line_Listing(Hierarchial_Entry, Text_Interface, ABC.Text.Block):
 	def to_str(self):

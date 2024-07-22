@@ -1,6 +1,12 @@
 import sys
 from .factory_helpers import Register_Interface
 
+class Local_Symbol:
+	def __init__(self, name):
+		self._name = name
+
+	def __repr__(self):
+		return f'L{self._name!r}'
 
 class Symbol:
 	def __init__(self, name, parent=None, auto_graft=None):
@@ -42,13 +48,19 @@ class Symbol:
 
 	@property
 	def _path(self):
-		if self._parent:
+		if self._parent and self._parent:
 			return f'{self._parent._path}.{self._name}'
 		else:
 			return self._name
 
 	def __repr__(self):
-		return f'{type(self).__name__}({self._path!r})'
+		def get_path(target):
+			if target._parent and target._parent and target._parent._parent:	#Skip root
+				return f'{get_path(target._parent)}.{target._name}'
+			else:
+				return target._name
+
+		return f'S{get_path(self)!r}'
 
 
 interface = Register_Interface(Symbol)

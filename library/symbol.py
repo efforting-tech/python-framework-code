@@ -40,6 +40,7 @@ _SF.register_symbols_at_target(_root, '''
 	action.exit_sub_parser
 	action.yield_match
 	action.yield_token
+	action.yield_text
 
 ''')
 

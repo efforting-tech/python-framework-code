@@ -3,6 +3,8 @@ from ..member import utils as MU
 from .. import member as M
 from ..rudimentary import Abstract_Record, Data_Descriptor
 from ... import ABC
+from ...introspection import stack_limit
+from ...symbol_factory import Local_Symbol
 
 #The idea here is to make use of the many ideas for various record definition systems from prior experiments
 #But for now the rudimentary system is probably powerful enough that we can have this system here just as a convenient way of defining classes
@@ -17,10 +19,12 @@ def iter_type(target, default=symbol.miss):
 		yield from iter_object_using_type(target, cls, default)
 
 
+REPR_STACK_LIMIT = stack_limit(2)
+
 class Structure(Abstract_Record):
 	def __init_subclass__(cls):
 		all_names = list()
-		for key, value in iter_type(cls, True):
+		for key, value in iter_type(cls):
 			if isinstance(value, ABC.Record.Member):
 				all_names.append(key)
 
@@ -49,3 +53,19 @@ class Structure(Abstract_Record):
 					raise Exception()	#TODO - proper exception
 
 		cls.__match_args__ = tuple(all_names)
+
+	def __repr__(self):
+		MISS = Local_Symbol('MISS')
+		with REPR_STACK_LIMIT:
+			try:
+				def fval(n):
+					if (value := getattr(self, n, MISS)) is MISS:
+						return 'N/A'
+					else:
+						return repr(value)
+
+				inner = ', '.join(f'{n}={fval(n)}' for n, f in iter_type(type(self)) if isinstance(f, ABC.Record.Data_Descriptor) and f.descriptor.repr)
+				return f'{self.__class__.__qualname__}({inner})'
+			except RecursionError:
+				return '\N{HORIZONTAL ELLIPSIS}'
+

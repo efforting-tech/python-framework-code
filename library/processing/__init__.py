@@ -14,14 +14,14 @@ class LUT_Rule(Structure):
 	action = M.positional(None)
 
 class Rule_Set(Structure):
-	rules = M.positional(factory=list)
+	rules = M.positional(factory=list, repr=False)
 	fallback = M.positional(None)
 
 	def add_conditional_action(self, condition=None, action=None):
 		self.rules.append(Rule(condition, action))
 
 class LUT_Rule_Set(Structure):
-	rules = M.positional(factory=dict)
+	rules = M.positional(factory=dict, repr=False)
 	default_action = M.positional(None)
 	fallback = M.positional(None)
 
@@ -42,7 +42,7 @@ class LUT_Rule_Set(Structure):
 
 class Processor(Structure):
 	name = M.positional(default=None)
-	rules = M.positional(factory=Rule_Set)
+	rules = M.positional(factory=Rule_Set, repr=False)
 
 	def process_node(self, node):
 		print(node.title)

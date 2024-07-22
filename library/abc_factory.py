@@ -2,18 +2,23 @@ import sys
 from .factory_helpers import Register_Interface
 
 
-class Symbol:
-	def __init__(self, name, parent=None, auto_graft=None):
-		self._name = name
-		self._parent = parent
-		self._auto_graft = auto_graft
+def create_ABC_Node(name, parent=None, auto_graft=None):
+	return ABC_Node(name, (), dict(
+		_name = name,
+		_parent = parent,
+		_auto_graft = auto_graft,
+		__module__ = parent._path if parent else 'ABC',
+	))
 
+
+
+class ABC_Node(type):
 	def __contains__(self, sub_item):
 		path_start = len(self._path) + 1
 		choices = {s._path[path_start:]:s for s in self._iter_children(True, True)}
 		if isinstance(sub_item, str):
 			return sub_item in choices.keys()
-		elif isinstance(sub_item, Symbol):
+		elif isinstance(sub_item, ABC_Node):
 			return sub_item in choices.values()
 
 
@@ -38,8 +43,6 @@ class Symbol:
 				yield child
 
 
-
-
 	@property
 	def _path(self):
 		if self._parent:
@@ -47,11 +50,27 @@ class Symbol:
 		else:
 			return self._name
 
-	def __repr__(self):
-		return f'{type(self).__name__}({self._path!r})'
 
 
-interface = Register_Interface(Symbol)
-register_symbols_here = interface.register_entries_here
-register_symbols_at_target = interface.register_entries_at_target
-register_symbol = interface.register_entry
+def register_node(target, abc_node):
+	ptr = target
+	parent = None
+	for piece in abc_node.split('.'):
+		assert not piece.startswith('_') #TODO - proper exception
+		if pending := getattr(ptr, piece, None):
+			ptr = pending
+		else:
+			new = ABC_Node(piece, ptr)
+			if ptr._auto_graft is not None:
+				ptr._auto_graft[new._name] = new
+
+			setattr(ptr, piece, new)
+			ptr = new
+
+	return ptr
+
+
+interface = Register_Interface(create_ABC_Node)
+register_abc_here = interface.register_entries_here
+register_abc_at_target = interface.register_entries_at_target
+register_abc = interface.register_entry

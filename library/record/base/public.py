@@ -1,7 +1,8 @@
 from ... import symbol
-from ..member import Abstract_Member, utils as MU
+from ..member import utils as MU
 from .. import member as M
 from ..rudimentary import Abstract_Record, Data_Descriptor
+from ... import ABC
 
 #The idea here is to make use of the many ideas for various record definition systems from prior experiments
 #But for now the rudimentary system is probably powerful enough that we can have this system here just as a convenient way of defining classes
@@ -20,7 +21,7 @@ class Structure(Abstract_Record):
 	def __init_subclass__(cls):
 		all_names = list()
 		for key, value in iter_type(cls, True):
-			if isinstance(value, Abstract_Member):
+			if isinstance(value, ABC.Record.Member):
 				all_names.append(key)
 
 				#TODO - properly reflect these kinds

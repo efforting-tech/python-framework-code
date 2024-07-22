@@ -2,6 +2,7 @@ from efforting.mvp6.record.base.public import Structure
 import efforting.mvp6.record.member as M
 from efforting.mvp6.record.member import utils as MU
 
+from efforting.mvp6 import ABC
 
 
 class Test(Structure):
@@ -10,4 +11,4 @@ class Test(Structure):
 
 print(Test.stuff.descriptor.init)
 
-#print(Test().stuff)
+print(Test().stuff)

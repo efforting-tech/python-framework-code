@@ -4,12 +4,12 @@ from ..text.interface import Text_Interface
 from ..document.settings.indention import get_line_with_indent, format_line_with_indent
 from ..record.base.public import Structure
 from ..record import member as M
-
+from .. import ABC
 
 #TODO - move items to abstract types or specific interfaces as much as possible
 COPY = object()
 
-class Line(Hierarchial_Entry):
+class Line(Hierarchial_Entry, ABC.Text.Line):
 	indent = M.named(default=None)
 	text = M.named(default=None)
 
@@ -86,7 +86,7 @@ def calculate_indices_from_slice(s, fi, li):
 
 	return start, stop
 
-class Abstract_Line_Listing(Hierarchial_Entry, Text_Interface):
+class Abstract_Line_Listing(Hierarchial_Entry, Text_Interface, ABC.Text.Block):
 	def to_str(self):
 		return self.document_settings.line_endings.join(l.to_str() for l in self.lines)
 

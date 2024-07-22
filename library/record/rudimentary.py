@@ -2,7 +2,7 @@ from itertools import chain
 import sys
 from .factory import Evaluate_In_Scope
 from .. import symbol
-from ..abc import Abstract_Factory, Abstract_Data_Descriptor
+from .. import ABC
 
 
 #BUG - one can specify all.named/positional more than once
@@ -39,19 +39,19 @@ def iter_names(target_type):
 		bo = tuple(reversed(target_type.mro()))
 		for base in bo:
 			for dd in base.__dict__.values():
-				if isinstance(dd, Abstract_Data_Descriptor):
+				if isinstance(dd, ABC.Record.Data_Descriptor):
 					yield dd.name
 
 
 def iter_type_members(target_type):
-	for n in chain(iter_positional(target_type), iter_named(target_type)):
+	for n in iter_names(target_type):
 		yield getattr(target_type, n)
 
 def iter_instance_members_and_values(target_instance, default=None):
 	for m in iter_type_members(type(target_instance)):
 		yield m, getattr(target_instance, m.descriptor.name, default)
 
-class Abstract_Record:
+class Abstract_Record(ABC.Record):
 	def __init__(self, *positional, **named):
 		positional = list(positional)
 		#bo = tuple(reversed(type(self).mro()))
@@ -85,7 +85,7 @@ class Abstract_Record:
 					setattr(self, n, named.pop(n))
 				else:
 					match dd.init:
-						case Abstract_Factory():
+						case ABC.Factory():
 							dd.init(dd, self)
 						case nothing if nothing is None:
 							setattr(self, n, None)
@@ -125,7 +125,7 @@ class Bound_Data_Descriptor:
 		cn = f'{self.owner.__module__}.{self.owner.__qualname__}' #TODO - use utility function for formatting class name
 		return f'<Member {self.descriptor.name!r} of class {cn!r}>'
 
-class Data_Descriptor(Abstract_Data_Descriptor):
+class Data_Descriptor(ABC.Record.Data_Descriptor):
 	def __init__(self, name, init=None, required=False, kind=symbol.argument.positional_or_named):
 		self.name = name
 		self.init = init

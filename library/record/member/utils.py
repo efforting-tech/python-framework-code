@@ -1,14 +1,14 @@
 from ..rudimentary import define_record, Abstract_Record
-from ...abc import Abstract_Factory
+from ... import ABC
 from ... import symbol
 
 
 
-class Factory_Interface(Abstract_Factory):
+class Factory_Interface(ABC.Factory):
 	def __call__(self, descriptor, target):
 		setattr(target, descriptor.name, self.function(*self.positional, **self.named))		#TODO -translations, such as the ones in rudimentary (self ref and such)
 
-class Constant_Interface(Abstract_Factory):
+class Constant_Interface(ABC.Factory):
 	def __call__(self, descriptor, target):
 		setattr(target, descriptor.name, self.value)
 

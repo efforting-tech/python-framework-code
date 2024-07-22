@@ -1,7 +1,7 @@
 from .. import symbol
-from ..abc import Abstract_Factory
+from .. import ABC
 
-class Evaluate_In_Scope(Abstract_Factory):
+class Evaluate_In_Scope(ABC.Factory):
 	def __init__(self, expression, scope, local_updates):
 		self.expression = expression
 		self.scope = scope

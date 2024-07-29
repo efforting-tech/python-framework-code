@@ -6,14 +6,26 @@ from .symbol_factory import Symbol
 
 ABC_LUT = defaultdict(set)
 
-class ABC_Symbol(Symbol):
+
+def create_ABC_Symbol(name, parent=None, auto_graft=None):
+	return ABC_Symbol(name, (), dict(
+		parent = parent,
+		auto_graft = auto_graft,
+	))
+
+
+
+class ABC_Symbol(Symbol, type):
 	def __instancecheck__(self, instance):
 		return self.__subclasscheck__(type(instance))
 
 	def __subclasscheck__(self, klass):
-		for item in ABC_LUT[klass]:
-			if item in self:
-				return True
+
+		if klass is not type:
+			for cls_to_check in reversed(klass.mro()):
+				for item in ABC_LUT[cls_to_check]:
+					if item is self or item in self:
+						return True
 
 		return klass in self	#This is for checking ABC in ABC
 
@@ -22,7 +34,7 @@ class ABC_Symbol(Symbol):
 		return target
 
 
-interface = Register_Interface(ABC_Symbol)
+interface = Register_Interface(create_ABC_Symbol)
 register_abc_here = interface.register_entries_here
 register_abc_at_target = interface.register_entries_at_target
 register_abc = interface.register_entry

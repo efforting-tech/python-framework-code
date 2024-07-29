@@ -35,6 +35,9 @@ class Symbol:
 
 			child = getattr(self, name)
 
+			if not isinstance(child, __class__):
+				continue
+
 			if recursive:
 				if not leaf_only or (leaf_only and not(tuple(child._iter_children()))):
 					yield child

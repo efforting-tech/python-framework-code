@@ -98,7 +98,8 @@ class Abstract_Record_Interface:
 
 
 #TODO - maybe rename to rudimentary record?
-class Abstract_Record(ABC.Record):
+@ABC.Record
+class Abstract_Record:
 	def __init__(self, *positional, **named):
 		positional = list(positional)
 		Abstract_Record_Interface.init(self, positional, named)
@@ -124,7 +125,8 @@ class Abstract_Record(ABC.Record):
 			raise No_Such_Member_Exception(self, name)
 
 #TODO - maybe rename to rudimentary sequence? list? mutable_sequence? - We need to make some design decisions
-class Abstract_Sequence(Abstract_Record, ABC.Sequence, list):
+@ABC.Sequence
+class Abstract_Sequence(Abstract_Record, list):
 	def __init__(self, *positional, **named):
 		positional = list(positional)
 		Abstract_Record_Interface.init(self, positional, named)
@@ -147,8 +149,8 @@ class Abstract_Sequence(Abstract_Record, ABC.Sequence, list):
 		return (super().__getstate__(), *self)
 
 
-
-class Bound_Data_Descriptor(ABC.Record.Data_Descriptor):
+@ABC.Record.Data_Descriptor
+class Bound_Data_Descriptor:
 	def __init__(self, descriptor, owner):
 		self.descriptor = descriptor
 		self.owner = owner
@@ -157,7 +159,8 @@ class Bound_Data_Descriptor(ABC.Record.Data_Descriptor):
 		cn = f'{self.owner.__module__}.{self.owner.__qualname__}' #TODO - use utility function for formatting class name
 		return f'<Member {self.descriptor.name!r} of class {cn!r}>'
 
-class Data_Descriptor(ABC.Record.Data_Descriptor):
+@ABC.Record.Data_Descriptor
+class Data_Descriptor:
 	def __init__(self, name, init=None, required=False, kind=symbol.argument.positional_or_named, repr=True):
 		self.name = name
 		self.init = init
@@ -183,7 +186,7 @@ class Data_Descriptor(ABC.Record.Data_Descriptor):
 		except KeyError as ke:
 			raise Member_Not_Set_Exception(instance, self.name) from ke
 
-def create_record(name, positional=None, named=None, bases=None, evaluation_scope=None, local_updates=None, prepared_scope=None):
+def create_record(name, positional=None, named=None, bases=None, decorators=None, evaluation_scope=None, local_updates=None, prepared_scope=None):
 	scope = prepared_scope if prepared_scope is not None else dict()
 
 	if positional:
@@ -206,6 +209,11 @@ def create_record(name, positional=None, named=None, bases=None, evaluation_scop
 	type_bases = (Abstract_Record,) if not bases else bases
 	result = type(name, type_bases, scope)
 	#TD_LUT[result] = Type_Definition(name, positional, named, bases)
+
+	if decorators:
+		for dec in decorators:
+			result = dec(result)
+
 	return result
 
 def define_simple_record(name, *positional, **named):
@@ -214,11 +222,11 @@ def define_simple_record(name, *positional, **named):
 	assert name not in target_scope	#TODO - proper exception
 	target_scope[name] = create_record(name, positional, named, evaluation_scope=target_scope, prepared_scope=dict(__module__=target_scope['__name__']))
 
-def define_record(name, positional=None, named=None, bases=None, evaluation_scope=None, local_updates=None):
+def define_record(name, positional=None, named=None, bases=None, decorators=None, evaluation_scope=None, local_updates=None):
 	target_scope = sys._getframe(1).f_locals
 
 	assert name not in target_scope	#TODO - proper exception
-	target_scope[name] = create_record(name, positional, named, bases=bases, evaluation_scope=target_scope, local_updates=local_updates, prepared_scope=dict(__module__=target_scope['__name__']))
+	target_scope[name] = create_record(name, positional, named, bases=bases, decorators=decorators, evaluation_scope=target_scope, local_updates=local_updates, prepared_scope=dict(__module__=target_scope['__name__']))
 
 class Value:
 	__match_args__ = ('value',)

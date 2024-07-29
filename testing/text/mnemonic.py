@@ -1,52 +1,3 @@
-
-from efforting.mvp6.processing import LUT_Processor
-
-
-print(LUT_Processor)
-
-assert not 'Member' in dir(LUT_Processor)
-assert not LUT_Processor.Member
-
-
-exit()
-
-class ABC_Meta_Value:
-	def __init__(self, value):
-		self.value = value
-
-	def __get__(self, instance, owner):
-		if instance is not None:
-			raise AttributeError()
-
-		return self.value
-
-class ABC_Meta(type):
-	stuff = ABC_Meta_Value('stuff')
-
-
-class ABC_Meta_Sub(ABC_Meta):
-	tree = ABC_Meta_Value('hello')
-
-class ABC_Node(metaclass=ABC_Meta):
-	pass
-
-
-class ABC_Sub_Node(metaclass=ABC_Meta_Sub):
-	pass
-
-print(type(ABC_Sub_Node).tree)
-
-
-assert hasattr(ABC_Meta, 'stuff')
-assert not hasattr(ABC_Node, 'stuff')
-assert 'stuff' in dir(ABC_Meta)
-assert 'stuff' not in dir(ABC_Node)
-
-exit()
-
-
-print(object().mro)
-
 from efforting.mvp6.record.base.public import Structure, Sequence
 from efforting.mvp6.record import member as M
 from efforting.mvp6.str.interface import String_Interface
@@ -59,17 +10,10 @@ from efforting.mvp6 import symbol
 T = symbol.text.token
 
 
-print(type(LUT_Processor))
-print()
+# print(type(LUT_Processor))
+# print()
 
 
-class new_class:
-	stuff = 123
-
-assert new_class.stuff == new_class().stuff
-
-print(LUT_Processor())
-exit()
 
 class Tokens:
 	#NOTE - would be nice to first just define our token patterns, maybe using some shorthand for when we build the sub parser.

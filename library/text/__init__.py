@@ -29,7 +29,8 @@ def calculate_indices_from_slice(s, fi, li):
 
 	return start, stop
 
-class Line(Hierarchial_Entry, ABC.Text.Line):
+@ABC.Text.Line
+class Line(Hierarchial_Entry):
 	indent = M.named(default=None)
 	text = M.named(default=None)
 
@@ -88,7 +89,8 @@ class Line(Hierarchial_Entry, ABC.Text.Line):
 		self.indent = None
 
 
-class Abstract_Line_Listing(Hierarchial_Entry, Text_Interface, ABC.Text.Block):
+@ABC.Text.Block
+class Abstract_Line_Listing(Hierarchial_Entry, Text_Interface):
 	def to_str(self):
 		return self.document_settings.line_endings.join(l.to_str() for l in self.lines)
 

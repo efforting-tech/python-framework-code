@@ -1,7 +1,8 @@
 from .. import symbol
 from .. import ABC
 
-class Evaluate_In_Scope(ABC.Factory):
+@ABC.Factory
+class Evaluate_In_Scope:
 	def __init__(self, expression, scope, local_updates):
 		self.expression = expression
 		self.scope = scope

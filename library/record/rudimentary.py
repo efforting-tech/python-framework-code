@@ -1,8 +1,7 @@
 from itertools import chain
 import sys
 from .factory import Evaluate_In_Scope
-from .. import symbol
-from .. import ABC
+from .. import symbol, ABC
 
 
 #BUG - one can specify all.named/positional more than once
@@ -44,31 +43,29 @@ def iter_names(target_type):
 
 
 def iter_type_members(target_type):
-	for n in iter_names(target_type):
+	for n in dict.fromkeys(iter_names(type(target))):		#TODO - make this pattern a function and reuse
 		yield getattr(target_type, n)
 
 def iter_instance_members_and_values(target_instance, default=None):
 	for m in iter_type_members(type(target_instance)):
 		yield m, getattr(target_instance, m.descriptor.name, default)
 
-#TODO - maybe rename to rudimentary record?
-class Abstract_Record(ABC.Record):
-	def __init__(self, *positional, **named):
-		positional = list(positional)
-		#bo = tuple(reversed(type(self).mro()))
+class Abstract_Record_Interface:
+	def init(target, positional, named):
+		#bo = tuple(reversed(type(target).mro()))
 
 		original_named = dict(named)
-		names = tuple(iter_names(type(self)))
+		names = dict.fromkeys(iter_names(type(target)))	#NOTE: Used as ordered set
 
 		for n in names:
-			dd = getattr(type(self), n).descriptor
+			dd = getattr(type(target), n).descriptor
 
 			if dd.kind is symbol.argument.all.positional:
-				setattr(self, n, tuple(positional))
+				setattr(target, n, tuple(positional))
 				positional.clear()
 
 			elif dd.kind is symbol.argument.all.named:
-				setattr(self, n, dict(named))
+				setattr(target, n, dict(named))
 				named.clear()
 
 			elif dd.kind is symbol.argument.positional_or_named:
@@ -76,31 +73,37 @@ class Abstract_Record(ABC.Record):
 
 					#TODO - we should make sure we are compatible with python kinds of pos, pos/name, name_only
 					if n in named:
-						setattr(self, n, named.pop(n))
+						setattr(target, n, named.pop(n))
 					else:
-						setattr(self, n, positional.pop(0))
+						setattr(target, n, positional.pop(0))
 
 					#assert n not in original_named	#TODO - figure out if we need original here or not
-					#setattr(self, n, positional.pop(0))
+					#setattr(target, n, positional.pop(0))
 				elif n in named:
-					setattr(self, n, named.pop(n))
+					setattr(target, n, named.pop(n))
 				else:
 					match dd.init:
 						case ABC.Factory():
-							dd.init(dd, self)
+							dd.init(dd, target)
 						case Value(value):
-							setattr(self, n, value)
+							setattr(target, n, value)
 						case nothing if nothing is None:
-							setattr(self, n, None)
+							setattr(target, n, None)
 
 						case unhandled:
 							raise Exception(unhandled)	#TODO - proper exception
 
-			assert (not dd.required) or hasattr(self, n)	#TODO - proper exception
+			assert (not dd.required) or hasattr(target, n)	#TODO - proper exception
 
+
+
+#TODO - maybe rename to rudimentary record?
+class Abstract_Record(ABC.Record):
+	def __init__(self, *positional, **named):
+		positional = list(positional)
+		Abstract_Record_Interface.init(self, positional, named)
 		assert not positional #TODO - proper exception
 		assert not named #TODO - proper exception
-
 
 	def __setattr__(self, name, value):
 		if (dd := getattr(type(self), name, None)) and isinstance(dd, Bound_Data_Descriptor):
@@ -119,6 +122,31 @@ class Abstract_Record(ABC.Record):
 			return dd.descriptor.__delete__(self)
 		else:
 			raise No_Such_Member_Exception(self, name)
+
+#TODO - maybe rename to rudimentary sequence? list? mutable_sequence? - We need to make some design decisions
+class Abstract_Sequence(Abstract_Record, ABC.Sequence, list):
+	def __init__(self, *positional, **named):
+		positional = list(positional)
+		Abstract_Record_Interface.init(self, positional, named)
+		assert not named #TODO - proper exception
+
+		list.__init__(self, positional)
+
+
+	def __getitem__(self, key_or_slice):
+		if isinstance(key_or_slice, slice):
+			MISS = object()	#TODO - local symbol type
+			named = {key: value for key, value in ((key, getattr(self, key, MISS)) for key in iter_names(type(self))) if value is not MISS}
+			return type(self)(*super().__getitem__(key_or_slice), **named)
+		else:
+			#NOTE - we could add potential element-specific stuff here
+			return super().__getitem__(key_or_slice)
+
+	def __getstate__(self):
+		#TODO - setstate
+		return (super().__getstate__(), *self)
+
+
 
 class Bound_Data_Descriptor(ABC.Record.Data_Descriptor):
 	def __init__(self, descriptor, owner):

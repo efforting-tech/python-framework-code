@@ -33,6 +33,6 @@ class Hierarchial_Entry(Structure):
 
 #TODO - should probably not be in this location
 class Text_Match(Structure):
-	source = M.positional()
+	source = M.positional(repr=False)
 	token = M.positional()
 	match = M.positional()

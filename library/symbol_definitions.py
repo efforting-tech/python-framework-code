@@ -1,9 +1,8 @@
-from . import symbol_factory as _SF
-from . import enum_factory as _EF
+from . import symbol_factory as SF
+from . import enum_factory as EF
 
-_root =_SF.Symbol(__name__.rsplit('.')[-1])
-_root._set_auto_graft_here()
-_SF.register_symbols_at_target(_root, '''
+root_symbol = SF.Symbol('symbol')
+SF.register_symbols_at_target(root_symbol, '''
 
 	miss
 
@@ -42,7 +41,9 @@ _SF.register_symbols_at_target(_root, '''
 	action.yield_token
 	action.yield_text
 
+	remaining_elements
+
 ''')
 
-_EF.convert_symbol_to_enum(indention.mode)
+EF.convert_symbol_to_enum(root_symbol.indention.mode)
 

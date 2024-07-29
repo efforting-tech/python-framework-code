@@ -16,7 +16,8 @@ class Symbol:
 
 	def __contains__(self, sub_item):
 		path_start = len(self._path) + 1
-		choices = {s._path[path_start:]:s for s in self._iter_children(True, True)}
+		choices = {s._path[path_start:]:s for s in self._iter_children(True, False)}
+
 		if isinstance(sub_item, str):
 			return sub_item in choices.keys()
 		elif isinstance(sub_item, Symbol):

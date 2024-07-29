@@ -1,13 +1,15 @@
 from ..record.base import public
 from ..record import member as M
+from .. import ABC
 
+@ABC.Data_Condition
 class Data_Condition(public.Structure):
 	def __and__(self, other):
-		assert isinstance(other, Data_Condition)	#TODO - use ABC
+		assert isinstance(other, ABC.Data_Condition)
 		return All(True, self, other)
 
 	def __or__(self, other):
-		assert isinstance(other, Data_Condition)	#TODO - use ABC
+		assert isinstance(other, ABC.Data_Condition)
 		return Any(True, self, other)
 
 	def __invert__(self):
@@ -48,6 +50,9 @@ class Sequence(Sequence_Data_Condition, Sequential_Data_Condition_Interface):
 class Identity(Comparative_Data_Condition):
 	pass
 
+class Equality(Comparative_Data_Condition):
+	pass
+
 class Type_Identity(Comparative_Data_Condition):
 	pass
 
@@ -67,4 +72,13 @@ class Type_Decendent(Comparative_Data_Condition):
 class Structure_Match(Comparative_Data_Condition):
 	value = M.all_named()
 
+class Call_And_Compare_Return_Value(Comparative_Data_Condition):
+	pass
 
+@lambda x: x()	#TODO improve
+class Always_True(Data_Condition):
+	pass
+
+@lambda x: x()	#TODO improve
+class Never_True(Data_Condition):
+	pass

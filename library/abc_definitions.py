@@ -11,4 +11,8 @@ AF.register_abc_at_target(root_symbol, '''
 	Text.Block
 	Text.Line
 
+	Action
+	Decorator
+	Data_Condition
+
 ''')

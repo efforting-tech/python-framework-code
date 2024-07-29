@@ -2,11 +2,11 @@ from efforting.mvp6.record.base.public import Structure, Sequence
 from efforting.mvp6.record import member as M
 from efforting.mvp6.str.interface import String_Interface
 
-from efforting.mvp6.processing import LUT_Processor
+from efforting.mvp6.processing import LUT_Processor, Type_LUT_Comparator, Call_Comparator_Function
 
 from efforting.mvp6.document import structures as DS
 
-from efforting.mvp6 import symbol
+from efforting.mvp6 import symbol, ABC
 T = symbol.text.token
 
 
@@ -81,7 +81,7 @@ class Token_Parser(LUT_Processor):
 		token_stream.source = String_Interface.regex_tokenize(token_stream.text, self.tokens, token_stream.pending_position)
 		for token in token_stream:
 			action = self.rules.lookup_action(token.token, None)
-			#print(self.name, token.token, action)
+			#print('TOKEN', self.name, token.token, repr(token.match.group()), action)
 
 			match action:
 				case Enter_Sub_Parser(target):
@@ -154,17 +154,19 @@ class Token_Parser(LUT_Processor):
 		return result_stack[-1]
 
 
+@ABC.Action
 class Enter_Sub_Parser(Structure):
 	sub_parser = M.positional()
 
+
 class Optional(Sequence):
-	value = M.positional()
+	pass
 
 class Expression(Sequence):
-	value = M.positional()
+	pass
 
 class Mnemonic(Sequence):
-	value = M.positional()
+	pass
 
 
 tp = Token_Parser('mnemonic', tokens=Tokens.mnemonic, post_processor=lambda p: Mnemonic(*p))
@@ -185,21 +187,23 @@ test = 'title[:] {text}'
 print(tp.process_text(test))
 print()
 
+
 from efforting.mvp6.matching import data_condition as DC
 
 
 #Helpers
 def literal_token(token, value):
-	return DC.Type_Instance(DS.Text_Match) & DC.Structure_Match(token=DC.Identity(token), match=DC.Structure_Match(match=value))
+	#return DC.Type_Instance(DS.Text_Match) & DC.Structure_Match(token=DC.Identity(token), match=DC.Structure_Match(match=value))
+	return DC.Type_Instance(DS.Text_Match) & DC.Structure_Match(token=DC.Identity(token), match=DC.Structure_Match(group=DC.Call_And_Compare_Return_Value(value)))
 
 def word(value):
-	return literal_token(T.word, value)
+	return literal_token(T.word, DC.Equality(value))
 
 def literal(value):
-	return literal_token(T.literal, value)
+	return literal_token(T.literal, DC.Equality(value))
 
 def optional(*sub_items):
-	return DC.Type_Instance(Optional) & DC.Sequence(*sub_items)
+	return DC.Sequence(*sub_items) | DC.Always_True
 
 def join_sequence(separator, *sequence, expand_sub_sequences=True, require_sequence_type=None):
 	#NOTE  that expand_sub_sequences does not insert separators, which is the idea of it.
@@ -246,11 +250,14 @@ print(v1 == v2)
 print()
 
 
-v3 = join_sequence(ws, word('mnemonic'), [word('function'), optional(literal(':'))], symbol.remaining_elements, require_sequence_type=Mnemonic)
+#v3 = join_sequence(ws, word('mnemonic'), [word('function'), optional(literal(':'))], symbol.remaining_elements, require_sequence_type=Mnemonic)
+
+v3 = join_sequence(ws, word('mnemonic'), [word('function'), optional(literal(':'))], symbol.remaining_elements, word('yo'), require_sequence_type=Mnemonic)
+
 
 print(v3)
 
-test_tokens = tp.process_text('mnemonic function: define tree processor: {name}')
+test_tokens = tp.process_text('mnemonic function: define tree processor: {name} yo')
 print()
 print(test_tokens)
 
@@ -262,9 +269,107 @@ dump = acquire('terminal_dump')
 
 
 #TODO - custom data dumping!
+#dump(v3, skip_underscore=True)
 
+#for t in test_tokens:
+#	print(t)
 
-dump(v3, skip_underscore=True, skip_not_assigned=True)
 
 
 #When we compare this, we may want a rule system since we may want to do very different things in different circumstances
+
+#Next up - compare test_tokens with v3 using a comparing processor
+
+comparator = Type_LUT_Comparator()
+
+print('---')
+
+@comparator.register(DC.All)
+def compare_all(comparator, expected, subject):
+	for sub_item in expected:
+		if not comparator.compare_items(sub_item, subject):
+			return False
+
+	return True
+
+@comparator.register(DC.Any)
+def compare_any(comparator, expected, subject):
+	for sub_item in expected:
+		if comparator.compare_items(sub_item, subject):
+			return True
+
+	return False
+
+@comparator.register(DC.Type_Instance)
+def compare_type_instance(comparator, expected, subject):
+	return isinstance(subject, expected.value)
+
+@comparator.register(DC.Equality)
+def compare_sequence(comparator, expected, subject):
+	return expected.value == subject
+
+@comparator.register(DC.Identity)
+def compare_sequence(comparator, expected, subject):
+	return expected.value is subject
+
+@comparator.register(DC.Structure_Match)
+def compare_sequence(comparator, expected, subject):
+	for name, sub_expected in expected.value.items():
+		if isinstance(sub_expected, DC.Call_And_Compare_Return_Value):
+			if method := getattr(subject, name, None):
+				if not comparator.compare_items(sub_expected.value, method()):
+					return False
+			else:
+				return False
+		else:
+			sub_value = getattr(subject, name, symbol.miss)	#We use a global miss here so we can test for it if we want that
+			if not comparator.compare_items(sub_expected, sub_value):
+				return False
+
+	return True
+
+@comparator.register(DC.Sequence)
+def compare_sequence(comparator, expected, subject):
+	#TODO - we must utilize the branchable iterator here.
+	#		but this means we should expect our subject to be the branchable iterator
+	#		if it is not we must put it in one
+	#		The question then becomes if comparator should have a different API for dealing with the BI
+
+	#Here we get to a tricky proposition
+
+	#We may have stuff in a sequence that eats up all remaining items and so on
+	#We should probably only allow for one of those so that we could have [..., A, B], [A, ..., B] and [A, B, ...]
+
+	variable_index = None
+	for sub_index, sub_expected in enumerate(expected):
+		if sub_expected is symbol.remaining_elements:
+			assert variable_index is None	#Allow only one
+			variable_index = sub_index
+
+	if variable_index is not None:
+		head = expected[:variable_index]
+		tail = expected[variable_index+1:]
+	else:
+		head = expected
+		tail = None
+
+
+
+	#BUG - We solved the eat-all problem, but we haven't solved optional branches
+	for i, sub_expected in enumerate(head):
+		print(i, sub_expected, comparator.compare_items(sub_expected, subject[i]))
+
+
+#comparator.rules.map_action(DC.All, Call_Comparator_Function(compare_all))
+
+
+# #SIDE NOTE
+# import re
+
+# match re.compile('.*').match('hello world'):
+# 	case re.Match(group=g) if g() == 'hello world':
+# 		print('Wee')
+
+# exit()
+
+comparator.compare_items(v3, test_tokens)

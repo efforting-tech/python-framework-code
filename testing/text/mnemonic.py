@@ -9,9 +9,7 @@ from efforting.mvp6.document import structures as DS
 from efforting.mvp6 import symbol, ABC
 T = symbol.text.token
 
-from efforting.mvp6.iteration import branchable_iterator
-
-
+from efforting.mvp6.iteration import branchable_iterator, Switchable_Iterator
 
 
 class Tokens:
@@ -40,20 +38,6 @@ class Tokens:
 		**common,
 	}
 
-
-#class Parser(Structure):
-#	pass
-
-
-class Switchable_Iterator(Structure):
-	source = M.positional()
-
-	def __iter__(self):
-		while True:
-			try:
-				yield next(self.source)
-			except StopIteration:
-				return
 
 class Token_Stream(Switchable_Iterator):
 	text = M.positional(None)
@@ -110,49 +94,6 @@ class Token_Parser(LUT_Processor):
 					raise Exception(action)
 
 
-	def process_text_old(self, text):
-		processor_stack = [self]
-		result_stack = [list()]
-		token_stream = Switchable_Iterator(String_Interface.regex_tokenize(text, processor_stack[-1].tokens))
-
-		for token in token_stream:
-			action = processor_stack[-1].rules.lookup_action(token.token, None)
-			match action:
-				case Enter_Sub_Parser(target):
-					#print('ENTER', target.name)
-					processor_stack.append(target)
-					result_stack.append(list())
-					token_stream.source = String_Interface.regex_tokenize(text, processor_stack[-1].tokens, token.match.end())
-
-				case actions if action is symbol.action.exit_sub_parser:
-					exited_from = processor_stack.pop(-1)
-					sub_result = result_stack.pop(-1)
-					result_stack[-1].append(sub_result)
-					#print('EXIT', exited_from.name)
-					token_stream.source = String_Interface.regex_tokenize(text, processor_stack[-1].tokens, token.match.end())
-
-				case actions if action is symbol.action.yield_text:
-					result_stack[-1].append(token.match.group())
-					#print('YIELD TEXT', repr(token.match.group()))
-
-				case actions if action is symbol.action.yield_match:
-					result_stack[-1].append(token.match)
-					#print('YIELD MATCH', repr(token.match))
-
-				case actions if action is symbol.action.yield_token:
-					result_stack[-1].append(token)
-					#print('YIELD TOKEN', repr(token))
-
-				case nothing if nothing is None:
-					raise Exception(token.token, token.match)	#TODO - proper exception
-					#print(token.token)
-
-				case unhandled:
-					raise Exception(action)
-
-		return result_stack[-1]
-
-
 @ABC.Action
 class Enter_Sub_Parser(Structure):
 	sub_parser = M.positional()
@@ -192,7 +133,6 @@ from efforting.mvp6.matching import data_condition as DC
 
 #Helpers
 def literal_token(token, value):
-	#return DC.Type_Instance(DS.Text_Match) & DC.Structure_Match(token=DC.Identity(token), match=DC.Structure_Match(match=value))
 	return DC.Type_Instance(DS.Text_Match) & DC.Structure_Match(token=DC.Identity(token), match=DC.Structure_Match(group=DC.Call_And_Compare_Return_Value(value)))
 
 def word(value):
@@ -230,8 +170,6 @@ ws = DC.Type_Instance(DS.Text_Match) & DC.Structure_Match(token=DC.Identity(T.wh
 #End of helpers
 
 
-
-
 v1 = DC.Sequence(word('define'), ws, optional(literal(':')), ws, DC.Capture_Remaining())
 
 v2 = DC.Sequence(
@@ -251,12 +189,12 @@ print()
 
 #v3 = join_sequence(ws, word('mnemonic'), [word('function'), optional(literal(':'))], DC.Capture_Remaining(), require_sequence_type=Mnemonic)
 
-v3 = join_sequence(ws, word('mnemonic'), [word('function'), optional(literal(':'))], DC.Capture_Remaining('pattern'), word('yo'), require_sequence_type=Mnemonic)
+v3 = join_sequence(ws, word('mnemonic'), [word('function'), optional(literal(':'))], DC.Capture_Remaining('pattern'), require_sequence_type=Mnemonic)
 
 
 print(v3)
 
-test_tokens = tp.process_text('mnemonic function: define tree processor: {name} yo')
+test_tokens = tp.process_text('mnemonic function: define tree processor[:] {name}')
 print()
 print(test_tokens)
 
@@ -375,21 +313,26 @@ def compare_sequence(comparator, expected, subject_iterator):
 			return False
 
 	if variable_index is not None:
-		tl = calculate_length.process_item(tail)	#This might fail in case we don't know the exact elements remaining - which would make the pattern invalid
-		#To put it better: A variable sized capture can not be followed by a variable size pattern (maybe we could do some sort of branching brute force later for this)
+		if tail:
+			tl = calculate_length.process_item(tail)	#This might fail in case we don't know the exact elements remaining - which would make the pattern invalid
+			#To put it better: A variable sized capture can not be followed by a variable size pattern (maybe we could do some sort of branching brute force later for this)
 
-		subject_all_remaining = subject_iterator.drain()
-		subject_tail = subject_all_remaining[-tl:]
-		subject_remaining = subject_all_remaining[:-tl]		#NOTE - we may not need this for comparison but for capture it will be needed so we leave it here for now
+			subject_all_remaining = subject_iterator.drain()
+			subject_tail = subject_all_remaining[-tl:]
+			subject_remaining = subject_all_remaining[:-tl]		#NOTE - we may not need this for comparison but for capture it will be needed so we leave it here for now
 
-		if variable_capture.name:
-			comparator.store_capture(subject_remaining, variable_capture.name)
+			if variable_capture.name:
+				comparator.store_capture(subject_remaining, variable_capture.name)
 
-		tail_iterator = branchable_iterator(iter(subject_tail))
+			tail_iterator = branchable_iterator(iter(subject_tail))
 
-		for expected_element in tail:
-			if not comparator.compare_items(expected_element, tail_iterator):
-				return False
+			for expected_element in tail:
+				if not comparator.compare_items(expected_element, tail_iterator):
+					return False
+		else:
+			if variable_capture.name:
+				comparator.store_capture(subject_iterator.drain(), variable_capture.name)
+
 
 	return True
 

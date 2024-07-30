@@ -1,4 +1,7 @@
 from .. import symbol
+from ..record.base.public import Structure
+from ..record import member as M
+
 from collections import deque
 
 class branchable_iterator:
@@ -71,3 +74,14 @@ class branchable_iterator:
 		return self
 
 	__next__ = pop
+
+
+class Switchable_Iterator(Structure):
+	source = M.positional()
+
+	def __iter__(self):
+		while True:
+			try:
+				yield next(self.source)
+			except StopIteration:
+				return

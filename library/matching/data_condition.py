@@ -24,6 +24,7 @@ class Comparative_Data_Condition_Interface:
 	def __eq__(self, other):
 		return type(self) is type(other) and self.value == other.value
 
+
 class Sequential_Data_Condition_Interface:
 	def __eq__(self, other):
 		return type(self) is type(other) and super().__eq__(self, other)
@@ -75,6 +76,12 @@ class Structure_Match(Comparative_Data_Condition):
 class Call_And_Compare_Return_Value(Comparative_Data_Condition):
 	pass
 
+class Capture(Data_Condition):
+	name = M.positional(default=None)
+
+class Capture_Remaining(Data_Condition):
+	name = M.positional(default=None)
+
 @lambda x: x()	#TODO improve
 class Always_True(Data_Condition):
 	pass
@@ -82,3 +89,4 @@ class Always_True(Data_Condition):
 @lambda x: x()	#TODO improve
 class Never_True(Data_Condition):
 	pass
+

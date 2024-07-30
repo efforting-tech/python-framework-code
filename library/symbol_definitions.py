@@ -5,6 +5,7 @@ root_symbol = SF.Symbol('symbol')
 SF.register_symbols_at_target(root_symbol, '''
 
 	miss
+	empty
 
  	target.instance
 
@@ -34,14 +35,14 @@ SF.register_symbols_at_target(root_symbol, '''
 	text.token.left_paranthesis
 	text.token.right_paranthesis
 
-	raise_exception
+	action.raise_exception
+	action.default
 
 	action.exit_sub_parser
 	action.yield_match
 	action.yield_token
 	action.yield_text
 
-	remaining_elements
 
 ''')
 

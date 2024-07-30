@@ -24,7 +24,6 @@ SF.register_symbols_at_target(root_symbol, '''
 	text.token.word
 	text.token.literal
 
-
 	text.token.left_curly_bracket
 	text.token.right_curly_bracket
 	text.token.colon

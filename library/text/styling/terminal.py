@@ -166,3 +166,6 @@ def render_ansi_control_sequences(span_list, ansi_style=styles.default):
 
 def stylize_and_render_document(document, style=presets.default, highlight_spans=()):
 	return render_ansi_control_sequences(apply_style_operations(stylize_text(document.to_str(), document.first_row, document.document_settings, highlight_spans=highlight_spans), style))
+
+def render_styled_text(styled_text, style=presets.default):
+	return render_ansi_control_sequences(apply_style_operations(styled_text, style))

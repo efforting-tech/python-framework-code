@@ -35,6 +35,11 @@ default.define_style('text',
 	(Event.pop('foreground_color'),),
 )
 
+default.define_style('mnemonic',
+	(Event.push('foreground_color', 'green'),),
+	(Event.pop('foreground_color'),),
+)
+
 default.define_style('white-space',
 	(Event.push('foreground_color', 'brown'),),
 	(Event.pop('foreground_color'),),
@@ -45,6 +50,15 @@ default.define_style('control-character',
 	(Event.pop('foreground_color'), Event.pop('italics'), Event.pop('filters')),
 )
 
+default.define_style('punctuation',
+	(Event.push('foreground_color', 'brown'),),
+	(Event.pop('foreground_color'),),
+)
+
+default.define_style('expression',
+	(Event.push('foreground_color', 'magenta'), Event.push('italics', 'True'),),
+	(Event.pop('foreground_color'), Event.pop('italics'),),
+)
 
 fruity = Style_Manager()
 
@@ -63,6 +77,11 @@ fruity.define_style('text',
 	(Event.pop('foreground_color'),),
 )
 
+fruity.define_style('mnemonic',
+	(Event.push('foreground_color', HSV(0.37, 0.7, 0.8)),),
+	(Event.pop('foreground_color'),),
+)
+
 fruity.define_style('highlight',
 	(Event.push('underline', True), Event.push('bold', True)),
 	(Event.pop('underline'), Event.pop('bold')),
@@ -77,3 +96,14 @@ fruity.define_style('control-character',
 	(Event.push('foreground_color', HSV(0.05, 0.7, 0.8)), Event.push('filters', Filter.function(format_cc)),),
 	(Event.pop('foreground_color'), Event.pop('filters'),),
 )
+
+fruity.define_style('punctuation',
+	(Event.push('foreground_color', HSV(0.7, 0.5, 0.8)),),
+	(Event.pop('foreground_color'),),
+)
+
+fruity.define_style('expression',
+	(Event.push('foreground_color', HSV(0.55, 0.6, 0.9)), Event.push('italics', True)),
+	(Event.pop('foreground_color'), Event.pop('italics')),
+)
+

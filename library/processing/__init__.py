@@ -106,7 +106,7 @@ class Type_LUT_Processor(LUT_Processor):
 				return function(self, item)
 
 			case sym if sym is symbol.action.raise_exception:
-				raise Exception(f'Failed to process {item!r} in {type(self).__qualname__} {self.name!r}')
+				raise Exception(f'Failed to process {type(item)!r} in {type(self).__qualname__} {self.name!r}')
 
 			case ABC.Action() as action:
 				raise Exception(f'Unsupported action: {action}')	#TODO - better error

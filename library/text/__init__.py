@@ -4,10 +4,10 @@ from ..text.interface import Text_Interface
 from ..document.settings.indention import get_line_with_indent, format_line_with_indent
 from ..record.base.public import Structure
 from ..record import member as M
-from .. import ABC
+from .. import ABC, symbol
 
 #TODO - move items to abstract types or specific interfaces as much as possible
-COPY = object()
+
 
 
 
@@ -34,11 +34,11 @@ class Line(Hierarchial_Entry):
 	indent = M.named(default=None)
 	text = M.named(default=None)
 
-	def copy(self, indent=COPY, text=COPY, parent=COPY):
+	def copy(self, indent=symbol.copy, text=symbol.copy, parent=symbol.copy):
 		return type(self)(
-			indent = self.indent if indent is COPY else indent,
-			text = self.text if text is COPY else text,
-			parent = self.parent if parent is COPY else parent,
+			indent = self.indent if indent is symbol.copy else indent,
+			text = self.text if text is symbol.copy else text,
+			parent = self.parent if parent is symbol.copy else parent,
 		)
 
 	@property
@@ -120,6 +120,12 @@ class Abstract_Line_Listing(Hierarchial_Entry, Text_Interface):
 		object.__setattr__(copy, '__class__', new_type)
 		return copy
 
+	def editable_copy(self):
+		return self.editable_type(parent=self, lines=self[:].lines)
+
+
+
+
 
 class Line_View(Abstract_Line_Listing):
 	first_index = M.positional(default=None)
@@ -139,29 +145,36 @@ class Line_View(Abstract_Line_Listing):
 				return self.lines[key_or_slice]
 
 			case slice():
-				return type(self).view_type(
+				return type(self)(
 					*calculate_indices_from_slice(key_or_slice, self.first_index, self.last_index),
 					parent=self.parent,
 				)
 
-Line_View.view_type = Line_View
 
 class Line_Listing(Abstract_Line_Listing):
 	lines = M.named(factory=list)
 	first_row = M.named(default=1)
-
-	view_type = Line_View
 
 	def __getitem__(self, key_or_slice):
 		match key_or_slice:
 			case int():
 				return self.lines[key_or_slice]
 
+
 			case slice():
-				return type(self).view_type(
+				return self.view_type(
 					*calculate_indices_from_slice(key_or_slice, self.first_index, self.last_index),
 					parent=self,
 				)
+
+			# case slice():
+			# 	#TODO - should we return a view here?
+			# 	fi, li = calculate_indices_from_slice(key_or_slice, self.first_index, self.last_index)
+			# 	return type(self)(
+			# 		lines = self.lines[key_or_slice],
+			# 		first_row = fi + self.first_row,
+			# 		parent=self,
+			# 	)
 
 
 	@property
@@ -232,6 +245,17 @@ class Line_Listing(Abstract_Line_Listing):
 
 
 	@classmethod
+	def from_lines(cls, source, **settings):
+		new = cls(**settings)
+		for source_line in source:
+			if isinstance(source_line, str):
+				new.lines.append(Line.from_str(source_line, parent=new))
+			else:
+				new.lines.append(source_line)
+
+		return new
+
+	@classmethod
 	def from_str(cls, source, **settings):
 		new = cls(**settings)
 		for source_line in source.split(new.document_settings.line_endings):
@@ -287,4 +311,10 @@ class Line_Listing(Abstract_Line_Listing):
 				self.lines.append(Line.from_str(source_line, parent=self))
 
 
+	def insert_line(self, source_line, index=0):
+		self.lines.insert(index, Line.from_str(source_line, parent=self))
 
+
+
+#Abstract_Line_Listing.view_type = Line_View
+#Abstract_Line_Listing.editable_type = Line_Listing

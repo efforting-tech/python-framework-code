@@ -72,6 +72,7 @@ class LUT_Rule_Set(Structure):
 class Processor_State(Structure):
 	processor = M.positional()
 	captures = M.positional(factory=dict)
+	capture_meta = M.positional(factory=dict)
 
 	#TODO - other API - should we also split them up depending on processor/comparator?
 	def compare_items(self, expected, subject):

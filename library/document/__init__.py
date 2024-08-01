@@ -11,5 +11,5 @@ def create_line_listing_document_from_str(source, normalize_block=False, **docum
 	return result
 
 def create_text_tree_document_from_str(source, normalize_block=False, **document_settings):
-	from ..text.tree import Text_Tree
-	return Text_Tree.from_lines(create_line_listing_document_from_str(source, normalize_block, **document_settings))
+	from ..text.tree import Text_Tree_Listing
+	return Text_Tree_Listing.from_lines(create_line_listing_document_from_str(source, normalize_block, **document_settings))

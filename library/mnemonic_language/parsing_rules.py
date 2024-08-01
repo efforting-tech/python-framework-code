@@ -83,6 +83,7 @@ def compare_sequence(comparator, expected, subject_iterator):
 			variable_capture = sub_expected
 			variable_index = sub_index
 
+
 	if variable_index is not None:
 		head = expected[:variable_index]
 		tail = expected[variable_index+1:]
@@ -131,6 +132,13 @@ def compare_special(comparator, expected, subject):
 @element_comparator.register(type(DC.Never_True))
 def compare_special(comparator, expected, subject):
 	return False
+
+@element_comparator.register(DC.Capture)
+def compare_special(comparator, expected, subject):
+	comparator.store_capture(subject, expected.name)
+	return True
+
+
 
 @element_comparator.register(DC.Sequence)
 def compare_sequence_element(comparator, expected, subject):

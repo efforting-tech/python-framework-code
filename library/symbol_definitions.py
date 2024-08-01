@@ -6,6 +6,7 @@ SF.register_symbols_at_target(root_symbol, '''
 
 	miss
 	empty
+	copy
 
  	target.instance
 

@@ -1,4 +1,4 @@
-from ..processing import Type_LUT_Processor
+from ..processing.generic import Type_LUT_Processor
 from ..document.structures import Text_Match
 from .structures import Optional, Mnemonic, Expression
 

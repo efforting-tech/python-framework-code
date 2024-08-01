@@ -1,6 +1,6 @@
 from ...record.base.public import Structure
 from ...record import member as M
-from ...processing import LUT_Processor
+from ...processing.generic import LUT_Processor
 from ...str.interface import String_Interface
 from ... import symbol
 

@@ -7,14 +7,17 @@ T = symbol.text.token
 
 
 #Helpers
-def literal_token(token, value):
-	return DC.Type_Instance(DS.Text_Match) & DC.Structure_Match(token=DC.Identity(token), match=DC.Structure_Match(group=DC.Call_And_Compare_Return_Value(value)))
+def literal_token_equality(token, value=None):
+	if value is not None:
+		return DC.Type_Instance(DS.Text_Match) & DC.Structure_Match(token=DC.Identity(token), match=DC.Structure_Match(group=DC.Call_And_Compare_Return_Value(DC.Equality(value))))
+	else:
+		return DC.Type_Instance(DS.Text_Match) & DC.Structure_Match(token=DC.Identity(token))
 
-def word(value):
-	return literal_token(T.word, DC.Equality(value))
+def word(value=None):
+	return literal_token_equality(T.word, value)
 
-def literal(value):
-	return literal_token(T.literal, DC.Equality(value))
+def literal(value=None):
+	return literal_token_equality(T.literal, value)
 
 def optional(*sub_items):
 	return DC.Sequence(*sub_items) | DC.Always_True

@@ -1,4 +1,4 @@
-from ..processing import Type_LUT_Processor, Type_LUT_Comparator
+from ..processing.generic import Type_LUT_Processor, Type_LUT_Comparator
 from ..matching import data_condition as DC
 from ..iteration import branchable_iterator
 from .. import symbol

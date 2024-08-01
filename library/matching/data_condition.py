@@ -82,6 +82,10 @@ class Capture(Data_Condition):
 class Capture_Remaining(Data_Condition):
 	name = M.positional(default=None)
 
+class Mnemonic(Comparative_Data_Condition):
+	pass
+
+
 @lambda x: x()	#TODO improve
 class Always_True(Data_Condition):
 	pass

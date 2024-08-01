@@ -28,3 +28,10 @@ define_record('constant', named=dict(
 	factory=None,
 	repr=Value(True),
 ), bases=(Abstract_Record,), decorators=(ABC.Record.Member,))
+
+
+define_record('state', named=dict(
+	default=None,
+	factory=None,
+	repr=Value(True),
+), bases=(Abstract_Record,), decorators=(ABC.Record.Member,))

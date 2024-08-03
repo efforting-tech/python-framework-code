@@ -1,3 +1,6 @@
+
+
+
 from efforting.mvp6.document import create_text_tree_document_from_str
 from efforting.mvp6.mnemonic_language.mnemonic_tokens_to_pattern import mttp
 from efforting.mvp6.mnemonic_language.string_formatting_rules import string_formatter
@@ -6,6 +9,9 @@ from efforting.mvp6.processing.text_tree import Mnemonic_Text_Tree_Processor
 from efforting.mvp6.text.tree import Text_Tree_Listing
 from efforting.mvp6.record.base.public import Structure
 from efforting.mvp6.record import member as M
+
+#NEXT UP - context system
+#TODO - we should also figure out how we want to deal with processor state, I don't really like __getattr__ there..
 
 #TODO - move to proper place in mnemonic_language
 class mnemonic_argument(Structure):

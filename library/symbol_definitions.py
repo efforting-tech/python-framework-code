@@ -8,6 +8,7 @@ SF.register_symbols_at_target(root_symbol, '''
 	empty
 	copy
 
+
  	target.instance
 
 	indention.mode.Tabs

@@ -22,7 +22,7 @@ import time
 
 
 class execution_frame(Structure):
-	pending_frames = M.positional()
+	owner = M.positional()
 	code = M.positional()
 	context = M.positional(None)
 	started = M.positional(None)
@@ -30,25 +30,61 @@ class execution_frame(Structure):
 
 	def __enter__(self):
 		self.started = time.monotonic()
-		self.pending_frames.add(self)
+		if (ft := self.owner.frame_tracker) is not None:
+			ft.push(self)
 		return self
 
 	def __exit__(self, et, ev, tb):
 		self.stopped = time.monotonic()
-		self.pending_frames.discard(self)
+
+		if et and (t := self.owner.exception_tracker):
+			t.track_exception(self, et, ev, tb)
+
+		if (ft := self.owner.frame_tracker) is not None:
+			ft.pop()
+
+
+class stack(list):
+	def push(self, value):
+		self.append(value)
+
+	def pop(self):
+		return super().pop(-1)
+
+	@property
+	def top(self):
+		if self:
+			return self[-1]
+
 
 class execution_tracker(Structure):
-	pending = M.positional(factory=set)
+	#TODO - this should be split up in specific sub trackers
+	exception_tracker = M.positional(symbol.target.instance)	#TODO/BUG - investigate why we get a member.utils.constant here
+	frame_tracker = M.positional(factory=stack)
 
 	def execute_code_in_context(self, code, context):
-		entry = execution_frame(self.pending, code, context)
+		entry = execution_frame(self, code, context)
 		return entry
+
+	def track_exception(self, ef, et, ev, tb):
+		try:
+			from efforting.mvp6.text.styling.terminal import stylize_and_render_document
+			from efforting.mvp6.text.styling import presets
+			from efforting.mvp6.document import create_line_listing_document_from_str
+			import re
+			code_listing = create_line_listing_document_from_str(self.frame_tracker.top.code)
+			hl_spans = [(re.compile('.*', re.DOTALL).match(code, *code_listing.lines[tb.tb_next.tb_frame.f_lineno - 1].span), 'highlight')]	#TODO - this should be a string utility
+
+			print(stylize_and_render_document(code_listing, presets.fruity, highlight_spans = hl_spans))
+		except Exception as e:
+			print('EEEE', e)
+
 
 class logging_execution_tracker(execution_tracker):
 	log = M.positional(factory=list)
 
 	def execute_code_in_context(self, code, context):
-		entry = execution_frame(self.pending, code, context)
+		entry = execution_frame(self, code, context)
 		self.log.append(entry)
 		return entry
 
@@ -164,9 +200,12 @@ et = execution_tracker()
 
 r.set('et', et)
 
+
 code = '''
 
-print(et.pending)
+#print(et.pending)
+42/0
+#stuff
 
 '''
 

@@ -47,6 +47,11 @@ class Line(Hierarchial_Entry):
 			return parent.get_row(self)
 
 	@property
+	def span(self):
+		if parent := self.parent:
+			return parent.span_of(self)
+
+	@property
 	def index(self):
 		if parent := self.parent:
 			return parent.index_of(self) + parent.first_index
@@ -60,6 +65,10 @@ class Line(Hierarchial_Entry):
 
 	def to_str(self):
 		return format_line_with_indent(self.text, self.indent, self.document_settings)
+
+	def __len__(self):
+		return len(self.to_str())
+
 
 	def write(self, source_line):
 		ds = self.document_settings
@@ -94,6 +103,14 @@ class Abstract_Line_Listing(Hierarchial_Entry, Text_Interface):
 	def to_str(self):
 		return self.document_settings.line_endings.join(l.to_str() for l in self.lines)
 
+	def span_of(self, line):
+		offset = 0
+		le_size = len(self.document_settings.line_endings)
+		for l in self.lines:
+			pending_offset = offset + len(l)
+			if l is line:
+				return offset, pending_offset
+			offset = pending_offset + le_size
 
 	@property
 	def first_line_index_with_content(self):

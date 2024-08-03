@@ -85,6 +85,8 @@ class Abstract_Record_Interface:
 					match dd.init:
 						case ABC.Factory():
 							dd.init(dd, target)
+						case Value(value) if value is symbol.target.instance:
+							setattr(target, n, target)
 						case Value(value):
 							setattr(target, n, value)
 						case nothing if nothing is None:

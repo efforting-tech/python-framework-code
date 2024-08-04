@@ -12,11 +12,14 @@ class Base_Processor(Structure):
 class Processor(Base_Processor):
 	STATE_TYPE = Processor_State
 
-	def __call__(self, pre_existing_state=None):
+	def __call__(self, pre_existing_state=None, state=None):
 		if pre_existing_state:
 			return pre_existing_state.with_processor(self)
 		else:
-			return type(self).STATE_TYPE(self)
+			if state:
+				return type(self).STATE_TYPE(self, **state)
+			else:
+				return type(self).STATE_TYPE(self)
 
 	#def process_node(self, node):
 		#print(node.title)

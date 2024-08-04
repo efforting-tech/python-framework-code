@@ -17,6 +17,8 @@ class Text_Tree_Processor_State(Processor_State):
 	node = M.state(None)
 	item = M.state(None)
 	rule = M.state(None)
+	context = M.state(None)
+	tracker = M.state(None)
 	result_stack = M.state(factory=list)
 
 	def process_item(self, title_subject):

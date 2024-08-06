@@ -12,6 +12,16 @@ from .structures import Rule_Set, Call_Text_Tree_Processing_Function, Processor_
 #		We can possibly avoid code duplication with some nifty common interfaces
 
 
+#TODO - lots of these utility functions should have fallbacks so that they'll work even during early errors
+#		for now we will just assume that we only use this for mnemonics #UGLY-HACK
+def get_string_representation(item):
+	try:
+		from ..mnemonic_language.string_formatting_rules import string_formatter
+		return repr(string_formatter.process_item(item))
+	except:
+		return repr(item)
+
+print(M.state().default)
 
 class Text_Tree_Processor_State(Processor_State):
 	node = M.state(None)
@@ -20,6 +30,11 @@ class Text_Tree_Processor_State(Processor_State):
 	context = M.state(None)
 	tracker = M.state(None)
 	result_stack = M.state(factory=list)
+
+	def with_processor(self, processor):
+		#TODO - use some copy protocol?
+		return Text_Tree_Processor_State(processor, self.captures, self.capture_meta, self.node, self.item, self.rule, self.context, self.tracker, self.result_stack)
+
 
 	def process_item(self, title_subject):
 		self.item = title_subject
@@ -50,7 +65,7 @@ class Text_Tree_Processor_State(Processor_State):
 					case unhandled:
 						raise Exception(f'Unknown action: {unhandled}')	#TODO - better error
 
-		raise Exception(f'Failed to handle: {title_subject!r}')	#TODO - better error
+		raise Exception(f'Failed to handle: {get_string_representation(title_subject)}')	#TODO - better error
 
 
 	def process_node(self, node):
@@ -107,6 +122,7 @@ class Text_Tree_Processor(Processor):
 
 
 
+#TODO - move away from here to mnemonic_language?
 class Mnemonic_Text_Tree_Processor(Text_Tree_Processor):
 	title_comparator = M.positional(element_comparator)
 	title_processor = M.positional(tp.process_text)

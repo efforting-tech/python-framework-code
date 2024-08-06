@@ -1,6 +1,31 @@
+from efforting.mvp6.mnemonic_language.bootstrap import mlp
+from efforting.mvp6.document import create_text_tree_document_from_str
+
+#TODO work on setup function
+
+test_tree = create_text_tree_document_from_str('''
+
+	amend current processor:
+		setup:
+			CTX: target_processor
+			PS: node, -processor_state
+
+		mnemonic function: test
+			print(dir())
+
+	test
+
+
+''', normalize_block=True)
+
+
+mlp.process_tree(test_tree)
+
+exit()
+
 from efforting.mvp6 import ABC
 from efforting.mvp6.context import context, python_code_execution_interface
-from efforting.mvp6.document import create_text_tree_document_from_str
+
 from efforting.mvp6.mnemonic_language.mnemonic_captures import cit
 from efforting.mvp6.mnemonic_language.mnemonic_tokens_to_pattern import mttp
 from efforting.mvp6.mnemonic_language.parser import tp

@@ -2,7 +2,6 @@ from .indention import Indention_Mode
 from ...record.base.public import Structure
 from ...record import member as M
 
-
 @lambda x:x()	#TODO use a named function
 class Default_Document_Settings(Structure):
 	indention_mode = M.constant(Indention_Mode.Tabs)

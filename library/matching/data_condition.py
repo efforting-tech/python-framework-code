@@ -79,6 +79,15 @@ class Call_And_Compare_Return_Value(Comparative_Data_Condition):
 class Capture(Data_Condition):
 	name = M.positional(default=None)
 
+class Update_Flag(Data_Condition):
+	capture = M.positional()
+	flag = M.positional()
+	value = M.positional(default=True)
+
+class Wrap_Capture(Data_Condition):	#NOTE - this is more of a post processor than condition but by making it a condition we can insert it into specific branches like we do with capture
+	capture = M.positional()
+	wrapper = M.positional()
+
 class Capture_Remaining(Data_Condition):
 	name = M.positional(default=None)
 

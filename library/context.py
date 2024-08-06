@@ -164,6 +164,14 @@ class context(Structure):
 
 		return default
 
+	def require(self, key):
+		MISS = object()	#TODO - local symbol
+		for ctx in self.iter_ancestors(True):
+			if (value := ctx.locals.get(key, MISS)) is not MISS:
+				return value
+
+		raise Exception(key)
+
 	def has_key(self, key):
 		for ctx in self.iter_ancestors(True):
 			if key in ctx.locals:

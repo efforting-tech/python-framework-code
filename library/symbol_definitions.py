@@ -6,6 +6,7 @@ SF.register_symbols_at_target(root_symbol, '''
 
 	miss
 	empty
+	not_set
 	copy
 
 
@@ -43,6 +44,9 @@ SF.register_symbols_at_target(root_symbol, '''
 	action.yield_match
 	action.yield_token
 	action.yield_text
+
+	mnemonic.context.manipulation.discard_entry
+
 
 
 ''')

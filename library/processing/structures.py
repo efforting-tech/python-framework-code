@@ -81,8 +81,22 @@ class Processor_State(Structure):
 	def store_capture(self, value, name):
 		self.captures[name] = value
 
+	def wrap_capture(self, name, wrapper):
+		self.captures[name] = wrapper(self.captures[name])
+
+	def update_captured_flag(self, name, flag, value):
+		if (flag_set := self.captures.get(name)) is None:
+			flag_set = self.captures[name] = set()
+
+		if value:	#TODO - should we have special update symbols instead such as set, clear, toggle and such?
+			flag_set.add(flag)
+		else:
+			flag_set.discard(flag)
+
+
+	#TODO - use some copy protocol?
 	def with_processor(self, processor):
-		return Processor_State(processor, self.captures)
+		return Processor_State(processor, self.captures, self.capture_meta)
 
 	def __repr__(self):
 		return f'{type(self).__qualname__}({self.processor!r})'

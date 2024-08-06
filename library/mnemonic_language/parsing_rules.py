@@ -133,6 +133,16 @@ def compare_special(comparator, expected, subject):
 def compare_special(comparator, expected, subject):
 	return False
 
+@element_comparator.register(DC.Update_Flag)
+def compare_special(comparator, expected, subject):
+	comparator.update_captured_flag(expected.capture, expected.flag, expected.value)
+	return True
+
+@element_comparator.register(DC.Wrap_Capture)
+def compare_special(comparator, expected, subject):
+	comparator.wrap_capture(expected.capture, expected.wrapper)
+	return True
+
 @element_comparator.register(DC.Capture)
 def compare_special(comparator, expected, subject):
 	comparator.store_capture(subject, expected.name)

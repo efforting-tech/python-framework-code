@@ -85,17 +85,22 @@ class Abstract_Record_Interface:
 					match dd.init:
 						case ABC.Factory():
 							dd.init(dd, target)
+
 						case Value(value) if value is symbol.target.instance:
 							setattr(target, n, target)
+
 						case Value(value):
 							setattr(target, n, value)
+
 						case nothing if nothing is None:
-							setattr(target, n, None)
+							if not dd.required:
+								setattr(target, n, None)
 
 						case unhandled:
 							raise Exception(unhandled)	#TODO - proper exception
 
-			assert (not dd.required) or hasattr(target, n)	#TODO - proper exception
+			if dd.required and not hasattr(target, n):	#TODO - proper exception
+				raise Exception(f'{type(target)} missing {n!r}')
 
 
 
@@ -203,8 +208,11 @@ def create_record(name, positional=None, named=None, bases=None, decorators=None
 				scope[member] = Data_Descriptor(member, Evaluate_In_Scope(init_or_kind, evaluation_scope, local_updates))
 			elif init_or_kind in symbol.argument.all:
 				scope[member] = Data_Descriptor(member, kind=init_or_kind)
+			elif init_or_kind is symbol.not_set:	#TODO - this is not really working, we must make sure we have a proper plan for this and then implement it
+				scope[member] = Data_Descriptor(member, required=True)
 			elif init_or_kind is None:
 				scope[member] = Data_Descriptor(member)
+
 			else:
 				raise Exception(member, init_or_kind)
 

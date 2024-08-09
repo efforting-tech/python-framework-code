@@ -22,3 +22,9 @@ def format_optional(processor, item):
 def format_expression(processor, item):
 	inner = ''.join(map(processor.process_item, item))
 	return f'{{{inner}}}'
+
+
+#NOTE - this one was actually just a symptom of a failure to rename a captured expression
+# @string_formatter.register(str)
+# def format_str(processor, item):
+# 	return item

@@ -88,11 +88,39 @@ class Wrap_Capture(Data_Condition):	#NOTE - this is more of a post processor tha
 	capture = M.positional()
 	wrapper = M.positional()
 
+class Set_Capture(Data_Condition):
+	capture = M.positional()
+	value = M.positional()
+
+class Push_Capture(Data_Condition):
+	capture = M.positional()
+
+class Push_Capture_State(Data_Condition):
+	capture = M.positional()
+
+class Pop_And_Push_Capture(Data_Condition):
+	source = M.positional()
+	target = M.positional()
+
+class Pop_Capture(Data_Condition):
+	capture = M.positional()
+
+class Call_Function(Data_Condition):	#NOTE - this is more of a post processor than condition but by making it a condition we can insert it into specific branches like we do with capture
+	target_capture = M.positional()
+	function = M.positional()
+	positional_captures = M.positional(())
+
 class Capture_Remaining(Data_Condition):
 	name = M.positional(default=None)
 
 class Mnemonic(Comparative_Data_Condition):
 	pass
+
+class Repeat(Data_Condition):
+	element_condition = M.positional(default=None)
+	stop_condition = M.positional(default=None)
+	min_count = M.positional(default=None)
+	max_count = M.positional(default=None)
 
 
 @lambda x: x()	#TODO improve
@@ -103,3 +131,5 @@ class Always_True(Data_Condition):
 class Never_True(Data_Condition):
 	pass
 
+def Branch(*items):
+	return Any(True, *items)

@@ -73,6 +73,7 @@ class Processor_State(Structure):
 	processor = M.positional()
 	captures = M.positional(factory=dict)
 	capture_meta = M.positional(factory=dict)
+	context = M.positional(None)
 
 	#TODO - other API - should we also split them up depending on processor/comparator?
 	def compare_items(self, expected, subject):
@@ -83,6 +84,13 @@ class Processor_State(Structure):
 
 	def wrap_capture(self, name, wrapper):
 		self.captures[name] = wrapper(self.captures[name])
+
+	def process_item(self, item):
+		return type(self.processor).process_item(self, item)
+
+	#TODO - maybe we should support default-values to also be factories, if we do this we should make sure the entire project does it like so
+	def get_capture(self, name, default=None):
+		return self.captures.get(name, default)
 
 	def update_captured_flag(self, name, flag, value):
 		if (flag_set := self.captures.get(name)) is None:

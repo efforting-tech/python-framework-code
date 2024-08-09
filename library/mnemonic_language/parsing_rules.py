@@ -4,6 +4,8 @@ from ..iteration import branchable_iterator
 from .. import symbol
 
 
+#TODO - make sure we have overlapping coverage for the different comparators and processors here
+
 element_comparator = Type_LUT_Comparator('element_comparator')
 sequence_comparator = Type_LUT_Comparator('sequence_comparator')
 calculate_length = Type_LUT_Processor('calculate_length')
@@ -22,6 +24,10 @@ def cl_all(processor, item):
 def cl_one(processor, item):
 	return 1
 
+@calculate_length.register(DC.Capture)
+@calculate_length.register(DC.Wrap_Capture)
+def cl_zero(processor, item):
+	return 0
 
 
 @element_comparator.register(DC.All)
@@ -121,8 +127,11 @@ def compare_sequence(comparator, expected, subject_iterator):
 
 @sequence_comparator.register_default()
 def compare_sequence_default_element(comparator, expected, subject_iterator):
-	value = next(subject_iterator)
-	return element_comparator(comparator).compare_items(expected, value)
+	try:
+		value = next(subject_iterator)
+		return element_comparator(comparator).compare_items(expected, value)
+	except StopIteration:
+		return False
 
 
 @element_comparator.register(type(DC.Always_True))
@@ -143,9 +152,98 @@ def compare_special(comparator, expected, subject):
 	comparator.wrap_capture(expected.capture, expected.wrapper)
 	return True
 
+@element_comparator.register(DC.Call_Function)
+def compare_special(comparator, expected, subject):
+
+	positional = list()
+	for p in expected.positional_captures:
+		positional.append(comparator.captures[p])
+
+	comparator.store_capture(expected.function(*positional), expected.target_capture)
+	#comparator.wrap_capture(expected.capture, expected.wrapper)
+
+	return True
+
+
 @element_comparator.register(DC.Capture)
 def compare_special(comparator, expected, subject):
 	comparator.store_capture(subject, expected.name)
+	return True
+
+@element_comparator.register(DC.Set_Capture)
+def compare_special(comparator, expected, subject):
+	comparator.store_capture(expected.value, expected.capture)
+	return True
+
+@element_comparator.register(DC.Push_Capture)
+def compare_special(comparator, expected, subject):
+	if (target := comparator.get_capture(expected.capture)) is None:
+		target = [subject]
+		comparator.store_capture(target, expected.capture)
+	else:
+		target.append(subject)
+
+	return True
+
+
+#TODO - push/pop should support empty also, if you pop something that doesn't exist and then push that item (which should be a special symbol) it should delete the item in captures
+
+@element_comparator.register(DC.Pop_And_Push_Capture)
+def compare_special(comparator, expected, subject):
+	comparator.captures[expected.target] = comparator.captures.pop(expected.source)
+	return True
+
+@element_comparator.register(DC.Push_Capture_State)
+def compare_special(comparator, expected, subject):
+	if (target := comparator.get_capture(expected.capture)) is None:
+		target = [dict(comparator.captures)]
+		comparator.store_capture(target, expected.capture)
+	else:
+		target.append(dict(comparator.captures))
+
+	return True
+
+@element_comparator.register(DC.Repeat)
+def compare_special(comparator, expected, subject):
+	#HACK - this is a brute force method for partial match, we should have a comparator specifically for this
+	#		maybe we can put all our comparators in some sort of interface we can reuse (or in some named tree)
+
+	#Check for some stuff we have not implemented yet
+	assert expected.element_condition
+	assert not expected.stop_condition
+	assert expected.min_count is None
+	assert expected.max_count is None
+
+	remaining = subject
+
+	while remaining:
+
+		#from ..mnemonic_language.string_formatting_rules import string_formatter
+		#print(f'checking {type(remaining).__qualname__}({string_formatter.process_item(remaining)!r})' )
+
+		for l in range(len(remaining)):
+			if l:
+				brute_force_subject = remaining[:-l]
+				pending_remaining = remaining[-l:]
+			else:
+				brute_force_subject = remaining[:]
+				pending_remaining = None
+
+			#print(f'BF {type(brute_force_subject).__qualname__}({string_formatter.process_item(brute_force_subject)!r})' )
+
+			if comparator.compare_items(expected.element_condition, brute_force_subject):
+				#print('Partial match for', repr(string_formatter.process_item(brute_force_subject)))
+				remaining = pending_remaining
+				break
+		else:
+
+			#print('No more find!')
+			#print('remaining', string_formatter.process_item(remaining))
+
+			#from efforting.mvp5.lazy_resources import acquire
+			#acquire('terminal_dump')(expected.element_condition, skip_underscore=True)
+			return False
+
 	return True
 
 
@@ -157,4 +255,8 @@ def compare_sequence_element(comparator, expected, subject):
 	except TypeError:
 		return False
 
-	return sequence_comparator(comparator).compare_items(expected, branchable_iterator(iterator))
+	bi = branchable_iterator(iterator)
+	if sequence_comparator(comparator).compare_items(expected, bi) and bi.is_empty():
+		return True
+	else:
+		return False

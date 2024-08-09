@@ -30,7 +30,7 @@ class Text_Tree_Interface:
 		return self[1:]
 
 	def iter_nodes(self):
-		min_indent = min(i.indent for i in self.lines if i.text)
+		min_indent = min(i.indent for i in self.lines if i.text)		#BUG fails if iterator is empty: ValueError: min() iterable argument is empty
 		last_root_index = None
 		for local_index, i in enumerate(self):
 			if not i.text:

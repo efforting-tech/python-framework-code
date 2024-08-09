@@ -6,7 +6,10 @@ from ..text.tree import Text_Tree_Listing
 from .mnemonic_captures import cit
 from .mnemonic_tokens_to_pattern import mttp
 from .parser import tp
-from .structures import mnemonic_argument, mnemonic_unwrapper
+from .structures import mnemonic_argument, mnemonic_unwrapper, mnemonic_unwrapper_for_records, pending_function_with_advanced_unwrapper
+
+
+
 
 
 #TODO - move to proper place
@@ -18,6 +21,15 @@ class pending_mnemonic_function_for_processor(Structure):
 	def __call__(self, function):
 		register_mnemonic_function(self.processor, self.mnemonic, function)
 		return function
+
+
+class pending_mnemonic_record_for_processor(Structure):
+	processor = M.positional()
+	mnemonic = M.positional()
+
+	def __call__(self, record):
+		register_mnemonic_record(self.processor, self.mnemonic, record)
+		return record
 
 
 
@@ -43,9 +55,34 @@ def get_mnemonic(mnemonic):		#TODO rename to get_mnemonic_pattern?
 		return mnemonic
 
 
-def register_mnemonic_function(processor, mnemonic, function=None):
+def register_mnemonic_record(processor, mnemonic, record=None):
 	mnemonic = get_mnemonic(mnemonic)
 	names = tuple(cit(mnemonic))
+
+	if record is None:
+		return pending_mnemonic_record_for_processor(processor, mnemonic)
+	else:
+		mu = mnemonic_unwrapper_for_records(record)
+		for n in names:
+
+			mu.arguments.append(mnemonic_argument(
+				n,
+			))
+
+		processor.register(mnemonic)(mu)
+
+def register_mnemonic_function(processor, mnemonic, function=None):
+	mnemonic = get_mnemonic(mnemonic)
+
+
+	#TODO - use match?
+	if isinstance(function, pending_function_with_advanced_unwrapper):
+		function, pending_wrapper, arguments = function.function, function, function.get_arguments()
+	else:
+		pending_wrapper = None	#Default
+		names = tuple(cit(mnemonic))
+		arguments = ('processor_state', *names)
+
 
 	if function is None:
 		return pending_mnemonic_function_for_processor(processor, mnemonic)
@@ -55,8 +92,9 @@ def register_mnemonic_function(processor, mnemonic, function=None):
 		b = function.editable_copy()
 		b.normalize_block()
 
-		args = ', '.join(('processor_state', *names))
+		args = ', '.join(arguments)
 		function_def = f'def handler({args}):'
+		print(function_def)
 		python_code = Text_Tree_Listing.from_title_and_branches(function_def, b).to_str()
 
 		#scope = dict()
@@ -74,23 +112,22 @@ def register_mnemonic_function(processor, mnemonic, function=None):
 
 	elif callable(function):
 		pass
+
 	else:
 		#TYPE ERROR
 		raise Exception('NI')
 
-	mu = mnemonic_unwrapper(function)
-	for n in names:
 
-		#TODO - since we have now added Wrap_Capture we could possibly get rid of this and use that instead
-		if n != 'pattern':
-			pp = lambda n: string_formatter().process_item(n)	#TODO - This is now assuming that we do want to turn this to text, which we may not want (we should rely on capture_meta)
-		else:
-			pp = None
+	if pending_wrapper:
+		mu = pending_wrapper(function)
+	else:
+		mu = mnemonic_unwrapper(function)
 
-		mu.arguments.append(mnemonic_argument(
-			n,
-			post_processor = pp,
-		))
+		for n in names:
+
+			mu.arguments.append(mnemonic_argument(
+				n,
+			))
 
 	processor.register(mnemonic)(mu)
 

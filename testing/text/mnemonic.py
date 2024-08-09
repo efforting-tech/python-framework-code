@@ -3,23 +3,48 @@ from efforting.mvp6.document import create_text_tree_document_from_str
 
 #TODO work on setup function
 
+
+#			CTX: target_processor
+
 test_tree = create_text_tree_document_from_str('''
 
 	amend current processor:
 		setup:
-			CTX: target_processor
-			PS: node, -processor_state
+			PS: node, captures as cpt
+			CTX: hello
+			MSYS: -processor_state, processor_state as PS
+			CPT: thing
 
-		mnemonic function: test
-			print(dir())
+		mnemonic function: test {name as thing}
+			print('THING', thing)
+			print(dir())	#'PS', 'cpt', 'hello', 'node', 'thing'
+			print(cpt)		#{'thing': 'stuff'}
 
-	test
 
+		setup:
+			PS: -node
+
+		mnemonic function: test2 {name as thing}
+			print(dir())	#'PS', 'cpt', 'hello', 'node', 'thing'
+
+
+	test stuff
+	test2 stuff
 
 ''', normalize_block=True)
 
+# second_test_tree = create_text_tree_document_from_str('''
+
+# 	test
+
+# ''', normalize_block=True)
+
+
+mlp.context.set('hello', 'world')
 
 mlp.process_tree(test_tree)
+
+print('ok?')
 
 exit()
 
@@ -109,6 +134,8 @@ def register_mnemonic_function(processor, mnemonic, function=None):
 	else:
 		#TYPE ERROR
 		raise Exception('NI')
+
+	print('FFF', function)
 
 	mu = mnemonic_unwrapper(function)
 	for n in names:

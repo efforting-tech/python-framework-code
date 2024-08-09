@@ -21,8 +21,6 @@ def get_string_representation(item):
 	except:
 		return repr(item)
 
-print(M.state().default)
-
 class Text_Tree_Processor_State(Processor_State):
 	node = M.state(None)
 	item = M.state(None)
@@ -33,8 +31,31 @@ class Text_Tree_Processor_State(Processor_State):
 
 	def with_processor(self, processor):
 		#TODO - use some copy protocol?
-		return Text_Tree_Processor_State(processor, self.captures, self.capture_meta, self.node, self.item, self.rule, self.context, self.tracker, self.result_stack)
+		result = Text_Tree_Processor_State(processor=processor, captures=self.captures, capture_meta=self.capture_meta, node=self.node, item=self.item, rule=self.rule, context=self.context, tracker=self.tracker, result_stack=self.result_stack)
+		return result
 
+	def process_action(self, action):
+		match action:
+			case Call_Text_Tree_Processing_Function(function):
+				result = function(self)
+				if self.result_stack:
+					self.result_stack[-1].append(result)
+
+				return result
+
+			#TODO - check uncommented
+
+			# case sym if sym is symbol.action.raise_exception:
+			# 	raise Exception(f'Failed to process {type(item)!r} in {type(self).__qualname__} {self.name!r}')
+
+			# case ABC.Action() as action:
+			# 	raise Exception(f'Unsupported action: {action}')	#TODO - better error
+
+			# case sym if sym in symbol.action:
+			# 	raise Exception(f'Unsupported action symbol: {sym}')	#TODO - better error
+
+			case unhandled:
+				raise Exception(f'Unknown action: {unhandled}')	#TODO - better error
 
 	def process_item(self, title_subject):
 		self.item = title_subject
@@ -42,33 +63,14 @@ class Text_Tree_Processor_State(Processor_State):
 			self.rule = rule
 			#We are assuming that the rules are of DC.Mnemonic but we should check it, possibly when adding the rules. TODO - type checking for valid rules in Rule_Set classes?
 			if self.title_comparator(self).compare_items(rule.condition.value, title_subject):	#We use self here when calling title comparator so that it will use our own captures dict
+				return self.process_action(rule.action)
 
-				match rule.action:
-					case Call_Text_Tree_Processing_Function(function):
-						result = function(self)
-						if self.result_stack:
-							self.result_stack[-1].append(result)
-
-						return result
-
-					#TODO - check uncommented
-
-					# case sym if sym is symbol.action.raise_exception:
-					# 	raise Exception(f'Failed to process {type(item)!r} in {type(self).__qualname__} {self.name!r}')
-
-					# case ABC.Action() as action:
-					# 	raise Exception(f'Unsupported action: {action}')	#TODO - better error
-
-					# case sym if sym in symbol.action:
-					# 	raise Exception(f'Unsupported action symbol: {sym}')	#TODO - better error
-
-					case unhandled:
-						raise Exception(f'Unknown action: {unhandled}')	#TODO - better error
 
 		raise Exception(f'Failed to handle: {get_string_representation(title_subject)}')	#TODO - better error
 
 
 	def process_node(self, node):
+		self.captures.clear()	#TODO - is there any case where we don't want to do this?
 		self.node = node
 		if self.title_processor:
 			return self.process_item(self.title_processor(node.title))
@@ -105,7 +107,7 @@ class Pending_Text_Tree_Process_Function(Structure):
 
 
 class Text_Tree_Processor(Processor):
-	STATE_TYPE = Text_Tree_Processor_State
+	STATE_TYPE = M.positional(default=Text_Tree_Processor_State)
 	#rules = M.positional(factory=Text_Tree_Rule_Set, repr=False)	#TODO - maybe we should have a specific type for when we are replacing an existing member? Or maybe this is fine. To be discussed/determined
 	title_comparator = M.positional(None)
 	title_processor = M.positional(None)

@@ -8,18 +8,19 @@ from .structures import Processor_State, Rule_Set, Pending_LUT_Process_Function,
 class Base_Processor(Structure):
 	name = M.positional(default=None)
 	rules = M.positional(factory=Rule_Set, repr=False)
+	STATE_TYPE = M.positional(default=None)
 
 class Processor(Base_Processor):
-	STATE_TYPE = Processor_State
+	STATE_TYPE = M.positional(default=Processor_State)
 
 	def __call__(self, pre_existing_state=None, state=None):
 		if pre_existing_state:
 			return pre_existing_state.with_processor(self)
 		else:
 			if state:
-				return type(self).STATE_TYPE(self, **state)
+				return self.STATE_TYPE(self, **state)
 			else:
-				return type(self).STATE_TYPE(self)
+				return self.STATE_TYPE(self)
 
 	#def process_node(self, node):
 		#print(node.title)

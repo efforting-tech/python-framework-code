@@ -51,53 +51,7 @@ class pending_function_with_advanced_unwrapper(Structure):
 
 
 	def __call__(self, function):
-		print('PFWAU', hex(id(self.mnemonic_implementation)))
 		return advanced_mnemonic_unwrapper(function, self.mnemonic_implementation)
-
-
-if False:	#NOTE - we should not calculate translation until the unwrapper
-	class pending_function_with_advanced_unwrapper(Structure):
-		function = M.positional()
-		mnemonic_implementation = M.positional()
-
-		def __call__(self, function):
-			return pending_advanced_mnemonic_unwrapper(function, self.get_translation())
-
-
-		#TODO - cache this
-		def get_translation(self):
-
-			#TODO - is this the right place to resolve this or should it be resolved when calling it? Could we have a different processor_state? Probably
-			tag_lut = dict(
-				PS = self.mnemonic_implementation.processor_state.__getattribute__,
-				CTX = self.mnemonic_implementation.processor_state.context.require,
-				MSYS = self.mnemonic_implementation.__getattribute__,
-			)
-
-			current_arguments = dict(
-			 	processor_state = pending_argument('MSYS', 'processor_state'),
-			)
-
-			for mutation in self.mnemonic_implementation.context_setup:
-				match mutation:
-					case context_manipulation.include(name, alias, tag):
-						current_arguments[alias or name] = pending_argument(tag, name)
-
-					case context_manipulation.exclude(name, tag):
-						assert tag == current_arguments.pop(name).tag	#TODO - figure out if we even need tag here
-
-					case unhandled:
-						raise Exception(unhandled)
-
-
-			result = dict()	#Maybe this should be deferred to __call__ of unwrapper
-			for (name, value) in current_arguments.items():
-				result[name] = argument_getter(tag_lut[value.tag], value.name)	#TODO - this is a bit ugly, we should fix it
-
-			return result
-
-
-
 
 class pending_argument(Structure):
 	tag = M.positional()
@@ -110,48 +64,16 @@ class argument_getter(Structure):
 	def __call__(self):
 		return self.function(self.name)
 
-# class advanced_mnemonic_unwrapper(Structure):
-# 	context = M.positional()
-
-# 	def __call__(self, function):
-# 		print('FUNC',  function)
-# 		exit()
-
-# 		positionals = list()
-# 		for name, getter in self.context.items():
-# 			positionals.append(getter())
-
-# 		print(positionals)
-
-
 class advanced_mnemonic_unwrapper(Structure):
 	function = M.positional()
 	mnemonic_implementation = M.positional()
 
 	def __call__(self, processor_state):
-		print('CALL', hex(id(self.mnemonic_implementation)), self.mnemonic_implementation.get_arguments())
 		positionals = list()
 		for name, getter in self.mnemonic_implementation.compute_translation(self, processor_state).items():
-			print(name)
 			positionals.append(getter())
 
-
-
 		return self.function(*positionals)
-
-
-
-# class pending_advanced_mnemonic_unwrapper(Structure):
-# 	function = M.positional()
-# 	translation = M.positional()
-
-# 	def __call__(self, processor_state):
-
-# 		positionals = list()
-# 		for name, getter in self.translation.items():
-# 			positionals.append(getter())
-
-# 		return self.function(*positionals)
 
 
 class pending_mnemonic_implementation(Structure):

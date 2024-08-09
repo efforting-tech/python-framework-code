@@ -11,6 +11,11 @@ from .. import symbol
 from ..record import member as M
 from ..record.base.public import Structure
 
+
+
+#NEXT UP - make processors accessible, we could identity them by symbols or names
+
+
 #NEXT UP - make mnemonic function be able to call using modified context
 
 
@@ -242,11 +247,7 @@ class amend_processor:
 	def mnemonic_function(processor_state, pattern):
 		target_processor = processor_state.context.require('target_processor')
 		pending_mnemonic_implementation = processor_state.context.require('pending_mnemonic_implementation').copy() #We copy so we get current state
-		print('ARGS', pending_mnemonic_implementation.get_arguments())
-
 		register_mnemonic_function(target_processor, pattern, pending_function_with_advanced_unwrapper(processor_state.node.body, pending_mnemonic_implementation))
-
-
 
 
 

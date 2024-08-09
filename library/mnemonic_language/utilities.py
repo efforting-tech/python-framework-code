@@ -94,7 +94,6 @@ def register_mnemonic_function(processor, mnemonic, function=None):
 
 		args = ', '.join(arguments)
 		function_def = f'def handler({args}):'
-		print(function_def)
 		python_code = Text_Tree_Listing.from_title_and_branches(function_def, b).to_str()
 
 		#scope = dict()

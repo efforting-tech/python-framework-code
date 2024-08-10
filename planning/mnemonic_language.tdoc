@@ -1,0 +1,51 @@
+Setup global macros:
+	¤		THIS_LIBRARY
+
+Processing setup:
+	import re
+
+
+Section: The Mnemonic Text Tree Processing System
+
+	Section: Language
+
+		Section: Tokens
+
+			Primary source:
+				/library/mnemonic_language/tokens.py
+
+			Setup context:
+				T = ¤.symbol.text.token
+
+			Hierarchical mapping: base
+				Sub heading: Common
+				Setup:
+					Key datatype: ¤.symbol_factory.Symbol
+					Value processor: re.compile
+
+				Map: T.word: r'\w+'
+				Map: T.whitespace: r'\s+'
+				Map: T.literal: None
+
+				Hierarchical mapping: mnemonic_expression
+					Sub heading: Mnemonic Expression
+					Map: T.right_curly_bracket: r'\}'
+
+					Functional description:
+						A mnemonic expression is used for specifying captures or complex matching rules
+
+				Hierarchical mapping: opt_epxression
+					Sub heading: Optional Expression
+					Map: T.right_square_bracket: r'\]'
+					Map: T.left_square_bracket: r'\['
+
+					Functional description:
+						Optional expressions create branch points in the matching pattern
+
+				Hierarchical mapping: mnemonic
+					Sub heading: Mnemonic Pattern
+					Map: T.left_curly_bracket: r'\{'
+					Map: T.left_square_bracket: r'\['
+
+					Functional description:
+						Mnemonic patterns are used extensively through this project in order to make it easy for humans to interact with the system.

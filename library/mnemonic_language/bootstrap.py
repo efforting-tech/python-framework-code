@@ -72,6 +72,7 @@ def rename_pattern(processor, pattern):
 
 
 @pattern_renamer.register(DC.Capture)
+@pattern_renamer.register(DC.Capture_Remaining)
 def rename_pattern(processor, pattern):
 	if processor.rename_from == pattern.name:
 		pattern.name = processor.rename_to
@@ -93,10 +94,12 @@ def capture_as_alias(processor_state, pattern, name):
 	#sub_captures = tuple(cfit(pending_pattern))
 	[(capt, capt_name)] = cfit(pending_pattern)
 
+	#print(getattr(capt ,capt_name), '→', name, pending_pattern)
+
 	#TODO - this is a mess! First I was thinking it might be easier to use a push/pop method to capture the original pattern and then transfer to name
 	#		but now I am thinking that perhaps we should just have features for renaming a capture in a pattern
 
-	pattern_renamer(state=dict(rename_from=capt_name, rename_to=name)).process_item(pending_pattern)
+	pattern_renamer(state=dict(rename_from=getattr(capt ,capt_name), rename_to=name)).process_item(pending_pattern)
 	return pending_pattern
 
 
@@ -222,6 +225,14 @@ class setup_processor:
 			pmi.context_setup.append(mutation)
 
 
+
+#TODO - we should have a common one that is included in the other ones instead of explicitly adding this to every one
+@register_mnemonic_function(mnemonic_language_processor, '#{pattern}')
+@register_mnemonic_function(amend_definition_processor, '#{pattern}')
+@register_mnemonic_function(processor_setup_processor, '#{pattern}')
+@register_mnemonic_function(context_manipulation_processor, '#{pattern}')
+def ignore_comment(processor_state, pattern):
+	pass
 
 
 class amend_processor:

@@ -92,12 +92,12 @@ class pending_mnemonic_implementation(Structure):
 			CPT = processor_state.captures.__getitem__,
 		)
 
-
-
 		current_arguments = dict(
 		 	processor_state = pending_argument('MSYS', 'processor_state'),
 		)
 
+
+		#TODO - use a processor?
 		for mutation in unwrapper.mnemonic_implementation.context_setup:
 			match mutation:
 				case context_manipulation.include(name, alias, tag):
@@ -113,6 +113,8 @@ class pending_mnemonic_implementation(Structure):
 		result = dict()	#Maybe this should be deferred to __call__ of unwrapper
 		for (name, value) in current_arguments.items():
 			result[name] = argument_getter(tag_lut[value.tag], value.name)	#TODO - this is a bit ugly, we should fix it
+
+		#print(result)
 
 		return result
 

@@ -219,9 +219,9 @@ class Line_Listing(Abstract_Line_Listing):
 	def strip_empty_lines(self):
 		if (f := self.first_line_index_with_content) is None:
 			self.clear()
-
-		b = self.last_line_index_with_content
-		self.lines = self.lines[f:b+1]
+		else:
+			b = self.last_line_index_with_content
+			self.lines = self.lines[f:b+1]
 
 	def normalize_block(self):
 		self.strip_empty_lines()

@@ -74,7 +74,6 @@ def register_mnemonic_record(processor, mnemonic, record=None):
 def register_mnemonic_function(processor, mnemonic, function=None):
 	mnemonic = get_mnemonic(mnemonic)
 
-
 	#TODO - use match?
 	if isinstance(function, pending_function_with_advanced_unwrapper):
 		function, pending_wrapper, arguments = function.function, function, function.get_arguments()
@@ -98,7 +97,7 @@ def register_mnemonic_function(processor, mnemonic, function=None):
 
 		#scope = dict()
 		#exec(python_code, scope)
-		ctx = (processor.context or root_context).sub_context(dict(__source_code__ = python_code))
+		ctx = (processor.context or root_context).sub_context(dict(__source_code__ = python_code))	#TODO - decide if we should use a context like this or if we should build things up via arguments like how we setup the context. We may need to streamline this a bit and harmonize.
 		tracker = processor.tracker
 		python_code_execution_interface.exec_in_context(ctx, python_code, tracker=tracker)
 

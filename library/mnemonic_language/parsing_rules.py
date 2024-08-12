@@ -4,6 +4,7 @@ from ..iteration import branchable_iterator
 from .. import symbol
 
 
+
 #TODO - make sure we have overlapping coverage for the different comparators and processors here
 
 element_comparator = Type_LUT_Comparator('element_comparator')
@@ -169,6 +170,10 @@ def compare_special(comparator, expected, subject):
 def compare_special(comparator, expected, subject):
 	comparator.store_capture(subject, expected.name)
 	return True
+
+@element_comparator.register(DC.Capture_Remaining)
+def compare_forbidden(comparator, expected, subject):
+	raise Exception('Illegal pattern')	#TODO explain that this should not happen because Capture_Remaining is handled in compare sequence
 
 @element_comparator.register(DC.Set_Capture)
 def compare_special(comparator, expected, subject):

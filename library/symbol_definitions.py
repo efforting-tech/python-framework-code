@@ -46,6 +46,7 @@ SF.register_symbols_at_target(root_symbol, '''
 	action.yield_text
 
 	mnemonic.context.manipulation.discard_entry
+	mnemonic.context.manipulation.new_context
 
 
 

@@ -1,5 +1,7 @@
 from ..record.base.public import Sequence, Structure
 from ..record import member as M
+from ..resources import lazy_library_query
+from .. import symbol
 
 class Optional(Sequence):
 	pass
@@ -83,6 +85,8 @@ class pending_mnemonic_implementation(Structure):
 	def copy(self):
 		return pending_mnemonic_implementation(list(self.context_setup))
 
+	#TODO - taglut should instead invoke specific parsers so that we can use different URIs for things - this should possibly also be part of the resource system
+
 	def compute_translation(self, unwrapper, processor_state):
 		#TODO - is this the right place to resolve this or should it be resolved when calling it? Could we have a different processor_state? Probably
 		tag_lut = dict(
@@ -90,6 +94,7 @@ class pending_mnemonic_implementation(Structure):
 			CTX = processor_state.context.require,
 			MSYS = dict(processor_state=processor_state).__getitem__,
 			CPT = processor_state.captures.__getitem__,
+			#LZ = lazy_library_query(package_root).query,
 		)
 
 		current_arguments = dict(
@@ -100,7 +105,10 @@ class pending_mnemonic_implementation(Structure):
 		#TODO - use a processor?
 		for mutation in unwrapper.mnemonic_implementation.context_setup:
 			match mutation:
-				case context_manipulation.include(name, alias, tag):
+				case context_manipulation.include(uri, alias, tag):
+					print(uri)
+
+					exit()
 					current_arguments[alias or name] = pending_argument(tag, name)
 
 				case context_manipulation.exclude(name, tag):
@@ -112,6 +120,7 @@ class pending_mnemonic_implementation(Structure):
 
 		result = dict()	#Maybe this should be deferred to __call__ of unwrapper
 		for (name, value) in current_arguments.items():
+			print('CT', name, value)
 			result[name] = argument_getter(tag_lut[value.tag], value.name)	#TODO - this is a bit ugly, we should fix it
 
 		#print(result)
@@ -128,15 +137,21 @@ class pending_mnemonic_implementation(Structure):
 
 		for mutation in self.context_setup:
 			match mutation:
-				case context_manipulation.include(name, alias, tag):
+				case context_manipulation.include(uri, alias, tag):
+					print(uri)
+					exit()
 					current_arguments[alias or name] = True
 
 				case context_manipulation.exclude(name, tag):
 					current_arguments.pop(name)
 
+				case new_context if new_context is symbol.mnemonic.context.manipulation.new_context:
+					current_arguments.clear()
+
 				case unhandled:
 					raise Exception(unhandled)
 
+		print(current_arguments)
 
 		return current_arguments.keys()
 
@@ -146,6 +161,11 @@ class context_manipulation:
 		tag = M.positional(None)
 
 	class include(Structure):
-		name = M.positional()
+		uri = M.positional()
 		alias = M.positional(None)
 		tag = M.positional(None)
+
+class pending_record(Structure):
+	name = M.positional()
+	bases = M.positional(factory=lambda: [Structure])
+	members = M.positional(factory=dict)

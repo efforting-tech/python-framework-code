@@ -27,6 +27,12 @@ def process_expression_name(processor):
 	#processor.capture_meta['pattern'] = 'pattern'	#TODO - describe proper post processing here
 	return DC.Capture_Remaining('pattern')
 
+#TODO - better names
+@mlexp.register(join_sequence(ws, word('text'), require_sequence_type=Expression))
+def process_expression_name(processor):
+	#return DC.Sequence(DC.Capture_Remaining('text')) & DC.Wrap_Capture('text', lambda n: string_formatter().process_item(n))	#HACK - we shouldn't have to wrap capture_remaining in sequence but because we don't deal with capture_remaining in element comparator we have to do it like this. We should refine the parsing rules to account for this.
+	return DC.Capture_Remaining('text') & DC.Wrap_Capture('text', lambda n: string_formatter().process_item(n))
+
 
 @mttpex.register(tuple)
 @mttpex.register(Mnemonic)

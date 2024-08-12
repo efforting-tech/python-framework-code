@@ -11,6 +11,8 @@ from .. import symbol
 from ..record import member as M
 from ..record.base.public import Structure
 
+from ..document import create_text_tree_document_from_path
+from ..resources import get_resource_path
 
 
 #NEXT UP - make processors accessible, we could identity them by symbols or names
@@ -31,7 +33,7 @@ from ..record.base.public import Structure
 
 mnemonic_language_processor = Mnemonic_Text_Tree_Processor('mnemonic_language_processor')
 amend_definition_processor = Mnemonic_Text_Tree_Processor('amend_definition_processor')
-processor_setup_processor = Mnemonic_Text_Tree_Processor('processor_setup_processor')
+#processor_setup_processor = Mnemonic_Text_Tree_Processor('processor_setup_processor')
 context_manipulation_processor = Mnemonic_Text_Tree_Processor('context_manipulation_processor')
 
 from .structures import Mnemonic, pending_function_with_advanced_unwrapper, pending_mnemonic_implementation, context_manipulation
@@ -56,6 +58,8 @@ class pattern_state(Processor_State):
 pattern_renamer = Type_LUT_Processor('pattern_renamer', STATE_TYPE = pattern_state)
 
 @pattern_renamer.register(DC.All)
+@pattern_renamer.register(DC.Any)
+@pattern_renamer.register(DC.Sequence)
 def rename_pattern(processor, pattern):
 	for sub_pattern in pattern:
 		processor.process_item(sub_pattern)
@@ -133,10 +137,17 @@ def capture_as_alias(processor_state, pattern, name):
 	#return word() & DC.Capture('alias') & DC.Wrap_Capture('alias', lambda n: string_formatter().process_item(n))
 
 
+register_mnemonic_record(context_manipulation_processor, 'new context')(lambda : symbol.mnemonic.context.manipulation.new_context)	#TODO - make nicer ways to return values, records and calling functions
 register_mnemonic_record(context_manipulation_processor, '-{name}')(context_manipulation.exclude)
-register_mnemonic_record(context_manipulation_processor, '{name} as {name as alias}')(context_manipulation.include)
-register_mnemonic_record(context_manipulation_processor, '{name}')(context_manipulation.include)
+#register_mnemonic_record(context_manipulation_processor, '{text as uri} as {name as alias}')(context_manipulation.include)
+register_mnemonic_record(context_manipulation_processor, '{text as uri}')(context_manipulation.include)
 
+
+
+from ..document import create_text_tree_document_from_str
+print(context_manipulation_processor().process_node(create_text_tree_document_from_str('text')))
+
+exit()
 
 # print(mlexp().process_item(Expression(*tp.process_text('pattern as thing'))))
 # #print(get_mnemonic('{stuff as alias}'))
@@ -200,36 +211,40 @@ register_mnemonic_record(context_manipulation_processor, '{name}')(context_manip
 
 
 
-class setup_processor:
+#class setup_processor:
 	# @register_mnemonic_function(processor_setup_processor, 'CTX[:] {pattern}')
 	# def mnemonic_function(processor_state, pattern):
 	# 	print('CTX', pattern)
 
 
-	@register_mnemonic_function(processor_setup_processor, '{name as tag}[:] {pattern}')
-	def mnemonic_function(processor_state, tag, pattern):
-		#BUG (Design error) - If we want a repeating pattern we must be able to do partial matching - this means we should use API similar to string `search´, `match´ and `fullmatch´
-		#TODO - here we assume r.condition is mnemonic and get .value, we should probably do this in a better way
-		#NOTE 'rule' could just as well be a symbol, possibly a local one
-		csp = DC.Repeat(DC.Branch(DC.Sequence(literal(',') | ws), *(r.condition.value & DC.Set_Capture('rule', r) & DC.Push_Capture_State('items') for r in context_manipulation_processor.rules)))
-		c = element_comparator()
-		c.compare_items(csp, Mnemonic(*pattern))
+	# @register_mnemonic_function(processor_setup_processor, '{name as tag}[:] {pattern}')
+	# def mnemonic_function(processor_state, tag, pattern):
+	# 	#BUG (Design error) - If we want a repeating pattern we must be able to do partial matching - this means we should use API similar to string `search´, `match´ and `fullmatch´
+	# 	#TODO - here we assume r.condition is mnemonic and get .value, we should probably do this in a better way
+	# 	#NOTE 'rule' could just as well be a symbol, possibly a local one
+	# 	csp = DC.Repeat(DC.Branch(DC.Sequence(literal(',') | ws), *(r.condition.value & DC.Set_Capture('rule', r) & DC.Push_Capture_State('items') for r in context_manipulation_processor.rules)))
+	# 	c = element_comparator()
+	# 	c.compare_items(csp, Mnemonic(*pattern))
 
-		pmi = processor_state.context.require('pending_mnemonic_implementation')
-		#TODO - we must document how this works - it is a bit messy
-		for sub_item in c.captures['items']:
-			ps = Text_Tree_Processor_State(context_manipulation_processor, captures=sub_item)
+	# 	pmi = processor_state.context.require('pending_mnemonic_implementation')
+	# 	#TODO - we must document how this works - it is a bit messy
+	# 	for sub_item in c.captures['items']:
+	# 		ps = Text_Tree_Processor_State(context_manipulation_processor, captures=sub_item)
 
-			mutation = ps.process_action(sub_item['rule'].action)
-			mutation.tag = tag	#TODO - Translate to symbol
-			pmi.context_setup.append(mutation)
+	# 		mutation = ps.process_action(sub_item['rule'].action)
+	# 		mutation.tag = tag	#TODO - Translate to symbol
+	# 		pmi.context_setup.append(mutation)
+
+	# 		print('MUT', mutation)
+
+
 
 
 
 #TODO - we should have a common one that is included in the other ones instead of explicitly adding this to every one
 @register_mnemonic_function(mnemonic_language_processor, '#{pattern}')
 @register_mnemonic_function(amend_definition_processor, '#{pattern}')
-@register_mnemonic_function(processor_setup_processor, '#{pattern}')
+#@register_mnemonic_function(processor_setup_processor, '#{pattern}')
 @register_mnemonic_function(context_manipulation_processor, '#{pattern}')
 def ignore_comment(processor_state, pattern):
 	pass
@@ -251,8 +266,13 @@ class amend_processor:
 
 	@register_mnemonic_function(amend_definition_processor, 'setup[:]')
 	def setup(processor_state):
-		ps = processor_state.with_processor(processor_setup_processor)
-		ps.process_tree(processor_state.node.body)
+		#ps = processor_state.with_processor(processor_setup_processor)
+		#ps.process_tree(processor_state.node.body)
+
+		mutation_list = processor_state.with_processor(context_manipulation_processor).process_tree(processor_state.node.body)
+
+		processor_state.context.require('pending_mnemonic_implementation').context_setup.extend(mutation_list)
+
 
 	@register_mnemonic_function(amend_definition_processor, 'mnemonic function[:] {pattern}')
 	def mnemonic_function(processor_state, pattern):
@@ -263,8 +283,14 @@ class amend_processor:
 
 
 
+
+processor_registry = dict()
+
 root_context = context('root', dict(
-	# ...
+	#...
 ))
 
+
 mlp = mnemonic_language_processor(state=dict(context=root_context))
+boot_tree = create_text_tree_document_from_path(get_resource_path('mnemonic_language_bootstrap.tdef'))
+mlp.process_tree(boot_tree)

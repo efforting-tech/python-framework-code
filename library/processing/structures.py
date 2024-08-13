@@ -68,7 +68,7 @@ class LUT_Rule_Set(Structure):
 		else:
 			return self.default_action or default
 
-
+@ABC.Processor_State
 class Processor_State(Structure):
 	processor = M.positional()
 	captures = M.positional(factory=dict)

@@ -1,7 +1,7 @@
 from .. import ABC
 from ..matching import data_condition as DC
 from ..mnemonic_language.parser import tp
-from ..mnemonic_language.parsing_rules import element_comparator
+from ..mnemonic_language.parsing_rules import compare_mnemonic_items
 from ..record import member as M
 from ..record.base.public import Structure
 from .generic import Processor
@@ -62,7 +62,7 @@ class Text_Tree_Processor_State(Processor_State):
 		for rule in self.rules:
 			self.rule = rule
 			#We are assuming that the rules are of DC.Mnemonic but we should check it, possibly when adding the rules. TODO - type checking for valid rules in Rule_Set classes?
-			if self.title_comparator(self).compare_items(rule.condition.value, title_subject):	#We use self here when calling title comparator so that it will use our own captures dict
+			if self.title_comparator(rule.condition.value, title_subject, self):	#We use self here when calling title comparator so that it will use our own captures dict
 				return self.process_action(rule.action)
 
 
@@ -126,5 +126,5 @@ class Text_Tree_Processor(Processor):
 
 #TODO - move away from here to mnemonic_language?
 class Mnemonic_Text_Tree_Processor(Text_Tree_Processor):
-	title_comparator = M.positional(element_comparator)
+	title_comparator = M.positional(compare_mnemonic_items)
 	title_processor = M.positional(tp.process_text)

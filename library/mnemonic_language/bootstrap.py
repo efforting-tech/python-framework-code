@@ -45,7 +45,7 @@ from .parser import tp
 from .string_formatting_rules import string_formatter
 from .rudimentary_definition_helpers import word, literal, ws
 from .mnemonic_captures import cfit
-from .parsing_rules import element_comparator
+#from .parsing_rules import compare_mnemonic_items
 from .structures import Expression
 
 
@@ -145,7 +145,7 @@ register_mnemonic_record(context_manipulation_processor, '{text as uri}')(contex
 
 
 from ..document import create_text_tree_document_from_str
-print(context_manipulation_processor().process_node(create_text_tree_document_from_str('text')))
+print(context_manipulation_processor().process_node(create_text_tree_document_from_str('stuff as things')))
 
 exit()
 

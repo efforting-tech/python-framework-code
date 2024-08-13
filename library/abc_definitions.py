@@ -15,4 +15,6 @@ AF.register_abc_at_target(root_symbol, '''
 	Decorator
 	Data_Condition
 
+	Processor_State
+
 ''')

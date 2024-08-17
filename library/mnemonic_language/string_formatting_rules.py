@@ -2,6 +2,7 @@ from ..processing.generic import Type_LUT_Processor
 from ..document.structures import Text_Match
 from .structures import Optional, Mnemonic, Expression
 
+
 string_formatter = Type_LUT_Processor('string_formatter')
 
 @string_formatter.register(tuple)

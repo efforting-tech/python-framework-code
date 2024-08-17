@@ -168,12 +168,13 @@ class Bound_Data_Descriptor:
 
 @ABC.Record.Data_Descriptor
 class Data_Descriptor:
-	def __init__(self, name, init=None, required=False, kind=symbol.argument.positional_or_named, repr=True):
+	def __init__(self, name, init=None, required=False, kind=symbol.argument.positional_or_named, repr=True, repr_condition=None):
 		self.name = name
 		self.init = init
 		self.required = required
 		self.kind = kind
 		self.repr = repr
+		self.repr_condition = repr_condition
 
 	def __get__(self, instance, owner):
 		if instance is None:

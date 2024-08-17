@@ -17,6 +17,7 @@ def get_name(target):
 		if v := getattr(target, n, None):
 			return v
 
+
 #TODO - move
 def iter_object_using_type(target_object, target_type, default=symbol.miss):
 	for key in target_type.__dict__:	#NOTE - we can't use dir because it will sort things
@@ -47,19 +48,19 @@ class Structure(Abstract_Record):
 
 				#TODO convert to match?
 				if isinstance(value, M.all_positional):
-					setattr(cls, key, Data_Descriptor(key, kind=symbol.argument.all.positional, repr=value.repr))
+					setattr(cls, key, Data_Descriptor(key, kind=symbol.argument.all.positional, repr=value.repr, repr_condition=value.repr_condition))
 
 				elif isinstance(value, M.all_named):
-					setattr(cls, key, Data_Descriptor(key, kind=symbol.argument.all.named, repr=value.repr))
+					setattr(cls, key, Data_Descriptor(key, kind=symbol.argument.all.named, repr=value.repr, repr_condition=value.repr_condition))
 
 				elif value.factory and value.default is None:	#TODO we must decide how to be able to create required positionals by M.positional() vs M.positional(...)
-					setattr(cls, key, Data_Descriptor(key, init=MU.factory(value.factory), repr=value.repr))
+					setattr(cls, key, Data_Descriptor(key, init=MU.factory(value.factory), repr=value.repr, repr_condition=value.repr_condition))
 
 				elif value.default is not None and not value.factory:
-					setattr(cls, key, Data_Descriptor(key, init=MU.constant(value.default), repr=value.repr))
+					setattr(cls, key, Data_Descriptor(key, init=MU.constant(value.default), repr=value.repr, repr_condition=value.repr_condition))
 
 				elif value.default is None and not value.factory:
-					setattr(cls, key, Data_Descriptor(key, repr=value.repr))
+					setattr(cls, key, Data_Descriptor(key, repr=value.repr, repr_condition=value.repr_condition))
 
 
 				else:
@@ -78,13 +79,27 @@ class Structure(Abstract_Record):
 				def fval(n):
 					if (value := getattr(self, n, MISS)) is MISS:
 						return 'N/A'
+					if isinstance(value, type):
+						if n := get_name(value):
+							return f'<{value.__qualname__}>'
+
 					elif callable(value):
 						if n := get_name(value):
 							return f'𝑓<{get_name(value)}>'
 
 					return repr(value)
 
-				inner = ', '.join(f'{n}={fval(n)}' for n, f in members.items())
+				def should_include(f, n):
+					if not f.descriptor.repr_condition:
+						return True
+
+					value = getattr(self, n, symbol.miss)
+					return f.descriptor.repr_condition(value)
+
+
+
+
+				inner = ', '.join(f'{n}={fval(n)}' for n, f in members.items() if should_include(f, n))
 				return f'{self.__class__.__qualname__}({inner})'
 			except RecursionError:
 				return '\N{HORIZONTAL ELLIPSIS}'

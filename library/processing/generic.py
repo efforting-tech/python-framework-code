@@ -118,6 +118,8 @@ class Identity_LUT_Processor(LUT_Processor):
 
 class Type_LUT_Comparator(Type_LUT_Processor):
 	def compare_items(self, expected, subject):
+		#TODO - we should probably separate the take action part from the look up action part to prevent code duplication
+		#TODO - we should also have support for having a different expected for decision than for calling function, like we do with branchable_iterator for the mnemonic_comparator
 		match self.rules.lookup_action(type(expected)):
 			case Call_Comparator_Function(function):
 				return function(self, expected, subject)

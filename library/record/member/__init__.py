@@ -8,20 +8,24 @@ define_record('positional', named=dict(
 	default=None,
 	factory=None,
 	repr=Value(True),
+	repr_condition=Value(None),
 ), bases=(Abstract_Record,), decorators=(ABC.Record.Member,))
 
 define_record('named', named=dict(
 	default=None,
 	factory=None,
 	repr=Value(True),
+	repr_condition=Value(None),
 ), bases=(Abstract_Record,), decorators=(ABC.Record.Member,))
 
 define_record('all_named', named=dict(
 	repr=Value(True),
+	repr_condition=Value(None),
 ), bases=(Abstract_Record,), decorators=(ABC.Record.Member,))
 
 define_record('all_positional', named=dict(
 	repr=Value(True),
+	repr_condition=Value(None),
 ), bases=(Abstract_Record,), decorators=(ABC.Record.Member,))
 
 
@@ -30,6 +34,7 @@ define_record('constant', named=dict(
 	default=None,
 	factory=None,
 	repr=Value(True),
+	repr_condition=Value(None),
 ), bases=(Abstract_Record,), decorators=(ABC.Record.Member,))
 
 
@@ -37,4 +42,5 @@ define_record('state', named=dict(
 	default=None,
 	factory=None,
 	repr=Value(True),
+	repr_condition=Value(None),
 ), bases=(Abstract_Record,), decorators=(ABC.Record.Member,))

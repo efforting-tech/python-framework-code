@@ -10,6 +10,10 @@ class branchable_iterator:
 		self.pending = deque()
 		#self.popped_items = 0
 
+	def synchronize_with(self, other_iterator):
+		self.source = iter(other_iterator.branch().drain())
+		self.pending.clear()
+
 	def push(self, item):
 		self.pending.appendleft(item)
 

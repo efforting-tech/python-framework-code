@@ -110,17 +110,18 @@ class Call_Function(Data_Condition):	#NOTE - this is more of a post processor th
 	function = M.positional()
 	positional_captures = M.positional(())
 
-class Capture_Remaining(Data_Condition):
-	name = M.positional(default=None)
+# class Capture_Remaining(Data_Condition):
+# 	name = M.positional(default=None)
+
 
 class Mnemonic(Comparative_Data_Condition):
 	pass
 
 class Repeat(Data_Condition):
-	element_condition = M.positional(default=None)
-	stop_condition = M.positional(default=None)
-	min_count = M.positional(default=None)
-	max_count = M.positional(default=None)
+	element_condition = M.positional(default=None, repr_condition=bool)
+	look_ahead_stop_condition = M.positional(default=None, repr_condition=bool)
+	#min_count = M.positional(default=None)
+	#max_count = M.positional(default=None)
 
 
 @lambda x: x()	#TODO improve
@@ -133,3 +134,6 @@ class Never_True(Data_Condition):
 
 def Branch(*items):
 	return Any(True, *items)
+
+def Capture_Remaining(capture, element_condition=None):
+	return Repeat(element_condition) & Capture(capture)

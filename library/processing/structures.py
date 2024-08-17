@@ -53,6 +53,16 @@ class LUT_Rule_Set(Structure):
 			self.rules[value] = LUT_Rule(value, action)
 
 
+	def lookup_rule(self, value, default=symbol.action.raise_exception):
+		MISS = object()	#TODO - local symbol
+		pending = self.rules.get(value, default)
+
+		if pending is symbol.action.raise_exception:
+			raise Exception(value)	#TODO - proper exception
+		else:
+			return pending
+
+
 	def lookup_action(self, value, default=symbol.action.raise_exception):
 		MISS = object()	#TODO - local symbol
 		pending = self.rules.get(value, MISS)

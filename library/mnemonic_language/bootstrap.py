@@ -137,10 +137,10 @@ def capture_as_alias(processor_state, pattern, name):
 	#return word() & DC.Capture('alias') & DC.Wrap_Capture('alias', lambda n: string_formatter().process_item(n))
 
 
-register_mnemonic_record(context_manipulation_processor, 'new context')(lambda : symbol.mnemonic.context.manipulation.new_context)	#TODO - make nicer ways to return values, records and calling functions
-register_mnemonic_record(context_manipulation_processor, '-{name}')(context_manipulation.exclude)
-#register_mnemonic_record(context_manipulation_processor, '{text as uri} as {name as alias}')(context_manipulation.include)
-register_mnemonic_record(context_manipulation_processor, '{text as uri}')(context_manipulation.include)
+#register_mnemonic_record(context_manipulation_processor, 'new context')(lambda : symbol.mnemonic.context.manipulation.new_context)	#TODO - make nicer ways to return values, records and calling functions
+#register_mnemonic_record(context_manipulation_processor, '-{name}')(context_manipulation.exclude)
+register_mnemonic_record(context_manipulation_processor, '{text as uri} as {name as alias}')(context_manipulation.include)
+#register_mnemonic_record(context_manipulation_processor, '{text as uri}')(context_manipulation.include)
 
 
 

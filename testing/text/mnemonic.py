@@ -1,4 +1,7 @@
 from efforting.mvp6.mnemonic_language.bootstrap import mlp
+
+exit()
+
 from efforting.mvp6.document import create_text_tree_document_from_str
 
 test_tree = create_text_tree_document_from_str('''
@@ -28,6 +31,6 @@ test_tree = create_text_tree_document_from_str('''
 ''', normalize_block=True)
 
 
-mlp.context.set('hello', 'world')
+#mlp.context.set('hello', 'world')
 mlp.process_tree(test_tree)
 

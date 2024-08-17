@@ -68,7 +68,7 @@ class LUT_Rule_Set(Structure):
 		pending = self.rules.get(value, MISS)
 
 		if pending is MISS:
-			return self.default_action or default
+			return self.default_action or default		#TODO - should we return here? That looks off.
 			#TODO - support fallback??
 
 		if pending is symbol.action.raise_exception:
@@ -140,3 +140,67 @@ class Pending_LUT_Process_Function(Structure):
 		self.owner.rules.map_action(self.action, Call_Processing_Function(function))
 		return function
 
+
+#TODO - maybe we don't need all these different ones
+@ABC.Decorator
+class Pending_Compare_Function(Structure):
+	owner = M.positional()
+	action = M.positional()
+
+	def __call__(self, function):
+		self.owner.rules.map_action(self.action, Call_Comparator_Function(function))
+		return function
+
+@ABC.Decorator
+class Pending_Process_Function(Structure):
+	owner = M.positional()
+	action = M.positional()
+
+	def __call__(self, function):
+		self.owner.rules.map_action(self.action, Call_Processing_Function(function))
+		return function
+
+
+
+
+class Regex_Rule_Set(Structure):
+	rules = M.positional(factory=dict, repr=False)
+	default_action = M.positional(None)
+	fallback = M.positional(None)	#TODO - support??
+
+	def map_action(self, value=None, action=None):
+		if value is symbol.action.default:
+			self.default_action = action
+		elif isinstance(value, str):
+			import re
+			pattern = re.compile(value)
+			self.rules[pattern] = LUT_Rule(pattern, action)
+		else:
+			self.rules[value] = LUT_Rule(value, action)
+
+
+	def lookup_rule(self, value, default=symbol.action.raise_exception):
+		for pattern, rule in self.rules.items():
+			if pattern.fullmatch(value):
+				return rule
+		else:
+			return self.default_action or default
+
+	def lookup_action(self, value, default=symbol.action.raise_exception):
+		for pattern, rule in self.rules.items():
+			if pattern.fullmatch(value):
+				return rule.action
+		else:
+			return self.default_action or default
+
+	def lookup_rule_and_match(self, value, default=symbol.action.raise_exception):
+		for pattern, rule in self.rules.items():
+			if match := pattern.fullmatch(value):
+				return rule, match
+		else:
+			return (self.default_action or default), None
+
+@ABC.Processor_State
+class Regex_Processor_State(Processor_State):
+	rule = M.positional()
+	match = M.positional()

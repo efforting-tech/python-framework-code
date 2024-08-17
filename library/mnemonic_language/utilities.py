@@ -32,7 +32,6 @@ class pending_mnemonic_record_for_processor(Structure):
 		return record
 
 
-
 #TODO - move to proper place
 def tokenize_text(text):
 	#TODO - use resolver(processor)

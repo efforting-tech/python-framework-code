@@ -3,7 +3,7 @@
 from ..record.base.public import Structure
 from ..record import member as M
 from .. import symbol, ABC
-from .structures import Processor_State, Rule_Set, Pending_LUT_Process_Function, LUT_Rule_Set, Pending_LUT_Compare_Function, Call_Comparator_Function, Call_Processing_Function
+from .structures import Regex_Processor_State, Processor_State, Rule_Set, Pending_LUT_Process_Function, LUT_Rule_Set, Pending_LUT_Compare_Function, Call_Comparator_Function, Call_Processing_Function, Pending_Process_Function, Regex_Rule_Set
 
 class Base_Processor(Structure):
 	name = M.positional(default=None)
@@ -92,7 +92,7 @@ class Type_LUT_Processor(LUT_Processor):
 
 class Identity_LUT_Processor(LUT_Processor):
 
-	def process_item(self, item, *additional_positionals):
+	def process_item(self, item, *additional_positionals):	#TODO - should we have additiona_positionals or not?
 		match self.rules.lookup_action(item):
 			case Call_Processing_Function(function):
 				return function(self, item, *additional_positionals)
@@ -142,3 +142,33 @@ class Type_LUT_Comparator(Type_LUT_Processor):
 
 	def register_default(self):
 		return Pending_LUT_Compare_Function(self, symbol.action.default)
+
+
+class Regex_Processor(Processor):
+	rules = M.positional(factory=Regex_Rule_Set)
+	STATE_TYPE = M.positional(default=Regex_Processor_State)
+
+	def process_item(self, item, *additional_positionals):	#TODO - should we have additiona_positionals or not?
+		self.rule, self.match = self.rules.lookup_rule_and_match(item)	#TODO - here we are assuming processor_state for self - we may want to refine this
+		match self.rule.action:
+			case Call_Processing_Function(function):
+				return function(self, item, *additional_positionals)
+
+			case sym if sym is symbol.action.raise_exception:
+				raise Exception(f'Failed to process {item!r} in {type(self).__qualname__} {self.name!r}')
+
+			case ABC.Action() as action:
+				raise Exception(f'Unsupported action: {action}')	#TODO - better error
+
+			case sym if sym in symbol.action:
+				raise Exception(f'Unsupported action symbol: {sym}')	#TODO - better error
+
+			case unhandled:
+				raise Exception(f'Unknown action: {unhandled}')	#TODO - better error
+
+	def register(self, action):
+		return Pending_Process_Function(self, action)
+
+	def register_default(self):
+		return Pending_Process_Function(self, symbol.action.default)
+

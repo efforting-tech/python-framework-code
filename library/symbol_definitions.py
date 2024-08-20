@@ -10,7 +10,6 @@ SF.register_symbols_at_target(root_symbol, '''
 	copy
 	end_of_pattern
 
-
  	target.instance
 
 	indention.mode.Tabs
@@ -41,6 +40,7 @@ SF.register_symbols_at_target(root_symbol, '''
 	action.raise_exception
 	action.default
 	action.skip
+	action.sub_dispatcher
 
 	action.exit_sub_parser
 	action.yield_match

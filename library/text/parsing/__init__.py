@@ -1,20 +1,45 @@
 from ...record.base.public import Structure
 from ...record import member as M
-from ...processing.generic import LUT_Processor
 from ...str.interface import String_Interface
 from ... import symbol
 
+from ...processing.dispatcher import Named_Dispatcher, LUT_Regulations, generic_data_condition, unconditional_rule
+from ...matching import data_condition as DC
+
 from .structures import Token_Stream, Enter_Sub_Parser
 
-class Token_Parser(LUT_Processor):
+
+class Token_Rule(Structure):
+	token = M.positional(None)
+	value = M.positional(None)
+	action = M.positional(True)
+
+	def match(self, item):
+		if self.token and self.token is not item.token:
+			return
+
+		if self.value is not None and self.value != item.value:
+			return
+
+		return True
+
+
+
+
+
+
+
+class Token_Parser(Named_Dispatcher):
+	regulations = M.positional(factory=LUT_Regulations)
 	tokens = M.positional(factory=dict(), repr=False)
 	post_processor = M.positional(tuple)
 
 	def map_token_to_action(self, token, action):
-		self.rules.map_action(token, action)
+		self.regulations.rules[token] = action
 
 	def set_default_action(self, action):
-		self.rules.default_action = action
+		self.regulations.fallback_rule = unconditional_rule(action)
+
 
 
 	def process_text(self, text, position=0):
@@ -26,7 +51,8 @@ class Token_Parser(LUT_Processor):
 	def process_token_stream_iteratively(self, token_stream):
 		token_stream.source = String_Interface.regex_tokenize(token_stream.text, self.tokens, token_stream.pending_position)
 		for token in token_stream:
-			action = self.rules.lookup_action(token.token, None)
+
+			action = self.dispatch_item(token.token).value.rule.action
 			#print('TOKEN', self.name, token.token, repr(token.match.group()), action)
 
 			match action:

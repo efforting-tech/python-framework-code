@@ -8,6 +8,17 @@ class Text_Tree_Interface:
 #		return lines.casted_copy(cls)
 
 	@classmethod
+	def from_title_and_body(cls, title, body, clean_body=False):
+		new = cls()
+		new.write(title)
+		adjustment = 1
+		if clean_body:
+			adjustment -= body.get_minimum_indention()
+		new.write(body, adjustment)
+
+		return new
+
+	@classmethod
 	def from_title_and_branches(cls, title, *branches):
 		new = cls()
 		new.write(title)
@@ -27,7 +38,24 @@ class Text_Tree_Interface:
 
 	@property
 	def body(self):
-		return self[1:]
+		first = None
+		first_indent = None
+		last = None
+		for i, l in enumerate(self.lines):
+			if l.is_empty:
+				continue
+
+			if first is None:
+				first = i
+				first_indent = l.indent
+			else:
+				if l.indent > first_indent:
+					last = i
+
+		#LIKELY BUG when dealing with empty bodies
+		return self[first+1:last]
+
+		#return self[self.first_line_index_with_content+1:]
 
 	def iter_nodes(self):
 		min_indent = min(i.indent for i in self.lines if i.text)		#BUG fails if iterator is empty: ValueError: min() iterable argument is empty
@@ -36,7 +64,10 @@ class Text_Tree_Interface:
 			if not i.text:
 				continue
 
-			if i.indent == min_indent:
+			if i.indent < min_indent:
+				break
+
+			elif i.indent == min_indent:
 				if last_root_index is not None:
 					yield self[last_root_index:local_index-1]
 

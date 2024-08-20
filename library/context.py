@@ -25,7 +25,7 @@ class execution_frame(Structure):
 		if (ft := self.owner.frame_tracker) is not None:
 			ft.pop()
 
-
+#TODO - we have another stack, we should not use two
 class stack(list):
 	def push(self, value):
 		self.append(value)

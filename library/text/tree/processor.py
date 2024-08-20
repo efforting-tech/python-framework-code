@@ -1,3 +1,5 @@
+#TODO - is this used or deprecated?
+
 from ...record.base.public import Structure
 from ...record import member as M
 

@@ -1,11 +1,4 @@
-from ..processing.text_tree import Text_Tree_Processor
-from ..record import member as M
-from ..record.base.public import Structure
-from ..processing.structures import Regex_Rule_Set, Call_Text_Tree_Processing_Function
-from ..processing.text_tree import Text_Tree_Processor_State, Text_Tree_Processor
-from .. import ABC
-
-
+#TODO - deprecate and rewrite
 
 #START OF SECTION: temporary regex processing
 #TODO: we should either move or remove this
@@ -54,7 +47,7 @@ def mtr(processor, mnemonic):
 @mnemonic_to_regex.register(Expression)
 def mtr(processor, mnemonic):
 	#NOTE - This implementation assumes it will be a single capture
-	name, pattern = mnemonic_expression_to_regex().process_item(string_formatter.process_item(Mnemonic(*mnemonic)))
+	name, pattern = mnemonic_expression_to_regex.process_item(string_formatter.process_item(Mnemonic(*mnemonic)))
 	return rf'(?P<{name}>{pattern})'
 
 @mnemonic_expression_to_regex.register(r'name')
@@ -67,7 +60,7 @@ def pattern(processor, mnemonic):
 
 @mnemonic_expression_to_regex.register(r'(.*?)\s+as\s+(\w+)')
 def pattern(processor, mnemonic):
-	pattern, alias = processor.match.groups()
+	pattern, alias = processor.match.value.value.match.groups()	# processor.match → Stack.value → First_Result.value → Rule_Match.match → re.Match()
 	sub_name, sub_pattern = processor.process_item(pattern)
 	return alias, sub_pattern
 
@@ -75,39 +68,51 @@ def pattern(processor, mnemonic):
 
 
 
+if False:
 
-@ABC.Decorator
-class Pending_Regex_Text_Tree_Process_Function(Structure):
-	owner = M.positional()
-	pattern = M.positional()
-
-	def __call__(self, function):
-		self.owner.rules.map_action(self.pattern, Call_Text_Tree_Processing_Function(function))
-		return function
-
-
-class Mnemonic_Text_Tree_Processor_State(Text_Tree_Processor_State):
-	rule = M.positional()
-	match = M.positional()
-
-	def process_item(self, title_subject):
-		#TODO - we should use the rulesystem API to get the correct rule instead (but we need to harmonize our processors and make sure we can build up all the different kinds)
-		self.item = title_subject
-		self.rule, self.match = self.rules.lookup_rule_and_match(title_subject)
-		if self.rule is symbol.action.raise_exception:
-			raise Exception(f'Failed to handle: {title_subject}')	#TODO - better error
-
-		return self.process_action(self.rule.action)
+	from ..processing.text_tree import Text_Tree_Processor
+	from ..record import member as M
+	from ..record.base.public import Structure
+	from ..processing.structures import Regex_Rule_Set, Call_Text_Tree_Processing_Function
+	from ..processing.text_tree import Text_Tree_Processor_State, Text_Tree_Processor
+	from .. import ABC
 
 
 
-class Mnemonic_Text_Tree_Processor(Text_Tree_Processor):
-	title_comparator = M.positional()
-	title_processor = M.positional()
-	rules = M.positional(factory=Regex_Rule_Set)
-	STATE_TYPE = M.positional(default=Mnemonic_Text_Tree_Processor_State)
+
+
+	@ABC.Decorator
+	class Pending_Regex_Text_Tree_Process_Function(Structure):
+		owner = M.positional()
+		pattern = M.positional()
+
+		def __call__(self, function):
+			self.owner.rules.map_action(self.pattern, Call_Text_Tree_Processing_Function(function))
+			return function
+
+
+	class Mnemonic_Text_Tree_Processor_State(Text_Tree_Processor_State):
+		rule = M.positional()
+		match = M.positional()
+
+		def process_item(self, title_subject):
+			#TODO - we should use the rulesystem API to get the correct rule instead (but we need to harmonize our processors and make sure we can build up all the different kinds)
+			self.item = title_subject
+			self.rule, self.match = self.rules.lookup_rule_and_match(title_subject)
+			if self.rule is symbol.action.raise_exception:
+				raise Exception(f'Failed to handle: {title_subject}')	#TODO - better error
+
+			return self.process_action(self.rule.action)
 
 
 
-	def register_mnemonic(self, mnemonic):
-		return Pending_Regex_Text_Tree_Process_Function(self, mnemonic_to_regex.process_item(mnemonic))	#TODO - this is a temporary solution until the pattern system is improved
+	class Mnemonic_Text_Tree_Processor(Text_Tree_Processor):
+		title_comparator = M.positional()
+		title_processor = M.positional()
+		rules = M.positional(factory=Regex_Rule_Set)
+		STATE_TYPE = M.positional(default=Mnemonic_Text_Tree_Processor_State)
+
+
+
+		def register_mnemonic(self, mnemonic):
+			return Pending_Regex_Text_Tree_Process_Function(self, mnemonic_to_regex.process_item(mnemonic))	#TODO - this is a temporary solution until the pattern system is improved

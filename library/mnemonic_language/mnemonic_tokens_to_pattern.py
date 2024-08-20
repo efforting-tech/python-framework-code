@@ -2,7 +2,7 @@ from .. import symbol
 from ..document.structures import Text_Match
 from ..matching import data_condition as DC
 from ..processing.generic import Type_LUT_Processor, Identity_LUT_Processor
-from ..processing.text_tree import Mnemonic_Text_Tree_Processor
+#from ..processing.text_tree import Mnemonic_Text_Tree_Processor
 from .rudimentary_definition_helpers import join_sequence, word, optional, literal, ws
 from .structures import Optional, Mnemonic, Expression
 from .string_formatting_rules import string_formatter
@@ -12,26 +12,28 @@ T = symbol.text.token
 mttp = Type_LUT_Processor('mttp')
 mttpex = Type_LUT_Processor('mttpex')
 tmip = Identity_LUT_Processor('tmip')
-mlexp = Mnemonic_Text_Tree_Processor('mlexp')
 
-#TODO - possibley get rid of capture_meta all together
+if False:	#TODO - put back when MTTP is finished
+	mlexp = Mnemonic_Text_Tree_Processor('mlexp')
+
+	#TODO - possibley get rid of capture_meta all together
 
 
-@mlexp.register(join_sequence(ws, word('name'), require_sequence_type=Expression))
-def process_expression_name(processor):
-	#processor.capture_meta['name'] =  'name'	#TODO - describe proper post processing here
-	return word() & DC.Capture('name') & DC.Wrap_Capture('name', lambda n: string_formatter().process_item(n))
+	@mlexp.register(join_sequence(ws, word('name'), require_sequence_type=Expression))
+	def process_expression_name(processor):
+		#processor.capture_meta['name'] =  'name'	#TODO - describe proper post processing here
+		return word() & DC.Capture('name') & DC.Wrap_Capture('name', lambda n: string_formatter().process_item(n))
 
-@mlexp.register(join_sequence(ws, word('pattern'), require_sequence_type=Expression))
-def process_expression_name(processor):
-	#processor.capture_meta['pattern'] = 'pattern'	#TODO - describe proper post processing here
-	return DC.Capture_Remaining('pattern')
+	@mlexp.register(join_sequence(ws, word('pattern'), require_sequence_type=Expression))
+	def process_expression_name(processor):
+		#processor.capture_meta['pattern'] = 'pattern'	#TODO - describe proper post processing here
+		return DC.Capture_Remaining('pattern')
 
-#TODO - better names
-@mlexp.register(join_sequence(ws, word('text'), require_sequence_type=Expression))
-def process_expression_name(processor):
-	#return DC.Sequence(DC.Capture_Remaining('text')) & DC.Wrap_Capture('text', lambda n: string_formatter().process_item(n))	#HACK - we shouldn't have to wrap capture_remaining in sequence but because we don't deal with capture_remaining in element comparator we have to do it like this. We should refine the parsing rules to account for this.
-	return DC.Capture_Remaining('text') & DC.Wrap_Capture('text', lambda n: string_formatter().process_item(n))
+	#TODO - better names
+	@mlexp.register(join_sequence(ws, word('text'), require_sequence_type=Expression))
+	def process_expression_name(processor):
+		#return DC.Sequence(DC.Capture_Remaining('text')) & DC.Wrap_Capture('text', lambda n: string_formatter().process_item(n))	#HACK - we shouldn't have to wrap capture_remaining in sequence but because we don't deal with capture_remaining in element comparator we have to do it like this. We should refine the parsing rules to account for this.
+		return DC.Capture_Remaining('text') & DC.Wrap_Capture('text', lambda n: string_formatter().process_item(n))
 
 
 @mttpex.register(tuple)

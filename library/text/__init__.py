@@ -128,6 +128,26 @@ class Abstract_Line_Listing(Hierarchial_Entry, Text_Interface):
 
 			return l
 
+	def get_minimum_indention(self):
+		mi = None
+
+		for l in self.lines:
+			if l.is_empty:
+				continue
+
+			if (indent := l.indent) is None:
+				indent = 0
+
+			if indent == 0:
+				return 0
+
+			if mi is None:
+				mi = indent
+			elif indent < mi:
+				mi = indent
+
+		return mi or 0
+
 	def __len__(self):
 		return len(self.lines)
 
@@ -240,25 +260,6 @@ class Line_Listing(Abstract_Line_Listing):
 		for line in self.lines:
 			line.clear_indention()
 
-	def get_minimum_indention(self):
-		mi = None
-
-		for l in self.lines:
-			if l.is_empty:
-				continue
-
-			if (indent := l.indent) is None:
-				indent = 0
-
-			if indent == 0:
-				return 0
-
-			if mi is None:
-				mi = indent
-			elif indent < mi:
-				mi = indent
-
-		return mi or 0
 
 
 	@classmethod

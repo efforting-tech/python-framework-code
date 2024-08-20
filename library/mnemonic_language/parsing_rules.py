@@ -4,7 +4,7 @@ from ..matching import data_condition as DC
 from ..processing.generic import Type_LUT_Processor, Type_LUT_Comparator
 from ..processing.structures import Call_Comparator_Function
 
-#PENDINg
+#PENDING
 
 # compare_items( [Sequence(= 123, Repeat() & (as stuff), = 456, = 789)] :: [[123, 1, 2, 3, 456, 789]]) ...
 # compare_items( [= 123, Repeat() & (as stuff), = 456, = 789] :: [123, 1, 2, 3, 456, 789]) ...

@@ -1,9 +1,9 @@
-from ..record.base import public
+from ..record.base.public import Structure, Sequence
 from ..record import member as M
 from .. import ABC
 
 @ABC.Data_Condition
-class Data_Condition(public.Structure):
+class Data_Condition(Structure):
 	def __and__(self, other):
 		assert isinstance(other, ABC.Data_Condition)
 		return All(True, self, other)
@@ -18,7 +18,7 @@ class Data_Condition(public.Structure):
 	def __eq__(self, other):
 		return type(self) is type(other) and self.__getstate__() == other.__getstate__()
 
-class Comparative_Data_Condition_Interface:
+class Comparative_Data_Condition_Interface(Structure):
 	value = M.positional()
 
 	def __eq__(self, other):
@@ -29,7 +29,7 @@ class Sequential_Data_Condition_Interface:
 	def __eq__(self, other):
 		return type(self) is type(other) and super().__eq__(self, other)
 
-class Sequence_Data_Condition(public.Sequence, Data_Condition):
+class Sequence_Data_Condition(Sequence, Data_Condition):
 	pass
 
 class Comparative_Data_Condition(Data_Condition, Comparative_Data_Condition_Interface):

@@ -67,7 +67,7 @@ class Structure(Abstract_Record):
 					raise Exception(key, value.default)	#TODO - proper exception
 
 
-		cls.__match_args__ = tuple(all_names)
+		cls.__match_args__ = tuple(n for n, d in iter_type(cls) if isinstance(d, ABC.Record.Data_Descriptor))
 
 
 

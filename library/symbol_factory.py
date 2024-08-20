@@ -9,6 +9,7 @@ class Local_Symbol:
 		return f'L{self._name!r}'
 
 class Symbol:
+	_REPR_PREFIX = 'S'
 	def __init__(self, name, parent=None, auto_graft=None):
 		self._name = name
 		self._parent = parent
@@ -64,7 +65,7 @@ class Symbol:
 			else:
 				return target._name
 
-		return f'S{get_path(self)!r}'
+		return f'{self._REPR_PREFIX}{get_path(self)!r}'
 
 
 interface = Register_Interface(Symbol)

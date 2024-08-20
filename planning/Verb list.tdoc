@@ -1,0 +1,99 @@
+Note: This document is being used to plan out the organization of dispatchers and processors
+
+List: Verbs
+	Group: Aggregate
+		Entry: aggregate
+
+	Group: Traverse
+		Entry: branch
+		Entry: iterate
+		Entry: sample
+		Entry: search
+		Entry: traverse
+
+	Group: Compute
+		Entry: calculate
+		Entry: compute
+		Entry: create
+		Entry: evaluate
+		Entry: extract
+
+	Group: Process
+		Entry: annotate
+		Entry: clean
+		Entry: clear
+		Entry: compile
+		Entry: comply
+		Entry: destroy
+		Entry: digest
+		Entry: modify
+		Entry: process
+		Entry: prune
+		Entry: randomize
+		Entry: resolve
+		Entry: substitute
+
+
+	Group: Operation
+		Entry: action
+		Entry: simulate
+
+	Group: Transform
+		Entry: convert
+		Entry: deserialize
+		Entry: normalize
+		Entry: optimize
+		Entry: reduce
+		Entry: separate
+		Entry: serialize
+		Entry: split
+		Entry: transform
+
+	Group: Organize
+		Entry: classify
+		Entry: connect
+		Entry: delete
+		Entry: disconnect
+		Entry: enqueue
+		Entry: group
+		Entry: index
+		Entry: insert
+		Entry: inventory
+		Entry: join
+		Entry: link
+		Entry: map
+		Entry: pop
+		Entry: push
+		Entry: rank
+		Entry: scramble
+		Entry: sort
+		Entry: switch
+		Entry: unlink
+
+	Group: Programming
+		Entry: debug
+		Entry: decompile
+		Entry: fuzz
+		Entry: inspect
+		Entry: present
+		Entry: trace
+
+	Group: Cryptography
+		Entry: decrypt
+		Entry: encrypt
+
+	Group: Validate
+		Entry: expect
+		Entry: test
+		Entry: validate
+
+	Group: Filter
+		Entry: filter
+
+	Group: Generate
+		Entry: generate
+		Entry: merge
+		Entry: synthesize
+
+
+

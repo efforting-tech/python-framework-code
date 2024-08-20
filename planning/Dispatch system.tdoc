@@ -1,0 +1,12 @@
+Class: Aggregator
+
+	Member: status
+		Enum:
+			pending
+			working
+			finished
+			aborted
+
+	API for method: abort
+		Argument: error
+		Purpose: Change status to aborted and set {member error} to {argument error}

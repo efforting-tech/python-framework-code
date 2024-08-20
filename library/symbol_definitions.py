@@ -40,6 +40,7 @@ SF.register_symbols_at_target(root_symbol, '''
 
 	action.raise_exception
 	action.default
+	action.skip
 
 	action.exit_sub_parser
 	action.yield_match
@@ -49,9 +50,16 @@ SF.register_symbols_at_target(root_symbol, '''
 	mnemonic.context.manipulation.discard_entry
 	mnemonic.context.manipulation.new_context
 
+	aggregator.status.Pending
+	aggregator.status.Working
+	aggregator.status.Finished
+	aggregator.status.Aborted
+
+	state_management.any_state
 
 
 ''')
 
 EF.convert_symbol_to_enum(root_symbol.indention.mode)
+EF.convert_symbol_to_enum(root_symbol.aggregator.status)
 

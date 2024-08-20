@@ -1,0 +1,75 @@
+Semantic class hierarchy:
+	Dispatcher
+
+		Comparator
+			Unary_Comparator
+			Binary_Comparator
+				Commutative_Binary_Comparator
+				Non_Commutative_Binary_Comparator
+			Set_Comparator
+				Commutative_Set_Comparator
+				Non_Commutative_Set_Comparator
+
+		Transformer
+		Resolver
+		Filter
+		Evaluator
+			Priority_Evaluator
+			Score_Evaluator
+		Classifier
+			Feature_Analyzer
+			Group_Classifier
+
+		Processor
+		Iterator
+
+	Regulations
+
+	Aggregator
+		Group_Organizer
+		Sorter
+
+	Generator
+
+Roles:
+	Abstract Class: Dispatcher
+		Abstract Class: Comparator
+			Class: Unary_Comparator
+				Brief: Perform a comparison of a single item
+
+			Class: Binary_Comparator
+				Brief: Perform a comparison of two items
+
+			Abstract Class: Set_Comparator
+				Class: Commutative_Set_Comparator
+					Brief: Perform a commutative comparison of a set of items
+				Class: Non_Commutative_Set_Comparator
+					Brief: Perform a non commutative comparison of a set of items
+
+		Abstract Class: Transformer
+			Class: Evaluator
+				Brief: Perform evaluation of an item
+				Class: Priority_Evaluator
+					Brief: Evaluate priority of an item
+				Class: Score_Evaluator
+					Brief: Compute a score for an item
+			Class: Resolver
+				Brief: Resolve an item into a value
+			Abstract Class: Classifier
+				Class: Feature_Analyzer
+					Brief: Analyze multiple features of an item an return a report object
+				Class: Group_Classifier
+					Brief: Classify an item into one of several groups
+
+			Class: Processor
+				Brief: Perform one or multiple actions on an item
+				Class: Strict_Processor
+					Brief: Under the condition that only one rule of the regulations matches the item an action is performed on an item
+					Note: There could be various strict options of other semantic classes here as well.
+
+		Class: Iterator
+			Brief: Iterate over an item and yield sub items
+			Class: Filter
+				Brief: Iterate over an item and conditionally yield sub items
+
+

@@ -10,11 +10,9 @@ class View_Definition_Resolver_Depth_Limiter(Structure):
 	def __enter__(self):
 		self.restore_value = self.resolver.limit_value
 		self.resolver.limit_value = self.limit
-		print('ENTER')
 
 	def __exit__(self, et, ev, tb):
 		self.resolver.limit_value = self.restore_value
-		print('EXIT')
 
 class View_Definition_Resolver(Structure):
 	definition = M.positional()
@@ -32,13 +30,10 @@ class View_Definition_Resolver(Structure):
 		if self.limit_value is not None:
 			self.limit_value -= 1
 			if self.limit_value <= 0:
-				print('LIMIT REACHED')
 				return symbol.unresolved
 
 		conversion_rule = self.definition._view_definition.members[name]
-		print(conversion_rule)
 		if conversion_rule in self.visited:
-			print('CYCLE DETECTED')
 			return symbol.unresolved
 
 		self.visited.add(conversion_rule)
@@ -92,6 +87,12 @@ class Branch(Node):
 class All(Node):
 	sub_conditions = M.all_positional()
 
+class Initializer(Node):
+	value = M.positional()
+
+	def resolve(self, resolver):
+		return self.value
+
 class Field_Conversion_Rule(Node):
 	field_name = M.positional()
 	converter = M.positional()
@@ -105,14 +106,12 @@ class Field_Conversion_Rule(Node):
 
 
 view_def = View_Definition(
-	int = Field_Conversion_Rule('float', int) | Field_Conversion_Rule('string', int),
-	float = Field_Conversion_Rule('string', float) | Field_Conversion_Rule('int', float),
-	string = Field_Conversion_Rule('int', str) | Field_Conversion_Rule('float', str),
+	int = Field_Conversion_Rule('float', int) | Field_Conversion_Rule('string', int) | Initializer(0),
+	float = Field_Conversion_Rule('string', float) | Field_Conversion_Rule('int', float) | Initializer(0.0),
+	string = Field_Conversion_Rule('int', str) | Field_Conversion_Rule('float', str) | Initializer('0'),
 )
 
-instance = view_def(int=42)
+instance = view_def()
 
 print(repr(instance.float))
-
-print('---')
-print(repr(instance.float))
+print(repr(instance.string))

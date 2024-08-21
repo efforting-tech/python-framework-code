@@ -39,6 +39,8 @@ class Processor(Named_Dispatcher):
 
 
 	def process_item(self, item, *additional_positionals):
+		#NOTE The additional_positionals can be fairly neat but currently action processing is duplicated
+		#TODO Revise how we register actions with positionals
 		match = self.dispatch_item(item)
 
 		with Stack_Frame(self.match, match, self.item, item):

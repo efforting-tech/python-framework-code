@@ -10,6 +10,7 @@ SF.register_symbols_at_target(root_symbol, '''
 	copy
 	end_of_pattern
 	unresolved
+	exclude
 
  	target.instance
 

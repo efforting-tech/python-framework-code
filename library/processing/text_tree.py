@@ -14,6 +14,7 @@ from .stack import Stack, Stack_Frame
 class Text_Tree_Dispatcher_Action(Structure):
 	target = M.positional()
 
+
 class Text_Tree_Dispatcher(Processor):
 	#title_preprocessor = M.positional(None)
 	tree = M.positional(factory=Stack)
@@ -31,6 +32,7 @@ class Text_Tree_Dispatcher(Processor):
 		match action:
 			case Text_Tree_Dispatcher_Action(target):
 				return target(self)
+
 			case unhandled:
 				raise Exception(unhandled)#TODO better
 
@@ -52,7 +54,6 @@ class Text_Tree_Dispatcher(Processor):
 			for node in tree.iter_nodes():
 				result.aggregate(self.dispatch_node(node))
 
-		print(result)
 		return result
 
 

@@ -14,9 +14,8 @@ from .stack import Stack, Stack_Frame
 class Text_Tree_Dispatcher_Action(Structure):
 	target = M.positional()
 
-#TODO - this one should be based on generic.Processor
 class Text_Tree_Dispatcher(Processor):
-	title_preprocessor = M.positional(None)
+	#title_preprocessor = M.positional(None)
 	tree = M.positional(factory=Stack)
 	node = M.positional(factory=Stack)
 	title = M.positional(factory=Stack)
@@ -37,8 +36,8 @@ class Text_Tree_Dispatcher(Processor):
 
 	def dispatch_node(self, node):
 		title = node.title
-		if self.title_preprocessor:
-			title = self.title_preprocessor(title)
+		#if self.title_preprocessor:
+		#	title = self.title_preprocessor(title)
 
 		if match := self.dispatch_item(title):
 			with Stack_Frame(self.node, node, self.title, title, self.match, match):

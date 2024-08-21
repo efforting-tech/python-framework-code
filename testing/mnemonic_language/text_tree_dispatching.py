@@ -1,12 +1,16 @@
-from efforting.mvp6.processing.dispatcher import Regulations, Dispatcher, regex_rule, sub_dispatcher_rule, generic_data_condition
+from efforting.mvp6.processing.dispatcher import Regulations, Dispatcher, regex_rule, sub_dispatcher_rule, generic_data_condition, Rule_Match
 from efforting.mvp6.document import create_text_tree_document_from_str
 from efforting.mvp6.mnemonic_language.parser import tp
 from efforting.mvp6.mnemonic_language.mnemonic_tokens_to_pattern import mttp
 from efforting.mvp6.processing.text_tree import Text_Tree_Dispatcher, Text_Tree_Dispatcher_Action
 
+from efforting.mvp6.mnemonic_language.string_formatting_rules import string_formatter
+
 
 from efforting.mvp6.mnemonic_language.processing import mnemonic_to_regex
 from efforting.mvp6.text.tree import Text_Tree_Listing
+
+from efforting.mvp6.data_view import View_Definition, Field_Conversion_Rule
 
 
 #NEXT UP - We started with the pattern recognizer and tokens but then we hit a snag here which we can solve but want to put off to later. This means we now mix regex and token pattern matches which we currently solved by using a fallback
@@ -90,6 +94,35 @@ from efforting.mvp6.context import context, python_code_execution_interface
 
 #	print(stylize_and_render_document(dispatcher.node.value.body, style=presets.fruity))
 
+mnemonic_title = View_Definition(
+	string = Field_Conversion_Rule('tokens', string_formatter.process_item),
+	tokens = Field_Conversion_Rule('string', tp.process_text),
+)
+
+
+class Mnemonic_Tree_Regulations(Regulations):
+	def aggregate_matches(self, aggregator, item):
+		found = False
+		for rule in self.rules:
+			match rule:	#TODO use ABc
+				case regex_rule():
+					match_item = item.string
+
+				#TODO - handle mnemonic pattern
+
+				case undhandled:
+					raise Exception()
+
+			if not aggregator.accepting_work:
+				break
+
+			if match := rule.match(match_item):
+				aggregator.aggregate(Rule_Match(rule, match_item, match))
+				found = True
+
+
+		if not found and self.fallback_rule:
+			aggregator.aggregate(Rule_Match(self.fallback_rule, item, symbol.miss))
 
 class Mnemonic_Tree_Dispatcher(Text_Tree_Dispatcher):
 	target_dispatcher = M.positional(factory=Stack)
@@ -101,6 +134,15 @@ class Mnemonic_Tree_Dispatcher(Text_Tree_Dispatcher):
 		state['name'] = self.name
 		state['regulations'] = self.regulations
 		return type(self)(**state)
+
+	def dispatch_node(self, node):
+		title = mnemonic_title(string=node.title)
+
+		if match := self.dispatch_item(title):
+			with Stack_Frame(self.node, node, self.title, title, self.match, match):
+				return self.process_action(match.value)
+		else:
+			raise Exception(f'No match for {title!r}')	#TODO - default handler, better message
 
 
 def amend_current_processor(dispatcher):
@@ -143,11 +185,15 @@ def amend_current_processor_mnemonic_function(dispatcher):
 	return 'mne'
 
 
-regex_regulations = Regulations()
+
+
+
+
+regex_regulations = Mnemonic_Tree_Regulations()
 regex_regulations.rules.append(regex_rule(re.compile(mnemonic_to_regex.process_item('amend current processor[:]')), Text_Tree_Dispatcher_Action(amend_current_processor)))
 bootstrap_dispatcher = Mnemonic_Tree_Dispatcher('bootstrap_dispatcher', regex_regulations)
 
-amend_regex_regulations = Regulations()
+amend_regex_regulations = Mnemonic_Tree_Regulations()
 amend_regex_regulations.rules.append(regex_rule(re.compile(mnemonic_to_regex.process_item('setup[:]')), Text_Tree_Dispatcher_Action(amend_current_processor_setup)))
 amend_regex_regulations.rules.append(regex_rule(re.compile(mnemonic_to_regex.process_item('mnemonic function[:] {pattern}')), Text_Tree_Dispatcher_Action(amend_current_processor_mnemonic_function)))
 #amend_regex_regulations.rules.append(regex_rule(re.compile(mnemonic_to_regex.process_item('amend [:]')), Text_Tree_Dispatcher_Action(test_func)))

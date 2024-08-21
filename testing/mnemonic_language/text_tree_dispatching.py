@@ -9,6 +9,10 @@ from efforting.mvp6.mnemonic_language.processing import mnemonic_to_regex
 from efforting.mvp6.text.tree import Text_Tree_Listing
 
 
+#NEXT UP - We started with the pattern recognizer and tokens but then we hit a snag here which we can solve but want to put off to later. This means we now mix regex and token pattern matches which we currently solved by using a fallback
+#			I would prefer if we used a single regulations object but we had different sub regulations depending on if we should work with the tokens or the strings. I think a reasonable approach here is to have a data view object
+#			that can have multiple views and define conversations between views. It can then automatically resolve items.
+
 #NEXT UP - we are back at the inconsistency in who should keep track of the context/processor state. Maybe we should make a processor and leave the regulations outside of it
 
 #print(mnemonic_to_regex.process_item('hello world[:] {name as thing}'))
@@ -24,9 +28,9 @@ test_tree = create_text_tree_document_from_str('''
 			CPT: thing
 
 		mnemonic function: test {name as thing}
-			print('THING', thing)
+			#print('THING', thing)
 			print(dir())	#'PS', 'cpt', 'hello', 'node', 'thing'
-			print(cpt)		#{'thing': 'stuff'}
+			#print(cpt)		#{'thing': 'stuff'}
 
 		setup:
 			PS: -node
@@ -91,15 +95,23 @@ class Mnemonic_Tree_Dispatcher(Text_Tree_Dispatcher):
 	target_dispatcher = M.positional(factory=Stack)
 	execution_context = M.positional(factory=context)
 
+	def on_behalf_of(self, dispatcher):
+		#NOTE - This feel a bit ugly, but it will have to do for now
+		state = dispatcher.__getstate__()
+		state['name'] = self.name
+		state['regulations'] = self.regulations
+		return type(self)(**state)
 
 
 def amend_current_processor(dispatcher):
-	print('AMEND')
+	print('AMEND', dispatcher)
 
-def amend_current_processor(dispatcher):
 	with Stack_Frame(dispatcher.target_dispatcher, dispatcher):
 		print('In stack')
-		amend_current_processor_dispatcher.dispatch_tree(dispatcher.node.value.body)
+		amend_current_processor_dispatcher.on_behalf_of(dispatcher).dispatch_tree(dispatcher.node.value.body)
+
+		  #).dispatch_tree(dispatcher.node.value.body)
+		#amend_current_processor_dispatcher.dispatch_tree(dispatcher.node.value.body)
 		print('Out stack')
 
 
@@ -112,7 +124,8 @@ def amend_current_processor_setup(dispatcher):
 
 
 def amend_current_processor_mnemonic_function(dispatcher):
-	print('MNEMONIC!', dispatcher.match.value.value.match.groupdict())
+	print('MNEMONIC!', dispatcher.match.value.value.match.groupdict()['pattern'])
+	pattern = dispatcher.match.value.value.match.groupdict()['pattern']
 
 	#body = dispatcher.node.value.body.editable_copy()
 	#body.normalize_block()
@@ -123,6 +136,7 @@ def amend_current_processor_mnemonic_function(dispatcher):
 	sc = dispatcher.execution_context.sub_context()
 	python_code_execution_interface.exec_in_context(sc, body.to_str())
 	action = Text_Tree_Dispatcher_Action(sc.require('handler'))
+
 
 	target_dispatcher.regulations.rules.append(regex_rule(re.compile(mnemonic_to_regex.process_item(pattern)), action))
 
@@ -144,7 +158,7 @@ amend_current_processor_dispatcher = Mnemonic_Tree_Dispatcher('amend_current_pro
 
 # print(Mnemonic_Tree_Dispatcher(main_regulations).dispatch_node(test_tree))
 
-print(bootstrap_dispatcher.dispatch_node(test_tree))
+print(bootstrap_dispatcher.dispatch_tree(test_tree))
 
 #mlp.context.set('hello', 'world')
 #mlp.process_tree(test_tree)

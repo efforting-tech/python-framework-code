@@ -30,6 +30,9 @@ def iter_type(target, default=symbol.miss):
 
 REPR_STACK_LIMIT = stack_limit(2)
 
+class Dynamic_Structure:
+	pass
+
 class Structure(Abstract_Record):
 	def __init_subclass__(cls):
 		all_names = dict()

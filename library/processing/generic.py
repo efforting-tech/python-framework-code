@@ -1,7 +1,7 @@
 from ..processing.dispatcher import Named_Dispatcher, LUT_Regulations, generic_data_condition, unconditional_rule, Type_LUT_Regulations, regex_rule, Regulations
 from .stack import Stack, Stack_Frame
 from ..record import member as M
-from ..record.base.public import Structure
+from ..record.base.public import Structure, Dynamic_Structure
 from .. import ABC, symbol
 from .structures import Call_Processing_Function
 
@@ -31,11 +31,42 @@ class Pending_Regex_Processor_Function(Structure):
 		self.owner.regulations.rules.append(regex_rule(re.compile(self.pattern), Call_Processing_Function(function)))
 		return function
 
-class Processor(Named_Dispatcher):
+
+class Pending_State_Stack(Structure):
+	state = M.positional()
+	locals = M.positional()
+	previous = M.positional(None)
+
+	def __enter__(self):
+		self.previous = tuple((k, getattr(self.state, k, symbol.miss)) for k in self.locals)
+		for key, value in self.locals.items():
+			setattr(self.state, key, value)
+
+	def __exit__(self, et, ev, tb):
+		for key, value in self.previous:
+			if value is symbol.miss:
+				delattr(self.state, key)
+			else:
+				setattr(self.state, key, value)
+
+
+
+
+
+class Generic_State(Dynamic_Structure):
+
+	def _stack(self, **named):
+		return Pending_State_Stack(self, named)
+
+
+class Stateful_Dispatcher(Structure):
+	state = M.positional(factory=Generic_State)
+
+class Processor(Stateful_Dispatcher, Named_Dispatcher):	#NOTE that we must specify reverse order for name to come before state (we should probably do something about that)
 	regulations = M.positional(factory=Regulations)
 
-	match = M.positional(factory=Stack)
-	item = M.positional(factory=Stack)
+	#match = M.positional(factory=Stack)
+	#item = M.positional(factory=Stack)
 
 
 	def process_item(self, item, *additional_positionals):
@@ -43,7 +74,8 @@ class Processor(Named_Dispatcher):
 		#TODO Revise how we register actions with positionals
 		match = self.dispatch_item(item)
 
-		with Stack_Frame(self.match, match, self.item, item):
+		#with Stack_Frame(self.match, match, self.item, item):
+		with self.state._stack(match=match, item=item):
 			assert match, f'No match for {item!r}'	#TODO better
 			action = match.value.rule.action
 

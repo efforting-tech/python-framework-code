@@ -60,7 +60,7 @@ def pattern(processor, mnemonic):
 
 @mnemonic_expression_to_regex.register(r'(.*?)\s+as\s+(\w+)')
 def pattern(processor, mnemonic):
-	pattern, alias = processor.match.value.value.match.groups()	# processor.match → Stack.value → First_Result.value → Rule_Match.match → re.Match()
+	pattern, alias = processor.state.match.value.match.groups()	# TODO - explain
 	sub_name, sub_pattern = processor.process_item(pattern)
 	return alias, sub_pattern
 

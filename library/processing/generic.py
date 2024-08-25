@@ -52,8 +52,12 @@ class Pending_State_Stack(Structure):
 
 
 
-
+#TODO - move out of here to generic data types
 class Generic_State(Dynamic_Structure):
+
+	def _update(self, **named):
+		for key, value in named.items():
+			setattr(self, key, value)
 
 	def _stack(self, **named):
 		return Pending_State_Stack(self, named)

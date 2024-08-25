@@ -1,14 +1,34 @@
 amend current processor:
 	setup:
 		new context
-		lzq:///symbol
-		lzq://mnemonic_language.bootstrap:processor_registry as PR
 
-	mnemonic function: test
-		print('TEST')
-		exit()
+		#TODO - URI system
+		#lzq:///symbol
+		#lzq://mnemonic_language.bootstrap:processor_registry as PR
 
-test
+	mnemonic value: #{pattern}
+		from .. import symbol
+		return symbol.empty
+
+
+	setup:
+		new context
+		ps.node
+		all captures
+
+
+	mnemonic function: mnemonic tree processor[:] {name}
+		new_dispatcher = Mnemonic_Tree_Dispatcher(name)
+
+		#TODO - dispatcher.state.context is a dict for the moment but maybe it should not be
+		#		maybe we should support storing dispatchers in different target collections/contexts
+		dispatcher.state.context[name] = new_dispatcher
+
+		with dispatcher.state._stack(target_dispatcher=new_dispatcher, context=dict(state_setup=list())):
+			amend_current_processor_dispatcher.on_behalf_of(dispatcher).dispatch_tree(node.body)
+
+
+
 
 
 #amend current processor:

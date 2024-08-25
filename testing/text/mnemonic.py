@@ -1,36 +1,30 @@
-from efforting.mvp6.mnemonic_language.bootstrap import mlp
-
-exit()
+from efforting.mvp6.mnemonic_language.bootstrap import bootstrap_dispatcher
 
 from efforting.mvp6.document import create_text_tree_document_from_str
 
 test_tree = create_text_tree_document_from_str('''
 
-	amend current processor:
+	mnemonic tree processor: test_processor
 		setup:
-			PS: node, captures as cpt
-			CTX: hello
-			MSYS: -processor_state, processor_state as PS
-			CPT: thing
+			all captures
 
-		mnemonic function: test {name as thing}
-			print('THING', thing)
-			print(dir())	#'PS', 'cpt', 'hello', 'node', 'thing'
-			print(cpt)		#{'thing': 'stuff'}
+		mnemonic function: greet {pattern as whom}
+			return f'Hello {whom}!'
 
-		setup:
-			PS: -node
-
-		mnemonic function: test2 {name as thing}
-			print(dir())	#'PS', 'cpt', 'hello', 'thing'
-
-
-	test stuff
-	test2 stuff
 
 ''', normalize_block=True)
 
 
 #mlp.context.set('hello', 'world')
-mlp.process_tree(test_tree)
+bootstrap_dispatcher.dispatch_tree(test_tree)
+
+tt2 = create_text_tree_document_from_str('''
+
+	greet World
+
+
+''', normalize_block=True)
+
+
+print(bootstrap_dispatcher.state.context['test_processor'].dispatch_node(tt2))	#Hello World!
 

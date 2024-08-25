@@ -1,7 +1,7 @@
 from ... import symbol
 from ..member import utils as MU
 from .. import member as M
-from ..rudimentary import Abstract_Record, Data_Descriptor, Abstract_Sequence
+from ..rudimentary import Abstract_Record, Data_Descriptor, Abstract_Sequence, Abstract_Mapping
 from ... import ABC
 from ...introspection import stack_limit
 from ...symbol_factory import Local_Symbol
@@ -122,6 +122,27 @@ class Sequence(Structure, Abstract_Sequence):
 
 				inner = ', '.join(itertools.chain(
 					(map(repr, self)),
+					(f'{n}={fval(n)}' for n, f in members.items()),
+				))
+				return f'{self.__class__.__qualname__}({inner})'
+			except RecursionError:
+				return '\N{HORIZONTAL ELLIPSIS}'
+
+class Mapping(Structure, Abstract_Mapping):
+	#TODO - handle long by [1, 2, ..., -2, -1]
+	def __repr__(self):
+		MISS = Local_Symbol('MISS')
+		with REPR_STACK_LIMIT:
+			members = dict((n, f) for n, f in iter_type(type(self)) if isinstance(f, ABC.Record.Data_Descriptor) and f.descriptor.repr)
+			try:
+				def fval(n):
+					if (value := getattr(self, n, MISS)) is MISS:
+						return 'N/A'
+					else:
+						return repr(value)
+
+				inner = ', '.join(itertools.chain(
+					(f'{k!r}: {v!r}' for k, v in self.items()),
 					(f'{n}={fval(n)}' for n, f in members.items()),
 				))
 				return f'{self.__class__.__qualname__}({inner})'

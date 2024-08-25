@@ -49,8 +49,10 @@ SF.register_symbols_at_target(root_symbol, '''
 	action.yield_token
 	action.yield_text
 
-	mnemonic.context.manipulation.discard_entry
-	mnemonic.context.manipulation.new_context
+	mnemonic_context.manipulation.discard_entry
+	mnemonic_context.manipulation.new_context
+	mnemonic_context.manipulation.clear_context
+	mnemonic_context.manipulation.all_captures
 
 	aggregator.status.Pending
 	aggregator.status.Working

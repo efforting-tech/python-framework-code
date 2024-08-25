@@ -7,6 +7,7 @@ AF.register_abc_at_target(root_symbol, '''
 	Record.Data_Descriptor
 	Record
 	Sequence
+	Mapping
 	Record.Member
 	Text.Block
 	Text.Line

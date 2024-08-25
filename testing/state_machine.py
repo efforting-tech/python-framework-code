@@ -1,4 +1,4 @@
-from efforting.mvp6.state_management import State_Manager, Transition
+from efforting.mvp6.state_machine import State_Manager, Transition
 from efforting.mvp6 import symbol
 
 

@@ -156,6 +156,19 @@ class Abstract_Sequence(Abstract_Record, list):
 		return (super().__getstate__(), *self)
 
 
+#TODO - maybe rename to rudimentary sequence? list? mutable_sequence? - We need to make some design decisions
+@ABC.Mapping
+class Abstract_Mapping(Abstract_Record, dict):
+	def __init__(self, *positional, **named):
+		Abstract_Record_Interface.init(self, tuple(), dict())
+		dict.__init__(self, *positional, **named)
+
+	def __getstate__(self):
+		#TODO - setstate
+		return (super().__getstate__(), *self.items())
+
+
+
 @ABC.Record.Data_Descriptor
 class Bound_Data_Descriptor:
 	def __init__(self, descriptor, owner):

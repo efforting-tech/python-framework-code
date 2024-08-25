@@ -62,3 +62,5 @@ class State_Manager(Structure):
 class Transition(Structure):
 	to_state = M.positional()
 	from_states = M.positional(symbol.state_management.any_state)
+
+

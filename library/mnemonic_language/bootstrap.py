@@ -5,7 +5,7 @@ from ..data_view import View_Definition, Field_Conversion_Rule
 from ..document import create_text_tree_document_from_str
 from ..mnemonic_language.mnemonic_tokens_to_pattern import mttp
 from ..mnemonic_language.parser import tp
-from ..mnemonic_language.processing import mnemonic_to_regex
+from ..mnemonic_language.processing import mnemonic_to_prepared_pattern
 from ..mnemonic_language.string_formatting_rules import string_formatter
 from ..processing.dispatcher import Regulations, Dispatcher, regex_rule, sub_dispatcher_rule
 from ..processing.dispatcher import Regulations, Dispatcher, regex_rule, sub_dispatcher_rule, generic_data_condition, Rule_Match
@@ -53,8 +53,15 @@ class state_unpacker(Structure):
 				case Contextual_Entry(context='msys', name='dispatcher'):
 					arguments.append(dispatcher)
 
-				case Contextual_Entry(context='cpt', name=name):
+				case Contextual_Entry(context='cpt', name=str() as name):
+					raise Exception('DEPRECATED')
 					arguments.append(dispatcher.state.match.value.match.groupdict().get(name, symbol.not_set))
+
+				case Contextual_Entry(context='cpt', name=name):
+					print('dispatcher.state.match.value.match', dispatcher.state.match.value.match.groupdict())
+					arguments.extend(name.unpack_match(dispatcher.state.match.value.match))
+
+					#arguments.append(dispatcher.state.match.value.match.groupdict().get(name, symbol.not_set))
 
 				case Contextual_Entry(context='ps', name='captures'):
 					arguments.append(dispatcher.state.match.value.match.groupdict())
@@ -76,13 +83,15 @@ class Pending_Mnemonic_Processor(Structure):
 	mnemonic = M.positional()
 
 	def __call__(self, function):
-		self.regulations.rules.append(regex_rule(re.compile(mnemonic_to_regex.process_item(self.mnemonic)), Text_Tree_Dispatcher_Action(function)))
+		pattern = mnemonic_to_prepared_pattern.process_item(self.mnemonic)
+		self.regulations.rules.append(regex_rule(pattern.get_compiled_pattern(), Text_Tree_Dispatcher_Action(function)))
 		return function
 
 class load_structure(Structure):
 	target = M.positional()
 
 	def __call__(self, dispatcher):
+		print('TARGET', self.target)
 		return self.target(**dispatcher.state.match.value.match.groupdict())
 
 
@@ -123,11 +132,13 @@ class Mnemonic_Tree_Regulations(Regulations):
 
 
 	def register_mnemonic_structure(self, mnemonic, structure):
-		self.rules.append(regex_rule(re.compile(mnemonic_to_regex.process_item(mnemonic)), Text_Tree_Dispatcher_Action(load_structure(structure))))
+		pattern = mnemonic_to_prepared_pattern.process_item(mnemonic)
+		self.rules.append(regex_rule(pattern.get_compiled_pattern(), Text_Tree_Dispatcher_Action(load_structure(structure))))
 
 
 	def register_mnemonic_value(self, mnemonic,  value):
-		self.rules.append(regex_rule(re.compile(mnemonic_to_regex.process_item(mnemonic)), Text_Tree_Dispatcher_Action(return_value(value))))
+		pattern = mnemonic_to_prepared_pattern.process_item(mnemonic)
+		self.rules.append(regex_rule(pattern.get_compiled_pattern(), Text_Tree_Dispatcher_Action(return_value(value))))
 
 
 
@@ -212,6 +223,7 @@ def amend_current_processor_setup(dispatcher):
 
 
 def prepare_state(dispatcher, captures):
+	raise Exception('Deprecated')
 	state_setup = dispatcher.state.context['state_setup']
 	state = dict(dispatcher=Contextual_Entry('msys', 'dispatcher'))
 
@@ -254,8 +266,57 @@ def prepare_state(dispatcher, captures):
 	return state
 
 
+def prepare_state2(dispatcher, prepared_pattern):
+	state_setup = dispatcher.state.context['state_setup']
+	state = dict(dispatcher=Contextual_Entry('msys', 'dispatcher'))
+
+	def resolve_entry(entry):
+		match entry:
+			case Contextual_Entry():
+				return entry.name, entry
+
+			case Alias():
+				sub_name, sub_value = resolve_entry(entry.value)
+				return entry.name, sub_value
+
+			case Exclude():
+				return entry.name, symbol.exclude
+
+			case sym if sym in symbol.mnemonic_context.manipulation or sym is symbol.empty:	#TODO just let all symbols through? ABC.symbol?
+				return None, sym
+
+			case unhandled:
+				raise Exception(unhandled)
+
+	for entry in state_setup:
+		name, value = resolve_entry(entry)
+		if value is symbol.exclude:
+			state.pop(name)
+		elif value is symbol.mnemonic_context.manipulation.clear_context:
+			state.clear()
+		elif value is symbol.mnemonic_context.manipulation.new_context:
+			state.clear()
+			state.update(dispatcher=Contextual_Entry('msys', 'dispatcher'))	#TODO - a function to create new context (single source of truth)
+		elif value is symbol.mnemonic_context.manipulation.all_captures:
+			for name, entry in prepared_pattern.get_captures().items():
+				state[name] = Contextual_Entry('cpt', entry)
+
+		elif value is symbol.empty:
+			pass
+		else:
+			state[name] = value
+
+	print('STATE', state)
+
+	return state
+
+
 def create_mnemonic_handler(dispatcher, state):
+	#DEPRECATED ?
 	pattern = dispatcher.state.match.value.match.groupdict()['pattern']
+	print('NO TIM', pattern)
+	exit()
+
 	re_pattern = re.compile(mnemonic_to_regex.process_item(pattern))
 	state = prepare_state(dispatcher, re_pattern.groupindex.keys())
 
@@ -273,16 +334,22 @@ def create_mnemonic_handler(dispatcher, state):
 
 def create_state_and_pattern(dispatcher):
 	pattern = dispatcher.state.match.value.match.groupdict()['pattern']
-	re_pattern = re.compile(mnemonic_to_regex.process_item(pattern))
-	state = prepare_state(dispatcher, re_pattern.groupindex.keys())
+	prepared = mnemonic_to_prepared_pattern.process_item(pattern)
+	#state = prepare_state(dispatcher, re_pattern.groupindex.keys())
+	re_pattern = prepared.get_compiled_pattern()
+	state = prepare_state2(dispatcher, prepared)
+
 	return state, re_pattern
 
 
-def create_function(dispatcher, function_name, arguments):
-	body = Text_Tree_Listing.from_title_and_body(f'def {function_name}({arguments}):', dispatcher.state.node.body, clean_body=True)
+def create_function(dispatcher, function_name, arguments, node=None):
+	if node is None:
+		node = dispatcher.state.node.body
+	body = Text_Tree_Listing.from_title_and_body(f'def {function_name}({arguments}):', node, clean_body=True)
 	sc = dispatcher.state.execution_context.sub_context()
 	python_code_execution_interface.exec_in_context(sc, body.to_str())
 	return sc.require(function_name)
+
 
 @amend_regex_regulations.register_mnemonic_processor('mnemonic function[:] {pattern}')
 def amend_current_processor_mnemonic_function(dispatcher):
@@ -311,7 +378,6 @@ def amend_current_processor(dispatcher):
 	#with Stack_Frame(dispatcher.target_dispatcher, dispatcher, dispatcher.context, dict(state_setup=list())):
 	with dispatcher.state._stack(target_dispatcher=dispatcher, context=dict(state_setup=list())):
 		amend_current_processor_dispatcher.on_behalf_of(dispatcher).dispatch_tree(dispatcher.state.node.body)
-
 
 
 bootstrap_dispatcher = Mnemonic_Tree_Dispatcher('bootstrap_dispatcher', regex_regulations)

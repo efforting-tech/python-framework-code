@@ -1,3 +1,9 @@
+from efforting.mvp6.mnemonic_language.processing import mnemonic_expression_to_regex, mnemonic_to_prepared_pattern
+
+
+#exit()
+
+
 from efforting.mvp6.mnemonic_language.bootstrap import bootstrap_dispatcher
 
 from efforting.mvp6.record.base.public import Structure
@@ -20,6 +26,7 @@ class store_dict(Structure):
 class AST:
 	class type_identity(Structure):
 		identity = M.positional()
+		code_body = M.positional()
 
 
 
@@ -48,9 +55,11 @@ test_tree = create_text_tree_document_from_str('''
 	mnemonic tree processor: dispatch_definition_processor
 		setup:
 			all captures
+			ps.node
 
-		mnemonic structure: type identity[:] {pattern as identity}
-			return AST.type_identity
+		mnemonic function: type identity[:] {pattern as identity}
+			return AST.type_identity(eval(identity), node.body)
+
 
 	amend current processor:
 		setup:
@@ -59,27 +68,58 @@ test_tree = create_text_tree_document_from_str('''
 			ctx.dispatch_definition_processor
 
 		mnemonic function: type lut processor[:] {signature}
+			first_parameter = next(iter(signature.arguments.parameters))
 
-			print(signature)
+			pdef = dispatch_definition_processor.on_behalf_of(dispatcher).dispatch_tree(node.body).value
 
-			#pdef = dispatch_definition_processor.on_behalf_of(dispatcher).dispatch_tree(node.body).value
-			#print(name, pdef, get_first_arg(args))
+			from ..processing.generic import Type_LUT_Processor
+			from ..mnemonic_language.bootstrap import create_function, amend_current_processor_setup
 
-	type lut processor: tp2(value)
+			new_processor = Type_LUT_Processor(signature.name)
+
+
+			#TODO - we should support "setup:" without having to reimplement it - call some prepare state thing
+			#TODO - we must include dispatcher in arguments - this should be using the setup system as we already use for other things
+
+			arguments = ', '.join(map(str, signature.arguments.parameters))	#TODO - improve
+
+			for item in pdef:
+				match item:
+					case AST.type_identity(identity, code_body):
+						f = create_function(dispatcher, f'type_identity_{identity.__name__}', arguments, code_body)
+						new_processor.register(identity)(f)
+
+					case unhandled:
+						raise Exception(unhandled)
+
+			dispatcher.state.context[signature.name] = new_processor
+			return new_processor
+
+
+	type lut processor: tp2(value, thing=123)
+
 
 		type identity: int
+			print()
+			print('VALUE', value)
+			exit()
+
+			print('INT-THING', thing)
 			return f'Integer({value})'
 
 		type identity: str
+			print('STR-THING', thing)
 			return f'String({value})'
-
-
 
 ''', normalize_block=True)
 
 
 #mlp.context.set('hello', 'world')
+
+
 bootstrap_dispatcher.dispatch_tree(test_tree)
+
+
 
 tt2 = create_text_tree_document_from_str('''
 
@@ -89,10 +129,9 @@ tt2 = create_text_tree_document_from_str('''
 ''', normalize_block=True)
 
 
-
 #print(bootstrap_dispatcher.state.context['test_processor'].dispatch_node(tt2))	#Hello World!
 
-print(bootstrap_dispatcher.state.context['tp2'].dispatch_node(123))
+print(bootstrap_dispatcher.state.context['tp2'].process_item(123))
 
 
 # from efforting.mvp6.abc_factory import ugly_stats

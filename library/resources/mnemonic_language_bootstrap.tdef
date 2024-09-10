@@ -18,6 +18,7 @@ amend current processor:
 
 
 	mnemonic function: mnemonic tree processor[:] {name}
+
 		new_dispatcher = Mnemonic_Tree_Dispatcher(name)
 
 		#TODO - dispatcher.state.context is a dict for the moment but maybe it should not be

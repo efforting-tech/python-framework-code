@@ -9,8 +9,8 @@ ABC_LUT = defaultdict(set)
 
 def create_ABC_Symbol(name, parent=None, auto_graft=None):
 	return ABC_Symbol(name, (), dict(
-		parent = parent,
-		auto_graft = auto_graft,
+		_parent = parent,
+		_auto_graft = auto_graft,
 	))
 
 

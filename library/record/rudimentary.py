@@ -149,19 +149,19 @@ class Abstract_Record:
 		assert not named #TODO - proper exception
 
 	def __setattr__(self, name, value):
-		if (dd := getattr(type(self), name, None)) and isinstance(dd, Bound_Data_Descriptor):
+		if (dd := getattr(type(self), name, None)) and isinstance(dd, ABC.Record.Data_Descriptor):
 			dd.descriptor.__set__(self, value)
 		else:
 			raise No_Such_Member_Exception(self, name)
 
 	def __getattr__(self, name):
-		if (dd := getattr(type(self), name, None)) and isinstance(dd, Bound_Data_Descriptor):
+		if (dd := getattr(type(self), name, None)) and isinstance(dd, ABC.Record.Data_Descriptor):
 			return dd.descriptor.__get__(self, dd.owner)
 		else:
 			raise No_Such_Member_Exception(self, name)
 
 	def __delattr__(self, name):
-		if (dd := getattr(type(self), name, None)) and isinstance(dd, Bound_Data_Descriptor):
+		if (dd := getattr(type(self), name, None)) and isinstance(dd, ABC.Record.Data_Descriptor):
 			return dd.descriptor.__delete__(self)
 		else:
 			raise No_Such_Member_Exception(self, name)
@@ -203,8 +203,7 @@ class Abstract_Mapping(Abstract_Record, dict):
 		return (super().__getstate__(), *self.items())
 
 
-
-@ABC.Record.Data_Descriptor
+@ABC.Record.Data_Descriptor.Bound
 class Bound_Data_Descriptor:
 	def __init__(self, descriptor, owner):
 		self.descriptor = descriptor

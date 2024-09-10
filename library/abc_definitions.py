@@ -5,6 +5,7 @@ AF.register_abc_at_target(root_symbol, '''
 
 	Factory
 	Record.Data_Descriptor
+	Record.Data_Descriptor.Bound
 	Record
 	Sequence
 	Mapping

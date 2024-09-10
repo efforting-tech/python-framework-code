@@ -176,6 +176,16 @@ class Line_View(Abstract_Line_Listing):
 	def lines(self):
 		return self.parent.lines[self.first_index:self.last_index+1]
 
+	def normalized_copy(self):
+		copy = self.editable_copy()
+		copy.normalize_block()
+		return copy
+
+	def normalized_text(self):
+		copy = self.editable_copy()
+		copy.normalize_block()
+		return copy.to_str()
+
 	def __getitem__(self, key_or_slice):
 		match key_or_slice:
 			case int():

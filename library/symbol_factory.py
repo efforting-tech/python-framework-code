@@ -30,7 +30,7 @@ class Symbol:
 		self._auto_graft = sys._getframe(stack_adjustment + 1).f_locals
 
 	def _iter_children(self, recursive=False, leaf_only=False):
-		for name in object.__dir__(self):
+		for name in super().__dir__():
 			if name.startswith('_'):
 				continue
 

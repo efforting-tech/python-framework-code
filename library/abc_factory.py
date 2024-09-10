@@ -15,8 +15,19 @@ def create_ABC_Symbol(name, parent=None, auto_graft=None):
 
 
 
+#from collections import Counter
+#ugly_stats = Counter()
+
 class ABC_Symbol(Symbol, type):
 	def __instancecheck__(self, instance):
+
+		# import sys
+		# f = sys._getframe(1)
+		# while f:
+		# 	ugly_stats[repr(f)] += 1
+		# 	f = f.f_back
+
+
 		return self.__subclasscheck__(type(instance))
 
 	def __subclasscheck__(self, klass):

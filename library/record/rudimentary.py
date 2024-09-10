@@ -34,12 +34,47 @@ class Member_Not_Set_Exception(AttributeError):
 # 		self.bases = bases
 
 
+iter_name_cache = dict()
+
 def iter_names(target_type):
+	if (names := iter_name_cache.get(target_type)) is not None:
+		yield from names
+	else:
 		bo = tuple(reversed(target_type.mro()))
+		result = list()
 		for base in bo:
 			for dd in base.__dict__.values():
 				if isinstance(dd, ABC.Record.Data_Descriptor):
 					yield dd.name
+					result.append(dd.name)
+
+		iter_name_cache[target_type] = tuple(result)
+
+
+
+# def iter_names(target_type):
+# 	bo = tuple(reversed(target_type.mro()))
+# 	result = list()
+# 	for base in bo:
+# 		for dd in base.__dict__.values():
+# 			if isinstance(dd, ABC.Record.Data_Descriptor):
+# 				yield dd.name
+
+
+# [devilholk@efforter text]$ time python mnemonic.py
+# Hello World!
+
+# real    0m0.304s
+# user    0m0.296s
+# sys     0m0.007s
+# [devilholk@efforter text]$ time python mnemonic.py
+# Hello World!
+
+# real    0m2.043s
+# user    0m1.980s
+# sys     0m0.003s
+
+
 
 
 def iter_type_members(target_type):

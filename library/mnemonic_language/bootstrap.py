@@ -54,7 +54,7 @@ class state_unpacker(Structure):
 					arguments.append(dispatcher)
 
 				case Contextual_Entry(context='cpt', name=name):
-					arguments.append(dispatcher.state.match.value.match.groupdict()[name])
+					arguments.append(dispatcher.state.match.value.match.groupdict().get(name, symbol.not_set))
 
 				case Contextual_Entry(context='ps', name='captures'):
 					arguments.append(dispatcher.state.match.value.match.groupdict())
@@ -297,6 +297,13 @@ def amend_current_processor_mnemonic_value(dispatcher):
 	action = Text_Tree_Dispatcher_Action(return_value(value))
 	dispatcher.state.target_dispatcher.regulations.rules.append(regex_rule(re_pattern, action))
 
+
+@amend_regex_regulations.register_mnemonic_processor('mnemonic structure[:] {pattern}')
+def amend_current_processor_mnemonic_structure(dispatcher):
+	state, re_pattern = create_state_and_pattern(dispatcher)
+	value = state_unpacker(state, create_function(dispatcher, 'handler', ', '.join(state.keys())))(dispatcher)
+	action = Text_Tree_Dispatcher_Action(load_structure(value))
+	dispatcher.state.target_dispatcher.regulations.rules.append(regex_rule(re_pattern, action))
 
 
 @regex_regulations.register_mnemonic_processor('amend current processor[:]')

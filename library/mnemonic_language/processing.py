@@ -58,6 +58,7 @@ def name(processor, mnemonic):
 def pattern(processor, mnemonic):
 	return 'pattern', r'.*?'
 
+
 @mnemonic_expression_to_regex.register(r'(.*?)\s+as\s+(\w+)')
 def pattern(processor, mnemonic):
 	pattern, alias = processor.state.match.value.match.groups()	# TODO - explain

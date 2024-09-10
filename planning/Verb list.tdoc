@@ -3,6 +3,7 @@ Note: This document is being used to plan out the organization of dispatchers an
 List: Verbs
 	Group: Aggregate
 		Entry: aggregate
+			Brief: The aggregator is responsible for aggregating results. The aggregator can abort processing by updating its status.
 
 	Group: Traverse
 		Entry: branch

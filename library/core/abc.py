@@ -1,6 +1,7 @@
 #NOTE - we may also introduce a quasi type system where instancecheck uses a set of conditions
 #NOTE - before we had that path.to.thing automatically implies path.to and path - should we do that? (update: we are doing that)
 
+#TODO - code dedup with Symbol
 class ABC_Registry:
 	def __init__(self):
 		self.lut_type_to_abc = dict()
@@ -26,26 +27,36 @@ class ABC_Registry:
 	#NOTE - we may add features such as "check for subclass" and other more selective queries
 
 	def check_if_abc(self, abc, type):
+		if isinstance(abc, ABC_Node_Reference):
+			abc = abc._target
+
+		if isinstance(type, ABC_Node_Reference):
+			type = type._target
+
 		cache_key = (type, abc)
 		if cache_key in self.cache:
 			return True
 
-		for b in type.mro():
-			if b in self.lut_abc_to_type.get(abc, ()):
-				self.cache.add(cache_key)
-				return True
-
-		#Check derived
-		for c in abc.walk():
-
-			if (type, c) in self.cache:
-				self.cache.add(cache_key)
-				return True
+		if isinstance(type, ABC_Node):
+			return type is abc or type in abc
+		else:
 
 			for b in type.mro():
-				if b in self.lut_abc_to_type.get(c, ()):
+				if b in self.lut_abc_to_type.get(abc, ()):
 					self.cache.add(cache_key)
 					return True
+
+			#Check derived
+			for c in abc.walk():
+
+				if (type, c) in self.cache:
+					self.cache.add(cache_key)
+					return True
+
+				for b in type.mro():
+					if b in self.lut_abc_to_type.get(c, ()):
+						self.cache.add(cache_key)
+						return True
 
 		return False
 
@@ -95,6 +106,14 @@ class ABC_Node:
 	def __repr__(self):
 		return f'{type(self).__qualname__}({self.path!r})'
 
+	def __contains__(self, other):
+		#TODO - possibly cache this
+		for i in self.walk():
+			if i is other:
+				return True
+
+		return False
+
 
 class ABC_Node_Reference:
 	def __init__(self, _target, _create_new=False):
@@ -133,6 +152,13 @@ class ABC_Node_Reference:
 			else:
 				raise AttributeError(f'There is no child {name!r} of {self}')
 
+	def __contains__(self, other):
+		#TODO - possibly cache this
+		for i in self._target.walk():
+			if i is other._target:
+				return True
+
+		return False
 
 
 

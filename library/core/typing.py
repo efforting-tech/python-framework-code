@@ -22,7 +22,7 @@ class Core_Collection(Core_Type):
 		self.element = element
 
 	def __instancecheck__(self, instance):
-		print('CHECK', self, instance)
+		#print('CHECK', self, instance)
 
 
 		if not isinstance(instance, self.types):	#TODO - maybe here we should utilize the ABC system
@@ -30,7 +30,7 @@ class Core_Collection(Core_Type):
 
 		for e in instance:
 			if not isinstance(e, self.element):
-				print('FAIL', repr(e), self.element)
+				#print('FAIL', repr(e), self.element)
 				return False
 
 		return True

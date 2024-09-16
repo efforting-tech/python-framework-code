@@ -26,17 +26,37 @@ class Core_Line(R.Record):
 
 		return self.text
 
+	def copy(self, adjust_indent=0, indention=Symbol.Default):
+		#TODO - maybe we should have a feature for dealing with settings to make these thigns easier to chain
+
+		if indention is Symbol.Default:
+			effective_indention = '\t'
+		else:
+			effective_indention = indention
+
+		if adjust_indent or indention is not Symbol.Default:
+			adjusted_indent = max(self.indent + adjust_indent, 0)
+			return type(self)(adjusted_indent * effective_indention + self.value)
+		else:
+			return type(self)(self.text)
+
+
 
 @ABC.Text.Line.Immutable
 class Immutable_Line(Core_Line):
 	text: 			R.Field_Update(type=ABC.String, mutable=False)
 
+@ABC.Text.Line.Mutable
+class Mutable_Line(Core_Line):
+	text: 			R.Field_Update(type=ABC.String, mutable=True)	#BUG - Why do we have to specify true here when Core_Line is mutable?
 
 
 @ABC.Text.Line_View
 class Core_Line_View(R.Record):
 	lines:			R.Field(type=TY.Sequence(ABC.Text.Line))
 
+	def get_min_indent(self):
+		return min((i.indent for i in self.lines if i.value), default=None)
 
 	def to_str(self, indention=Symbol.Default):
 		#TODO - should we have a type further down the type chain for custom newlines?
@@ -57,6 +77,38 @@ class Core_Line_View(R.Record):
 				continue
 
 			return l
+
+	@property
+	def last_line_index_with_content(self):
+		for i, l in reversed(tuple(enumerate(self.lines))):
+			if l.is_empty:
+				continue
+
+			return i
+
+	@property
+	def last_line_with_content(self):
+		for l in reversed(self.lines):
+			if l.is_empty:
+				continue
+
+			return l
+
+	def copy(self, adjust_indent=0, indention=Symbol.Default):
+		return type(self)([l.copy(adjust_indent=adjust_indent, indention=indention) for l in self])
+
+	def normal(self):
+		if (fliwc := self.first_line_index_with_content) is None:
+			return type(self)()	#Create empty
+
+		lliwc = self.last_line_index_with_content
+
+		c = self[fliwc:lliwc+1]
+		return c.copy(adjust_indent=-(c.get_min_indent() or 0))
+
+	def normal_str(self):	#Shorthand
+		return self.normal().to_str()
+
 
 	def get_minimum_indention(self):
 		mi = None
@@ -94,25 +146,93 @@ class Core_Line_View(R.Record):
 class Immutable_Line_View(Core_Line_View):
 	lines:			R.Field_Update(type=TY.Sequence(ABC.Text.Line.Immutable), mutable=False)
 
-	def __init__(self, text):
+	@classmethod
+	def from_str(cls, value):	#NOTE - we must use different one for mutable sub classes
+		return cls(tuple(value.splitlines()))
+
+	def __init__(self, text=None):
 		#NOTE - we can't use match here because ABC nodes are not actually types
 
-		if isinstance(text, ABC.String):
+		if text is None:
+			lines = ()
+		elif isinstance(text, ABC.String):
 			lines = tuple(map(Immutable_Line, text.splitlines()))
 		elif isinstance(text, ABC.Sequence):
 			#TODO - now we are just assuming this is a sequence of lines but we should really use the conversion system to make this flexible
-			assert isinstance(text, tuple)
-			lines = text
-		elif text is None:
-			lines = ()
+			assert isinstance(text, (tuple, list))
+			lines = tuple(text)
 		else:
 			raise TypeError(text)
 
 		super().__init__(lines)
 
 
+@ABC.Text.Line_View.Mutable
+class Mutable_Line_View(Core_Line_View):
+	lines:			R.Field_Update(type=TY.Sequence(ABC.Text.Line.Mutable), mutable=True)
+
+	@classmethod
+	def from_str(cls, value):
+		return cls(list(value.splitlines()))
+
+	def insert(self, index, line):
+		#TODO - some more convenient converter?
+		if isinstance(line, ABC.Text.Line.Mutable):
+			pass	#Already what we want
+
+		elif isinstance(line, ABC.Text.Line):
+			line = Mutable_Line(line.text)
+
+		elif isinstance(line, ABC.String):
+			line = Mutable_Line(line)
+
+		else:
+			raise TypeError(line)
+
+		self.lines.insert(index, line)
+
+	def __init__(self, text=None):
+		#NOTE - we can't use match here because ABC nodes are not actually types
+
+
+		if text is None:
+			lines = list()
+		elif isinstance(text, ABC.String):
+			lines = list(map(Mutable_Line, text.splitlines()))
+		elif isinstance(text, ABC.Sequence):
+			#TODO - now we are just assuming this is a sequence of lines but we should really use the conversion system to make this flexible
+			assert isinstance(text, (tuple, list))
+			lines = list(text)
+		else:
+			raise TypeError(text)
+
+		super().__init__(lines)
+
+
+
 @ABC.Text.Tree_View
 class Core_Tree_View(Core_Line_View):
+
+	#TODO - adapt and implement this interface
+
+	# @classmethod
+	# def from_title_and_body(cls, title, body, clean_body=False):
+	# 	new = cls()
+	# 	new.write(title)
+	# 	adjustment = 1
+	# 	if clean_body:
+	# 		adjustment -= body.get_minimum_indention()
+	# 	new.write(body, adjustment)
+
+	# 	return new
+
+	# @classmethod
+	# def from_title_and_branches(cls, title, *branches):
+	# 	new = cls()
+	# 	new.write(title)
+	# 	for b in branches:
+	# 		new.write(b, 1)
+	# 	return new
 
 	@property
 	def title(self):
@@ -142,7 +262,7 @@ class Core_Tree_View(Core_Line_View):
 
 
 	def iter_nodes(self):
-		min_indent = min((i.indent for i in self.lines if i.value), default=None)
+		min_indent = self.get_min_indent()
 		if min_indent is None:
 			return
 
@@ -163,5 +283,26 @@ class Core_Tree_View(Core_Line_View):
 		if last_root_index is not None:
 			yield self[last_root_index:]
 
+
+#TODO - add ABCs
 class Immutable_Tree_View(Core_Tree_View, Immutable_Line_View):
 	pass
+
+
+class Mutable_Tree_View(Core_Tree_View, Mutable_Line_View):
+	pass
+
+
+	#TODO - adapt and implement this interface
+	# def write(self, source_item, adjust_indent=None):
+	# 	if isinstance(source_item, Text_Tree_Interface):	#TODO  use ABC
+	# 		for l in source_item.lines:
+	# 			if adjust_indent is None:
+	# 				new_indent = symbol.copy
+	# 			else:
+	# 				new_indent = max(0, l.indent + adjust_indent)
+
+	# 			self.lines.append(l.copy(parent=self, indent=new_indent))
+
+	# 	else:
+	# 		super().write(source_item)

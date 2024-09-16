@@ -1,10 +1,10 @@
-from ..document.structures import Hierarchial_Entry
+from ...document.structures import Hierarchial_Entry
 from ..text.interface import Text_Interface
 #TODO - these should not be in settings
-from ..document.settings.indention import get_line_with_indent, format_line_with_indent
-from ..record.base.public import Structure
-from ..record import member as M
-from .. import ABC, symbol
+from ...document.settings.indention import get_line_with_indent, format_line_with_indent
+from ...record.base.public import Structure
+from ...record import member as M
+from ... import ABC, Symbol
 
 #TODO - move items to abstract types or specific interfaces as much as possible
 
@@ -34,11 +34,11 @@ class Line(Hierarchial_Entry):
 	indent = M.named(default=None)
 	text = M.named(default=None)
 
-	def copy(self, indent=symbol.copy, text=symbol.copy, parent=symbol.copy):
+	def copy(self, indent=Symbol.Copy, text=Symbol.Copy, parent=Symbol.Copy):
 		return type(self)(
-			indent = self.indent if indent is symbol.copy else indent,
-			text = self.text if text is symbol.copy else text,
-			parent = self.parent if parent is symbol.copy else parent,
+			indent = self.indent if indent is Symbol.Copy else indent,
+			text = self.text if text is Symbol.Copy else text,
+			parent = self.parent if parent is Symbol.Copy else parent,
 		)
 
 	@property

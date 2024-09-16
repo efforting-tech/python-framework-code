@@ -1,4 +1,4 @@
-from ..str.interface import String_Interface
+from ...str.interface import String_Interface
 
 class Text_Interface(String_Interface):
 	def generic_text_operation(self, operation):

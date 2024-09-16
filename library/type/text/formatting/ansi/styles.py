@@ -1,5 +1,5 @@
-from ....record.base.public import Structure
-from ....record import member as M
+from .....record.base.public import Structure
+from .....record import member as M
 
 class ANSI_Style(Structure):
 	bgc_lut = M.positional(factory=dict)

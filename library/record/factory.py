@@ -1,4 +1,4 @@
-from .. import symbol
+from .. import Symbol
 from .. import ABC
 
 @ABC.Factory
@@ -12,7 +12,7 @@ class Evaluate_In_Scope:
 		if self.local_updates:
 			scope = dict(self.scope)
 			for key, value in self.local_updates.items():
-				if value is symbol.target.instance:
+				if value is Symbol.Target.Instance:
 					scope[key] = target
 				else:
 					scope[key] = value

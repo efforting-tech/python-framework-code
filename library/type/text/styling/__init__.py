@@ -1,7 +1,7 @@
 #Improved formatting system
 import colorsys
-from ...record.base.public import Structure
-from ...record import member as M
+from ....record.base.public import Structure
+from ....record import member as M
 
 class HSV(Structure):
 	hue = M.positional()

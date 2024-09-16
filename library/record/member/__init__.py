@@ -1,5 +1,5 @@
 from ..rudimentary import define_record, Abstract_Record, Value
-from ... import ABC, symbol
+from ... import ABC, Symbol
 
 #TODO - we must make it so that M.positional() is different from M.positional(...) by having default be symbol.not_set
 #		this was started to be implemented but got a bit messy and it should be addressed soon

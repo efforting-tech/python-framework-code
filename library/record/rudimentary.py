@@ -1,7 +1,7 @@
 from itertools import chain
 import sys
 from .factory import Evaluate_In_Scope
-from .. import symbol, ABC
+from .. import Symbol, ABC
 
 
 #BUG - one can specify all.named/positional more than once
@@ -95,15 +95,15 @@ class Abstract_Record_Interface:
 		for n in names:
 			dd = getattr(type(target), n).descriptor
 
-			if dd.kind is symbol.argument.all.positional:
+			if dd.kind is Symbol.Argument.All.Positional:
 				setattr(target, n, tuple(positional))
 				positional.clear()
 
-			elif dd.kind is symbol.argument.all.named:
+			elif dd.kind is Symbol.Argument.All.Named:
 				setattr(target, n, dict(named))
 				named.clear()
 
-			elif dd.kind is symbol.argument.positional_or_named:
+			elif dd.kind is Symbol.Argument.Positional_or_Named:
 				if positional:
 
 					#TODO - we should make sure we are compatible with python kinds of pos, pos/name, name_only
@@ -117,11 +117,12 @@ class Abstract_Record_Interface:
 				elif n in named:
 					setattr(target, n, named.pop(n))
 				else:
+					#NOTE - we currently can't use our ABC references as patterns (though maybe we can fix that later)
 					match dd.init:
-						case ABC.Factory():
+						case F if isinstance(F, ABC.Factory):
 							dd.init(dd, target)
 
-						case Value(value) if value is symbol.target.instance:
+						case Value(value) if value is Symbol.Target.Instance:
 							setattr(target, n, target)
 
 						case Value(value):
@@ -215,7 +216,7 @@ class Bound_Data_Descriptor:
 
 @ABC.Record.Data_Descriptor
 class Data_Descriptor:
-	def __init__(self, name, init=None, required=False, kind=symbol.argument.positional_or_named, repr=True, repr_condition=None):
+	def __init__(self, name, init=None, required=False, kind=Symbol.Argument.Positional_or_Named, repr=True, repr_condition=None):
 		self.name = name
 		self.init = init
 		self.required = required
@@ -254,9 +255,9 @@ def create_record(name, positional=None, named=None, bases=None, decorators=None
 				scope[member] = Data_Descriptor(member, init_or_kind)
 			elif isinstance(init_or_kind, str):
 				scope[member] = Data_Descriptor(member, Evaluate_In_Scope(init_or_kind, evaluation_scope, local_updates))
-			elif init_or_kind in symbol.argument.all:
+			elif init_or_kind in Symbol.Argument.All:
 				scope[member] = Data_Descriptor(member, kind=init_or_kind)
-			elif init_or_kind is symbol.not_set:	#TODO - this is not really working, we must make sure we have a proper plan for this and then implement it
+			elif init_or_kind is Symbol.Not_Set:	#TODO - this is not really working, we must make sure we have a proper plan for this and then implement it
 				scope[member] = Data_Descriptor(member, required=True)
 			elif init_or_kind is None:
 				scope[member] = Data_Descriptor(member)

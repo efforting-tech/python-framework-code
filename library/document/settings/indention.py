@@ -1,5 +1,5 @@
-from ... import symbol
-Indention_Mode = symbol.indention.mode
+from ... import Symbol
+Indention_Mode = Symbol.Indention.Mode
 
 #TODO - move out of here
 def format_line_with_indent(text, indent, settings):

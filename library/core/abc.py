@@ -26,22 +26,22 @@ class ABC_Registry:
 
 	#NOTE - we may add features such as "check for subclass" and other more selective queries
 
-	def check_if_abc(self, abc, type):
+	def check_if_abc(self, abc, type_ref):
 		if isinstance(abc, ABC_Node_Reference):
 			abc = abc._target
 
-		if isinstance(type, ABC_Node_Reference):
-			type = type._target
+		if isinstance(type_ref, ABC_Node_Reference):
+			type_ref = type_ref._target
 
-		cache_key = (type, abc)
+		cache_key = (type_ref, abc)
 		if cache_key in self.cache:
 			return True
 
-		if isinstance(type, ABC_Node):
-			return type is abc or type in abc
+		if isinstance(type_ref, ABC_Node):
+			return type_ref is abc or type_ref in abc
 		else:
 
-			for b in type.mro():
+			for b in type.mro(type_ref):
 				if b in self.lut_abc_to_type.get(abc, ()):
 					self.cache.add(cache_key)
 					return True
@@ -49,11 +49,12 @@ class ABC_Registry:
 			#Check derived
 			for c in abc.walk():
 
-				if (type, c) in self.cache:
+				if (type_ref, c) in self.cache:
 					self.cache.add(cache_key)
 					return True
 
-				for b in type.mro():
+				#TODO - check if we do type_ref.mro() somewhere else (especially disguised as type.mro()
+				for b in type.mro(type_ref):
 					if b in self.lut_abc_to_type.get(c, ()):
 						self.cache.add(cache_key)
 						return True

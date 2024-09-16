@@ -1,6 +1,6 @@
 import unicodedata, re
-from ...document.settings import Default_Document_Settings
-from ...document.settings.indention import format_line_with_indent
+from ....document.settings import Default_Document_Settings
+from ....document.settings.indention import format_line_with_indent
 from ...text.styling import Stylized_Span, HSV, RGB, apply_style_operations
 from ...text.styling import presets
 from ...text.formatting.ansi import styles

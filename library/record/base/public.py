@@ -1,8 +1,7 @@
-from ... import symbol
 from ..member import utils as MU
 from .. import member as M
 from ..rudimentary import Abstract_Record, Data_Descriptor, Abstract_Sequence, Abstract_Mapping
-from ... import ABC
+from ... import ABC, Symbol
 from ...introspection import stack_limit
 from ...symbol_factory import Local_Symbol
 
@@ -19,11 +18,11 @@ def get_name(target):
 
 
 #TODO - move
-def iter_object_using_type(target_object, target_type, default=symbol.miss):
+def iter_object_using_type(target_object, target_type, default=Symbol.Miss):
 	for key in target_type.__dict__:	#NOTE - we can't use dir because it will sort things
 		yield key, getattr(target_object, key, default)
 
-def iter_type(target, default=symbol.miss):
+def iter_type(target, default=Symbol.Miss):
 	for cls in reversed(target.mro()):
 		yield from iter_object_using_type(target, cls, default)
 
@@ -51,10 +50,10 @@ class Structure(Abstract_Record):
 
 				#TODO convert to match?
 				if isinstance(value, M.all_positional):
-					setattr(cls, key, Data_Descriptor(key, kind=symbol.argument.all.positional, repr=value.repr, repr_condition=value.repr_condition))
+					setattr(cls, key, Data_Descriptor(key, kind=Symbol.Argument.All.Positional, repr=value.repr, repr_condition=value.repr_condition))
 
 				elif isinstance(value, M.all_named):
-					setattr(cls, key, Data_Descriptor(key, kind=symbol.argument.all.named, repr=value.repr, repr_condition=value.repr_condition))
+					setattr(cls, key, Data_Descriptor(key, kind=Symbol.Argument.All.Named, repr=value.repr, repr_condition=value.repr_condition))
 
 				elif value.factory and value.default is None:	#TODO we must decide how to be able to create required positionals by M.positional() vs M.positional(...)
 					setattr(cls, key, Data_Descriptor(key, init=MU.factory(value.factory), repr=value.repr, repr_condition=value.repr_condition))
@@ -96,7 +95,7 @@ class Structure(Abstract_Record):
 					if not f.descriptor.repr_condition:
 						return True
 
-					value = getattr(self, n, symbol.miss)
+					value = getattr(self, n, Symbol.Miss)
 					return f.descriptor.repr_condition(value)
 
 

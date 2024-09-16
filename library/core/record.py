@@ -86,8 +86,6 @@ class Record:
 		inner = ' '.join(pieces)
 		return f'{type(self).__qualname__}({inner})'
 
-
-
 @dataclass
 class Core_Field_Record:
 	type: 			Optional[type] = None

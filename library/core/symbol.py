@@ -1,15 +1,6 @@
 #NOTE - we may also introduce a quasi type system where instancecheck uses a set of conditions
 #NOTE - before we had that path.to.thing automatically implies path.to and path - should we do that? (update: we are doing that)
 
-class Symbol_Registry:
-	def __init__(self):
-		self.registry = dict()
-
-
-
-
-SYMBOL_REGISTRY = Symbol_Registry()
-
 #TODO - code dedup with ABC
 class Symbol_Node:
 	def __init__(self, name=None, parent=None):
@@ -23,6 +14,13 @@ class Symbol_Node:
 		else:
 			new = self.children[name] = type(self)(name, self)
 			return new
+
+	def get_or_create_by_path(self, path):
+		ptr = self
+		for piece in path.split('.'):
+			ptr = ptr.get_or_create(piece)
+
+		return ptr
 
 	def get(self, name, default=None):
 		return self.children.get(name, default)

@@ -1,3 +1,5 @@
+#NOTE - we should not use identity check with symbols because of the various references we use
+
 #NOTE - we may also introduce a quasi type system where instancecheck uses a set of conditions
 #NOTE - before we had that path.to.thing automatically implies path.to and path - should we do that? (update: we are doing that)
 
@@ -10,6 +12,16 @@ class Symbol_Node_Reference:
 		self._target = _target
 		self._create_new = _create_new
 		self._cache = dict()
+
+	def __eq__(self, other):
+		match other:
+			case Symbol_Node_Reference():
+				return self._target == other._target
+			case Symbol_Node():
+				return self._target == other
+
+		return False
+
 
 	def __dir__(self):
 		return self._target.children.keys()

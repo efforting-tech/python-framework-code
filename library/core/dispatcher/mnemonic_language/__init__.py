@@ -3,6 +3,10 @@ from ..tree_view import Tree_View_Dispatcher
 from . import patterns as MP
 from ...text import Mutable_Tree_View
 
+import re
+
+p_args = re.compile(r'(\w+)\((.*)\)')
+
 #Create the core dispatcher
 class Mnemonic_Core_Dispatcher(R.Record):
 	global_context_setup: 	R.Field(factory=list)
@@ -30,17 +34,33 @@ class Mnemonic_Core_Dispatcher(R.Record):
 		export = set()
 
 		for sub_dispatcher_node in node.body.iter_nodes():
-			dispatcher_defs.write_line(f'{sub_dispatcher_node.title} = Tree_View_Dispatcher()')
-			export.add(sub_dispatcher_node.title)
+
+			if m := p_args.match(sub_dispatcher_node.title):
+				dispatcher_name, dispatcher_args = m.groups()
+				dispatcher_bases = tuple(map(str.strip, dispatcher_args.split(',')))
+
+			else:
+				dispatcher_name = sub_dispatcher_node.title
+				dispatcher_bases = ()
+
+
+			dispatcher_defs.write_line(f'{dispatcher_name} = Tree_View_Dispatcher()')
+			export.add(dispatcher_name)
 
 			for line in sub_dispatcher_node.body.lines:
+				if not line.value:
+					continue
+
 				pattern, expression = map(str.strip, line.value.split('→'))
 
-				rule_defs.write_line(f'@{sub_dispatcher_node.title}.register({pattern})')
+				rule_defs.write_line(f'@{dispatcher_name}.register({pattern})')
 				rule_defs.write_line(f'def handler(dispatcher, node, result):')
 				rule_defs.write_pieces(self.local_context_setup, indent_adjustment=1)
 				rule_defs.write_line(f'\treturn {expression}')
 				rule_defs.write_line()
+
+			for b in dispatcher_bases:
+				rule_defs.write_line(f'{dispatcher_name}.register_fallback_dispatcher({b})')
 
 		dispatcher_defs.write_line()
 
@@ -56,6 +76,7 @@ class Mnemonic_Core_Dispatcher(R.Record):
 		scope = dict(
 			Tree_View_Dispatcher = Tree_View_Dispatcher,
 		)
+
 
 		exec(code_tree.to_str(), scope)
 

@@ -156,7 +156,7 @@ class Categorizing_Set_Dispatcher(Dispatcher):
 
 class Transformer(Dispatcher):
 	def dispatch_item(self, item):
-		return super().dispatch_item(item).value.match(item)
+		return super().dispatch_item(item).value.match(item)		#NOTE- this might be wrong but we will fix it during core migration
 
 class Single_Operation_Processor(Transformer):
 	def dispatch_sequence(self, sequence):

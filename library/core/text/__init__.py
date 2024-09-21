@@ -2,6 +2,21 @@ from .. import typing as TY
 from .. import record as R
 from ... import ABC, Symbol
 
+#TODO - move to core string utils
+def expand_tabs_in_line(line, tab_width=4):
+	result = ''
+	for c in line:
+		if c == '\t':
+			result += ' ' * (tab_width - len(result) % tab_width)
+		else:
+			result += c
+
+	return result
+
+def expand_tabs(text, tab_width=4):
+	return '\n'.join(expand_tabs_in_line(l, tab_width) for l in text.split('\n'))
+
+
 
 @ABC.Text.Line
 class Core_Line(R.Record):
@@ -55,6 +70,13 @@ class Mutable_Line(Core_Line):
 class Core_Line_View(R.Record):
 	lines:			R.Field(type=TY.Sequence(ABC.Text.Line))
 
+	def convert_tabs_to_spaces(self, spaces=4):
+		#TODO - the class should define a line type that is then used in the Field declaration
+		#		but this requires the resolution system to get a suitable concrete type from the ABC
+		#return type(self)(type(self.lines)(LT(expand_tabs_in_line(line.text, spaces)) for line in self.lines))
+
+		return type(self)('\n'.join(expand_tabs_in_line(line.text, spaces) for line in self.lines))
+
 	def get_min_indent(self):
 		return min((i.indent for i in self.lines if i.value), default=None)
 
@@ -106,8 +128,8 @@ class Core_Line_View(R.Record):
 		c = self[fliwc:lliwc+1]
 		return c.copy(adjust_indent=-(c.get_min_indent() or 0))
 
-	def normal_str(self):	#Shorthand
-		return self.normal().to_str()
+	def normal_str(self, indention=Symbol.Default):	#Shorthand
+		return self.normal().to_str(indention=indention)
 
 
 	def get_minimum_indention(self):
@@ -176,7 +198,7 @@ class Mutable_Line_View(Core_Line_View):
 		return cls(list(value.splitlines()))
 
 	def write_line(self, line='', indent_adjustment=0):
-		self.lines.append(Mutable_Line(line, indent=indent_adjustment))
+		self.lines.append(Mutable_Line(line).copy(adjust_indent=indent_adjustment))
 
 	def write_pieces(self, piece_list, indent_adjustment=0):
 		for piece in piece_list:

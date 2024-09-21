@@ -6,6 +6,10 @@ def path(input_str):
 	words = input_str.split()
 	return rf"{r'\s+'.join(words)}:?\s*([\w\.]+)"
 
+def identifier(input_str):
+	words = input_str.split()
+	return rf"{r'\s+'.join(words)}:?\s*(\w+)"
+
 def pattern(input_str):
 	words = input_str.split()
 	return rf"{r'\s+'.join(words)}:?\s*(.+)"

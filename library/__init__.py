@@ -17,6 +17,12 @@ SYMBOL_DEFINITION = '''
 		Aborted
 
 	Not_Set
+	Miss
+	Empty
+
+	E Action
+		Raise_Exception
+
 
 
 '''

@@ -66,6 +66,9 @@ class Core_Record:
 
 			super().__setattr__(name, value)
 
+		assert not positionals, f'Unexpected positional arguments: {positionals}'
+		assert not named, f'Unexpected keyword arguments: {named}'
+
 
 
 	def __repr__(self):
@@ -73,7 +76,12 @@ class Core_Record:
 		pieces = list()
 		MISS = object()
 		for f, i in type(self)._record_fields.items():
-			if (value := getattr(self, f, MISS)) is MISS:
+
+			if i.repr is False:
+				pass
+			elif callable(i.repr):
+				pieces.append(i.repr(self, f, i))
+			elif (value := getattr(self, f, MISS)) is MISS:
 				pieces.append(f'{f}=N/A')
 			else:
 				pieces.append(f'{f}={value!r}')
@@ -112,6 +120,7 @@ class Core_Field_Record:
 	mutable:		Optional[bool] = True
 	owner:			Optional[type] = None
 	factory:		Optional[callable] = None
+	repr:			Optional[callable] = True
 
 class Field(Core_Field_Record):
 	pass

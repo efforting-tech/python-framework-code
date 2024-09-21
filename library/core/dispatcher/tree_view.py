@@ -1,6 +1,8 @@
 from .. import record as R
 from . import Regulations, Dispatcher
 from .rules import Regex_Rule
+from ... import Strict_Symbol as S
+from ..decoration import Pending_Decorator
 
 class Tree_View_Dispatcher(Dispatcher):
 	regulations: R.Field(factory=Regulations)
@@ -14,7 +16,7 @@ class Tree_View_Dispatcher(Dispatcher):
 			self.regulations.rules.append(Regex_Rule(re.compile(pattern), target))
 			return target
 
-		return pending_decorator(finalize)
+		return Pending_Decorator(finalize)
 
 
 
@@ -30,7 +32,7 @@ class Tree_View_Dispatcher(Dispatcher):
 
 
 	def bound_dispatch_node(self, target, node):
-		if match := self.dispatch_item(node.title):
+		if (match := self.dispatch_item(node.title)) and match.value != S.Not_Set:
 			#Assume function for now
 			return match.value.rule.action(target, self, node, match)
 		else:
@@ -48,17 +50,9 @@ class Tree_View_Dispatcher(Dispatcher):
 
 
 	def dispatch_node(self, node):
-		if match := self.dispatch_item(node.title):
+		if (match := self.dispatch_item(node.title)) and match.value != S.Not_Set:
 			#Assume function for now
 			return match.value.rule.action(self, node, match)
 		else:
 			raise Exception(f'No match for {node.title!r} in {self!r}')	#TODO - default handler, better message
-
-class pending_decorator:
-	def __init__(self, finalizer):
-		self.finalizer = finalizer
-
-	def __call__(self, target):
-		return self.finalizer(target)
-
 

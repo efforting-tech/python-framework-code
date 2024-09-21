@@ -175,6 +175,32 @@ class Mutable_Line_View(Core_Line_View):
 	def from_str(cls, value):
 		return cls(list(value.splitlines()))
 
+	def write_line(self, line='', indent_adjustment=0):
+		self.lines.append(Mutable_Line(line, indent=indent_adjustment))
+
+	def write_pieces(self, piece_list, indent_adjustment=0):
+		for piece in piece_list:
+			self.write(piece, indent_adjustment=indent_adjustment)
+
+
+	def write(self, piece, indent_adjustment=0):
+
+		if isinstance(piece, ABC.Text.Block):
+			for line in piece:
+				self.lines.append(Mutable_Line(line.copy(adjust_indent=indent_adjustment).text))	#NOTE - we only need to copy if we have non zero indent_adjustment, it may be better to have a feature in the constructor
+		else:
+			raise TypeError(piece)
+
+
+		#TODO - convert to match once we fix our ABC system
+		# match piece:
+
+		# 	case ABC.Text.Block(lines=lines):
+		# 		print(lines)
+
+		# 	case unhandled:
+		# 		raise TypeError(piece)
+
 	def insert(self, index, line):
 		#TODO - some more convenient converter?
 		if isinstance(line, ABC.Text.Line.Mutable):
@@ -284,11 +310,15 @@ class Core_Tree_View(Core_Line_View):
 			yield self[last_root_index:]
 
 
-#TODO - add ABCs
+
+@ABC.Text.Block.Immutable
+@ABC.Text.Tree.Immutable
 class Immutable_Tree_View(Core_Tree_View, Immutable_Line_View):
 	pass
 
 
+@ABC.Text.Block.Mutable
+@ABC.Text.Tree.Mutable
 class Mutable_Tree_View(Core_Tree_View, Mutable_Line_View):
 	pass
 

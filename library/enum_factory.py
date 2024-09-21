@@ -23,6 +23,7 @@ class Enum(Symbol):
 			return ptr
 
 
+
 def convert_symbol_to_enum(symbol):
 	symbol.__class__ = Enum
 

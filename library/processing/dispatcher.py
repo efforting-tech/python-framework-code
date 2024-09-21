@@ -3,7 +3,7 @@
 from ..aggregation import First_Result, Result_List
 from ..record import member as M
 from ..record.base.public import Structure
-from .. import symbol
+from .. import Symbol
 from ..matching import data_condition as DC
 
 #TODO ABC
@@ -25,7 +25,7 @@ class LUT_Rule(unconditional_rule):
 
 class sub_dispatcher_rule(Structure):
 	dispatcher = M.positional()
-	action = M.positional(symbol.action.sub_dispatcher)
+	action = M.positional(Symbol.Action.Sub_Dispatcher)
 
 
 	def match(self, item):
@@ -77,7 +77,7 @@ class Regulations(Structure):
 
 
 		if not found and self.fallback_rule:
-			aggregator.aggregate(Rule_Match(self.fallback_rule, item, symbol.miss))
+			aggregator.aggregate(Rule_Match(self.fallback_rule, item, Symbol.Miss))
 
 class LUT_Regulations(Regulations):
 	rules = M.positional(factory=dict)
@@ -93,7 +93,7 @@ class LUT_Regulations(Regulations):
 		action = self.rules.get(key, MISS)
 		if action is MISS:
 			if self.fallback_rule and aggregator.accepting_work:
-				aggregator.aggregate(Rule_Match(self.fallback_rule, item, symbol.miss))
+				aggregator.aggregate(Rule_Match(self.fallback_rule, item, Symbol.Miss))
 		else:
 			if aggregator.accepting_work:
 				aggregator.aggregate(Rule_Match(LUT_Rule(action), item, key))
@@ -113,7 +113,7 @@ class Base_Dispatcher(Structure):
 		match_aggregator = self.item_aggregator_type()
 		self.regulations.aggregate_matches(match_aggregator, item)
 
-		if match_aggregator.value is not symbol.not_set:
+		if match_aggregator.value is not Symbol.Not_Set:
 			return match_aggregator
 
 	def dispatch_sequence(self, sequence):
@@ -166,7 +166,7 @@ class Single_Operation_Processor(Transformer):
 				break
 
 			v = self.dispatch_item(sub_item)
-			if v is symbol.action.skip:
+			if v is symbol.Action.Skip:
 				continue
 			else:
 				result_aggregator.aggregate(v)
@@ -180,7 +180,7 @@ class Sequential_Operations_Processor(Single_Operation_Processor):
 	def dispatch_item(self, item):
 		for rm in Dispatcher.dispatch_item(self, item).value:
 			pending = rm.match(item)
-			if pending is symbol.action.skip:
+			if pending is Symbol.Action.Skip:
 				continue
 			else:
 				item = pending

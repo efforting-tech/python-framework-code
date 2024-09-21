@@ -1,22 +1,20 @@
-from . import Symbol
-from .record import member as M
-from .record.base.public import Structure
-from .state_machine import State_Manager, Transition
+from ... import Strict_Symbol as SS	#TODO - we should use strict_symbol in most places
+from ..state_machine import State_Manager, Transition
+from .. import record as R
 import random
 
+AS = SS.Aggregator.Status
 
-S = Symbol.Aggregator.Status
-
-class Aggregator(Structure):
-	state_manager = State_Manager(S, dict(
-		abort = Transition(S.Aborted, {S.Pending, S.Working}),
-		finish = Transition(S.Finished, {S.Pending, S.Working}),
-		work = Transition(S.Working, {S.Pending, S.Working}),
-		reset = Transition(S.Pending),
+class Aggregator(R.Record):
+	state_manager = State_Manager(AS, dict(
+		abort = Transition(AS.Aborted, {AS.Pending, AS.Working}),
+		finish = Transition(AS.Finished, {AS.Pending, AS.Working}),
+		work = Transition(AS.Working, {AS.Pending, AS.Working}),
+		reset = Transition(AS.Pending),
 	))
 
-	_state = M.positional(factory=state_manager, repr=False)
-	error = M.positional(None)
+	_state: R.Field(factory=state_manager) #, repr=False)	#TODO (also note that we may by default hide fields starting with _ using tristate
+	error: R.Field() = None
 
 	#TODO - we should have a way to include properties in the representation
 	@property
@@ -40,7 +38,7 @@ class Aggregator(Structure):
 
 
 class First_Result(Aggregator):
-	value = M.positional(Symbol.Not_Set)
+	value: R.Field() = SS.Not_Set
 
 	def __iter__(self):
 		yield self.value
@@ -50,7 +48,7 @@ class First_Result(Aggregator):
 		self.value = entry
 
 class Result_List(Aggregator):
-	value = M.positional(factory=list)
+	value: R.Field(factory=list)
 
 	def __iter__(self):
 		yield from self.value
@@ -60,7 +58,7 @@ class Result_List(Aggregator):
 		self.value.append(entry)
 
 class Result_Set(Aggregator):
-	value = M.positional(factory=set)
+	value: R.Field(factory=set)
 
 	def __iter__(self):
 		yield from self.value
@@ -70,9 +68,9 @@ class Result_Set(Aggregator):
 		self.value.add(entry)
 
 class Sorted_List(Aggregator):
-	_value = M.positional(factory=list)
-	key = M.positional(None)
-	reverse = M.positional(False)
+	_value: R.Field(factory=list)
+	key: R.Field() = None
+	reverse: R.Field() = False
 
 	def __iter__(self):
 		yield from self.value
@@ -86,7 +84,7 @@ class Sorted_List(Aggregator):
 		return sorted(self._value, key=self.key, reverse=self.reverse)
 
 class Last_Result(Aggregator):
-	value = M.positional(Symbol.Not_Set)
+	value: R.Field() = SS.Not_Set
 
 	def __iter__(self):
 		yield self.value
@@ -96,7 +94,7 @@ class Last_Result(Aggregator):
 		self.value = entry
 
 class Random_Result(Aggregator):
-	_options = M.positional(factory=list)
+	_options: R.Field(factory=list)
 
 	def aggregate(self, entry):
 		self.register_work()
@@ -110,10 +108,10 @@ class Random_Result(Aggregator):
 		if self._options:
 			return random.choice(self._options)
 		else:
-			return Symbol.Not_Set
+			return SS.Not_Set
 
 class Counter(Aggregator):
-	value = M.positional(factory=dict)
+	value: R.Field(factory=dict)
 
 	def __iter__(self):
 		yield from self.value.items()

@@ -1,11 +1,10 @@
-from . import Symbol
-from .record.base.public import Structure
-from .record import member as M
+from .. import Symbol
+from . import record as R
 
 
-class State_Manager_Transition_Interface(Structure):
-	_target = M.positional()
-	_pending_transition = M.positional()
+class State_Manager_Transition_Interface(R.Record):
+	_target: R.Field()
+	_pending_transition: R.Field()
 
 	def __call__(self):
 		ts = self._pending_transition.to_state
@@ -23,8 +22,8 @@ class State_Manager_Transition_Interface(Structure):
 		fs = self._pending_transition.from_states
 		return (fs is Symbol.State_Management.Any_State) or self._target.value in fs
 
-class State_Manager_Interface(Structure):
-	_target = M.positional()
+class State_Manager_Interface(R.Record):
+	_target: R.Field()
 
 	def __getattr__(self, name):
 		return State_Manager_Transition_Interface(self._target, self._target.manager.transitions[name])
@@ -32,10 +31,10 @@ class State_Manager_Interface(Structure):
 	def __dir__(self):
 		return self._target.manager.transitions.keys()
 
-class State(Structure):
-	manager = M.positional()
-	value = M.positional()
-	assert_validity = M.positional(True)
+class State(R.Record):
+	manager: R.Field()
+	value: R.Field()
+	assert_validity: R.Field() = True
 
 	@property
 	def interface(self):
@@ -44,10 +43,10 @@ class State(Structure):
 	def __repr__(self):
 		return f'State({self.value})'
 
-class State_Manager(Structure):
-	states = M.positional()
-	transitions = M.positional(factory=dict)
-	default_state = M.positional()
+class State_Manager(R.Record):
+	states: R.Field()
+	transitions: R.Field(factory=dict)
+	default_state: R.Field()
 
 
 	def __call__(self, value=None, assert_validity=True):
@@ -59,8 +58,8 @@ class State_Manager(Structure):
 		return State(self, value, assert_validity=assert_validity)
 
 
-class Transition(Structure):
-	to_state = M.positional()
-	from_states = M.positional(Symbol.State_Management.Any_State)
+class Transition(R.Record):
+	to_state: R.Field()
+	from_states: R.Field() = Symbol.State_Management.Any_State
 
 

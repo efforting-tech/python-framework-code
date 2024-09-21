@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-class Record:
+class Core_Record:
 	def __init_subclass__(cls):
 		pending_fields = dict()
 
@@ -29,6 +29,7 @@ class Record:
 						raise Exception(unhandled)
 
 		cls._record_fields = pending_fields
+		cls.__match_args__ = tuple(pending_fields.keys())		#TODO - consider exluding fields from match_args
 
 		# NOTE - Here we could take actions such as subclass initialization of record fields
 		#for name, info in pending_fields.items():
@@ -47,7 +48,10 @@ class Record:
 			else:
 				MISS = object()
 				if (value := named.pop(name, MISS)) is MISS:
-					continue
+					if info.factory:				#TODO - support contextual factories
+						value = info.factory()
+					else:
+						continue
 
 			if target_type := info.type:
 				if et := info.ensure_type:
@@ -59,17 +63,9 @@ class Record:
 
 				assert isinstance(value, target_type), f'Unable to set {type(self)}.{name} ({info.owner}). Expected type {target_type} but got {type(value)}.'
 
+
 			super().__setattr__(name, value)
 
-
-	def __setattr__(self, name, value):
-		if name.startswith('_'):
-			super().__setattr__(name, value)
-		else:
-			cls = type(self)
-			info = cls._record_fields[name]
-			assert info.mutable, f'Field {cls}.{name} ({info.owner}) is not mutable.'
-			super().__setattr__(name, value)
 
 
 	def __repr__(self):
@@ -86,12 +82,36 @@ class Record:
 		inner = ' '.join(pieces)
 		return f'{type(self).__qualname__}({inner})'
 
+class Record(Core_Record):
+	def __setattr__(self, name, value):
+		if name.startswith('_'):
+			super().__setattr__(name, value)
+		else:
+			cls = type(self)
+			info = cls._record_fields[name]
+			assert info.mutable, f'Field {cls}.{name} ({info.owner}) is not mutable.'
+			super().__setattr__(name, value)
+
+class Dynamic_Record(Core_Record):
+	def __setattr__(self, name, value):
+		if name.startswith('_'):
+			super().__setattr__(name, value)
+		else:
+			cls = type(self)
+			if info := cls._record_fields.get(name):
+				assert info.mutable, f'Field {cls}.{name} ({info.owner}) is not mutable.'
+
+			super().__setattr__(name, value)
+
+
+
 @dataclass
 class Core_Field_Record:
 	type: 			Optional[type] = None
 	ensure_type: 	Optional[bool] = False
-	mutable:		Optional[bool] = None
+	mutable:		Optional[bool] = True
 	owner:			Optional[type] = None
+	factory:		Optional[callable] = None
 
 class Field(Core_Field_Record):
 	pass

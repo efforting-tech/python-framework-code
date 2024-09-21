@@ -2,11 +2,55 @@
 #NOTE - before we had that path.to.thing automatically implies path.to and path - should we do that? (update: we are doing that)
 
 #TODO - code dedup with ABC
+
+
+
+class Symbol_Node_Reference:
+	def __init__(self, _target, _create_new=False):
+		self._target = _target
+		self._create_new = _create_new
+		self._cache = dict()
+
+	def __dir__(self):
+		return self._target.children.keys()
+
+	def __repr__(self):
+		return f'{type(self).__qualname__}({self._target.path!r})'
+
+	def __getattr__(self, name):
+		if self._create_new:
+			if cached := self._cache.get(name):
+				return cached
+			else:
+				child = self._target.get_or_create(name)
+				child_ref = self._cache[name] = child.get_reference(True)
+				return child_ref
+		else:
+			if child := self._target.get(name):
+				child_ref = self._cache[name] = child.get_reference()
+				return child_ref
+			else:
+				raise AttributeError(f'There is no child {name!r} of {self}')
+
+	def __contains__(self, other):
+		#TODO - possibly cache this
+
+		if isinstance(other, Symbol_Node_Reference):
+			for i in self._target.walk():
+				if i is other._target:
+					return True
+
+		return False
+
+
 class Symbol_Node:
 	def __init__(self, name=None, parent=None):
 		self.name = name
 		self.parent = parent
 		self.children = dict()
+
+	def get_reference(self, create_new=False):
+		return Symbol_Node_Reference(self, create_new)
 
 	def get_or_create(self, name):
 		if existing := self.children.get(name):
@@ -43,39 +87,6 @@ class Symbol_Node:
 	def __repr__(self):
 		return f'{type(self).__qualname__}({self.path!r})'
 
-
-class Symbol_Node_Reference:
-	def __init__(self, _target, _create_new=False):
-		self._target = _target
-		self._create_new = _create_new
-		self._cache = dict()
-
-	def __repr__(self):
-		return f'{type(self).__qualname__}({self._target.path!r})'
-
-	def __getattr__(self, name):
-		if self._create_new:
-			if cached := self._cache.get(name):
-				return cached
-			else:
-				child_ref = self._cache[name] = type(self)(self._target.get_or_create(name), True)
-				return child_ref
-		else:
-			if child := self._target.get(name):
-				child_ref = self._cache[name] = type(self)(child)
-				return child_ref
-			else:
-				raise AttributeError(f'There is no child {name!r} of {self}')
-
-	def __contains__(self, other):
-		#TODO - possibly cache this
-		for i in self._target.walk():
-			if i is other._target:
-				return True
-
-		return False
-
-
 Symbol_Root_Node = Symbol_Node('Symbol')
 
 def register_core_abc(path):
@@ -87,4 +98,5 @@ def register_core_abc(path):
 	return ptr
 
 #NOTE - we should use references as the identities
-Symbol = Symbol_Node_Reference(Symbol_Root_Node, True)
+Symbol = Symbol_Root_Node.get_reference(True)
+Strict_Symbol = Symbol_Root_Node.get_reference(False)

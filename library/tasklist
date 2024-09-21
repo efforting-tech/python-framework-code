@@ -1,0 +1,27 @@
+core					promising
+core.enum				WIP
+enum_factory			deprecated
+mnemonic_language		broken
+type.text				deprecated, docs needed
+type.text.styling		finished
+
+
+# Ones with deprecated symbol
+context												sym
+data_utils											sym
+data_view											sym
+iteration											sym
+mnemonic_language.bootstrap							sym
+mnemonic_language.mnemonic_tokens_to_pattern		sym
+mnemonic_language.parser							sym
+mnemonic_language.parsing_rules						sym
+mnemonic_language.processing						sym
+mnemonic_language.rudimentary_definition_helpers	sym
+mnemonic_language.structures						sym
+mnemonic_language.tokens							sym
+processing.generic									sym
+processing.stack									sym
+processing.structures								sym
+processing.text_tree								sym
+type.text.parsing									sym
+type.text.tree.processor							sym

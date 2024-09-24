@@ -22,9 +22,54 @@ class Mnemonic_Core_Dispatcher(R.Record):
 	def core_tree_translation_global_context_setup(self, dispatcher, node, result):
 		self.global_context_setup.append(node.body.normal())
 
+
+	#TODO - revise to something like  @D.register.terminal('core tree translat...')  ?
 	@D.register(MP.terminal, 'core tree translation local context setup')
 	def core_tree_translation_local_context_setup(self, dispatcher, node, result):
 		self.local_context_setup.append(node.body.normal())
+
+
+
+
+	@D.register(MP.terminal, 'core regex line translation map')
+	def core_regex_line_translation_map(self, dispatcher, node, result):
+		dispatcher_defs = Mutable_Tree_View()
+		rule_defs = Mutable_Tree_View()
+		export = set()
+
+		for sub_dispatcher_node in node.body.iter_nodes():
+			if m := p_args.match(sub_dispatcher_node.title):
+				dispatcher_name, dispatcher_args = m.groups()
+				dispatcher_bases = tuple(map(str.strip, dispatcher_args.split(',')))
+
+			else:
+				dispatcher_name = sub_dispatcher_node.title
+				dispatcher_bases = ()
+
+			dispatcher_defs.write_line(f'{dispatcher_name} = Regex_Transformer()')
+			export.add(dispatcher_name)
+
+
+			for line in sub_dispatcher_node.body.lines:
+				if not line.value:
+					continue
+
+				pattern, expression = map(str.strip, line.value.split('→'))
+
+				rule_defs.write_line(f'@{dispatcher_name}.register({pattern!r})')
+				rule_defs.write_line(f'def handler(dispatcher, item, result):')
+				rule_defs.write_pieces(self.local_context_setup, indent_adjustment=1)
+				rule_defs.write_line(f'\treturn {expression}')
+				rule_defs.write_line()
+
+			for b in dispatcher_bases:
+				rule_defs.write_line(f'{dispatcher_name}.register_fallback_dispatcher({b})')
+
+
+		print(rule_defs.to_str())
+		exit()
+
+
 
 	@D.register(MP.terminal, 'core tree translation map')
 	def core_tree_translation_map(self, dispatcher, node, result):

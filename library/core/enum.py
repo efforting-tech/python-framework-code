@@ -8,7 +8,7 @@ class Enum_Node_Reference(Symbol_Node_Reference):
 		return self._target[key]
 
 	def __eq__(self, other):
-		if isinstance(other, Enum_Node_Reference):	#TODO - ABC
+		if isinstance(other, Symbol_Node_Reference):	#TODO - ABC
 			return self._target == other._target
 		else:
 			raise TypeError(self, other)	#TODO - Not implemented yet - should support Enum_Node
@@ -22,7 +22,7 @@ class Enum_Node(Symbol_Node):
 		return Enum_Node_Reference(self, create_new)
 
 	def __eq__(self, other):
-		if isinstance(other, Enum_Node):	#TODO - ABC
+		if isinstance(other, Symbol_Node):	#TODO - ABC
 			return self is other	#Underlying nodes are singletons
 		else:
 			raise TypeError(self, other)	#TODO - Not implemented yet - should support Enum_Node_Reference

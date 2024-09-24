@@ -22,6 +22,8 @@ class Symbol_Node_Reference:
 
 		return False
 
+	def __hash__(self):
+		return hash(self._target)
 
 	def __dir__(self):
 		return self._target.children.keys()

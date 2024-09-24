@@ -1,5 +1,16 @@
 from dataclasses import dataclass
 from typing import Optional
+from .. import Strict_Symbol as S, Symbol as DFS
+
+from . import enum as E
+
+#Record is used very early so we need to forward declare some symbols here
+DFS.Member.Kind.Positional_or_Named
+DFS.Member.Kind.All_Positional
+DFS.Member.Kind.All_named
+DFS.Not_Set
+E.convert_symbol_to_enum(S.Member.Kind._target)
+
 
 class Core_Record:
 	def __init_subclass__(cls):
@@ -41,17 +52,33 @@ class Core_Record:
 
 		cls = type(self)
 		for name, info in cls._record_fields.items():
+
+			value = S.Not_Set	#TODO - This should not be needed unless we made a mistake in the logic under here - maybe we should instead have a special value for raising exceptions rather than silently assuming "not set"
+
 			if positionals:
 				assert name not in named
-				value = positionals.pop(0)
+
+				if info.kind == S.Member.Kind.Positional_or_Named:
+					value = positionals.pop(0)
+
+
+				elif info.kind == S.Member.Kind.All_Positional:
+					value = tuple(positionals)
+					positionals.clear()
 
 			else:
 				MISS = object()
-				if (value := named.pop(name, MISS)) is MISS:
-					if info.factory:				#TODO - support contextual factories
-						value = info.factory()
-					else:
-						continue
+				if info.kind == S.Member.Kind.All_Positional:
+					value = ()
+				elif info.kind == S.Member.Kind.Positional_or_Named:
+					if (value := named.pop(name, MISS)) is MISS or value == S.Not_Set:
+						if info.factory:				#TODO - support contextual factories
+							value = info.factory()
+						else:
+							continue
+				elif info.kind == S.Member.Kind.All_Named:
+					value = dict(named)
+					named.clear()
 
 			if target_type := info.type:
 				if et := info.ensure_type:
@@ -64,7 +91,8 @@ class Core_Record:
 				assert isinstance(value, target_type), f'Unable to set {type(self)}.{name} ({info.owner}). Expected type {target_type} but got {type(value)}.'
 
 
-			super().__setattr__(name, value)
+			if value != S.Not_Set:
+				super().__setattr__(name, value)
 
 		assert not positionals, f'Unexpected positional arguments: {positionals}'
 		assert not named, f'Unexpected keyword arguments: {named}'
@@ -121,6 +149,7 @@ class Core_Field_Record:
 	owner:			Optional[type] = None
 	factory:		Optional[callable] = None
 	repr:			Optional[callable] = True
+	kind:			object = S.Member.Kind.Positional_or_Named	#TODO fix up
 
 class Field(Core_Field_Record):
 	pass

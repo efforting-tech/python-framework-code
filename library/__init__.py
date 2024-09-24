@@ -23,6 +23,12 @@ SYMBOL_DEFINITION = '''
 	E Action
 		Raise_Exception
 
+	Member
+		E Kind
+			Positional_or_Named
+			All_Positional
+			All_Named
+
 
 
 '''

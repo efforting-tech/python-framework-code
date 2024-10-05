@@ -1,6 +1,6 @@
 import re
 from .. import record as R
-from ... import Strict_Symbol as SS
+from ... import Strict_Symbol as S
 from . import aggregation as AGR
 
 from ..decoration import Pending_Decorator
@@ -30,8 +30,38 @@ class Regulations(R.Record):
 
 
 		if not found and self.fallback_rule:
-			aggregator.aggregate(Rule_Match(self.fallback_rule, item, SS.Miss))
+			aggregator.aggregate(Rule_Match(self.fallback_rule, item, S.Miss))
 
+
+class LUT_Regulations(Regulations):
+	rules: R.Field(factory=dict)
+	LUT_key: R.Field() = None
+
+	def register_function(self, condition):
+		def finalize(function):
+			self.rules[condition] = function
+			return function
+
+		return Pending_Decorator(finalize)
+
+	def aggregate_matches(self, aggregator, item):
+		MISS = object()	#TODO local symbol
+		if self.LUT_key:
+			key = self.LUT_key(item)
+		else:
+			key = item
+
+		action = self.rules.get(key, MISS)
+
+		if action is MISS:
+			if self.fallback_rule and aggregator.accepting_work:
+				aggregator.aggregate(Rule_Match(self.fallback_rule, item, Symbol.Miss))
+		else:
+			if aggregator.accepting_work:
+				aggregator.aggregate(Rule_Match(LUT_Rule(action), item, key))
+
+class Type_LUT_Regulations(LUT_Regulations):
+	LUT_key: R.Field() = type
 
 
 def repr_reg_count(instance, field, info):
@@ -74,12 +104,17 @@ class Core_Dispatcher(R.Record):
 	def register_fallback_dispatcher(self, fallback_dispatcher):
 		self.regulations.rules.extend(fallback_dispatcher.regulations.rules)
 
+	def register(self, *positional, **named):
+		return self.regulations.register(*positional, **named)
+
+	def register_function(self, *positional, **named):
+		return self.regulations.register_function(*positional, **named)
 
 	def dispatch_item(self, item):
 		match_aggregator = self.item_aggregator_type()
 		self.regulations.aggregate_matches(match_aggregator, item)
 
-		if match_aggregator.value != SS.Not_Set:
+		if match_aggregator.value != S.Not_Set:
 			return match_aggregator
 
 		else:
@@ -98,13 +133,16 @@ class Core_Dispatcher(R.Record):
 class Dispatcher(Core_Dispatcher):
 	pass
 
+#TODO - we should probably construct all these variants using a lazy factory system
+class Type_LUT_Dispatcher(Core_Dispatcher):
+	regulations: R.Field_Update(factory=Type_LUT_Regulations)
 
 class Transformer(Dispatcher):
 	def dispatch_item(self, item):
 		return super().dispatch_item(item).value.rule.action(item)
 
 
-class Single_Operation_Processor(Transformer):
+class Single_Operation_Processor(Dispatcher):
 	def dispatch_sequence(self, sequence):
 		result_aggregator = self.sequence_aggregator_type()
 		for sub_item in sequence:
@@ -132,38 +170,7 @@ class Regex_Regulations(Regulations):
 		return Pending_Decorator(finalize)
 
 
-class LUT_Regulations(Regulations):
-	rules: R.Field(factory=dict)
-	LUT_key: R.Field() = None
-
-	def register_function(self, condition):
-		def finalize(function):
-			self.rules[condition] = function
-			return function
-
-		return Pending_Decorator(finalize)
-
-	def aggregate_matches(self, aggregator, item):
-		MISS = object()	#TODO local symbol
-		if self.LUT_key:
-			key = self.LUT_key(item)
-		else:
-			key = item
-
-		action = self.rules.get(key, MISS)
-		if action is MISS:
-			if self.fallback_rule and aggregator.accepting_work:
-				aggregator.aggregate(Rule_Match(self.fallback_rule, item, Symbol.Miss))
-		else:
-			if aggregator.accepting_work:
-				aggregator.aggregate(Rule_Match(LUT_Rule(action), item, key))
-
-class Type_LUT_Regulations(LUT_Regulations):
-	LUT_key: R.Field() = type
-
-
-
-class Regex_Transformer(Dispatcher):
+class Regex_Transformer(Transformer):
 	regulations: R.Field_Update(factory=Regex_Regulations)
 
 	def dispatch_item(self, item):

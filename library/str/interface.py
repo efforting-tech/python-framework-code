@@ -44,7 +44,7 @@ class String_Interface:
 			if best_candidate:
 				head = text[pos:best_candidate.match.start()]
 				if head:
-					if default_pattern:
+					if default_pattern is not None:
 						yield Text_Match(self, default_pattern, re.compile(r'.*', re.DOTALL).match(text[:best_candidate.match.start()], pos))	#Create unconditional match object by matching everything
 					else:
 						raise Exception()
@@ -57,7 +57,7 @@ class String_Interface:
 
 		tail = text[pos:]
 		if tail:
-			if default_pattern:
+			if default_pattern is not None:
 				yield Text_Match(self, default_pattern, re.compile(r'.*', re.DOTALL).match(text, pos))	#Create unconditional match object by matching everything
 			else:
 				raise Exception()

@@ -1,5 +1,5 @@
 from .. import record as R
-from . import Regulations, Dispatcher
+from . import Regulations, Dispatcher, Regex_Regulations
 from .rules import Regex_Rule
 from ... import Strict_Symbol as S
 from ..decoration import Pending_Decorator
@@ -56,3 +56,5 @@ class Tree_View_Dispatcher(Dispatcher):
 		else:
 			raise Exception(f'No match for {node.title!r} in {self!r}')	#TODO - default handler, better message
 
+class Tree_View_Regex_Dispatcher(Tree_View_Dispatcher):
+	regulations: R.Field(factory=Regex_Regulations)

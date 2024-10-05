@@ -61,9 +61,30 @@ class Core_Line(R.Record):
 class Immutable_Line(Core_Line):
 	text: 			R.Field_Update(type=ABC.String, mutable=False)
 
+	@classmethod
+	def from_anything(cls, value):
+		match value:
+			case cls():
+				return value	#Immutable can share
+			case str():
+				return cls(value)
+			case unmatched:
+				raise TypeError(type(value))
+
 @ABC.Text.Line.Mutable
 class Mutable_Line(Core_Line):
 	text: 			R.Field_Update(type=ABC.String, mutable=True)	#BUG - Why do we have to specify true here when Core_Line is mutable?
+
+
+	@classmethod
+	def from_anything(cls, value):
+		match value:
+			case str():
+				return cls(value)
+			case unmatched:
+				raise TypeError(type(value))
+
+
 
 
 @ABC.Text.Line_View
@@ -170,7 +191,7 @@ class Immutable_Line_View(Core_Line_View):
 
 	@classmethod
 	def from_str(cls, value):	#NOTE - we must use different one for mutable sub classes
-		return cls(tuple(value.splitlines()))
+		return cls(tuple(map(Immutable_Line.from_anything, value.splitlines())))
 
 	def __init__(self, text=None):
 		#NOTE - we can't use match here because ABC nodes are not actually types
@@ -193,23 +214,35 @@ class Immutable_Line_View(Core_Line_View):
 class Mutable_Line_View(Core_Line_View):
 	lines:			R.Field_Update(type=TY.Sequence(ABC.Text.Line.Mutable), mutable=True)
 
+
 	@classmethod
 	def from_str(cls, value):
-		return cls(list(value.splitlines()))
+		return cls(list(map(Mutable_Line.from_anything, value.splitlines())))
+
+
+
 
 	def write_line(self, line='', indent_adjustment=0):
 		self.lines.append(Mutable_Line(line).copy(adjust_indent=indent_adjustment))
 
 	def write_pieces(self, piece_list, indent_adjustment=0):
+		if not piece_list:
+			return
+
 		for piece in piece_list:
 			self.write(piece, indent_adjustment=indent_adjustment)
 
 
 	def write(self, piece, indent_adjustment=0):
+		if not piece:
+			return
 
 		if isinstance(piece, ABC.Text.Block):
 			for line in piece:
 				self.lines.append(Mutable_Line(line.copy(adjust_indent=indent_adjustment).text))	#NOTE - we only need to copy if we have non zero indent_adjustment, it may be better to have a feature in the constructor
+		elif isinstance(piece, ABC.Text.Line):
+			self.lines.append(Mutable_Line(piece.copy(adjust_indent=indent_adjustment).text))	#NOTE - we only need to copy if we have non zero indent_adjustment, it may be better to have a feature in the constructor
+
 		else:
 			raise TypeError(piece)
 
@@ -336,7 +369,16 @@ class Core_Tree_View(Core_Line_View):
 @ABC.Text.Block.Immutable
 @ABC.Text.Tree.Immutable
 class Immutable_Tree_View(Core_Tree_View, Immutable_Line_View):
-	pass
+	@classmethod
+	def from_anything(cls, value):
+		match value:
+			case cls():
+				return value	#It is immutable so is fine to share
+			case str():
+				return cls.from_str(value)
+			case unmatched:
+				raise TypeError(type(value))
+
 
 
 @ABC.Text.Block.Mutable

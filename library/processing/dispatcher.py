@@ -83,6 +83,8 @@ class LUT_Regulations(Regulations):
 	rules = M.positional(factory=dict)
 	LUT_key = M.positional(None)
 
+
+
 	def aggregate_matches(self, aggregator, item):
 		MISS = object()	#TODO local symbol
 		if self.LUT_key:
@@ -135,6 +137,8 @@ class Dispatcher(Base_Dispatcher):
 
 class Named_Dispatcher(Base_Dispatcher, Base_Named_Dispatcher): #This should ensure name is first positional (note that we must reverse bases for this to work!) - TODO - maybe make a convenience function for compositing that is more readable
 	pass
+
+
 
 
 class Mapping_Dispatcher(Dispatcher):

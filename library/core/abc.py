@@ -1,6 +1,8 @@
 #NOTE - we may also introduce a quasi type system where instancecheck uses a set of conditions
 #NOTE - before we had that path.to.thing automatically implies path.to and path - should we do that? (update: we are doing that)
 
+import types
+
 #TODO - code dedup with Symbol
 class ABC_Registry:
 	def __init__(self):
@@ -8,19 +10,35 @@ class ABC_Registry:
 		self.lut_abc_to_type = dict()
 		self.cache = set()
 
-	def register(self, type, abc):
+	def register(self, pending_type, abc):
+
+		if not isinstance(pending_type, type) and callable(pending_type):
+			#TO DOC - how we can create types from functions to easier classify them
+			#print('Create type from function', pending_type)
+			pending_type = type(pending_type.__name__, (), dict(
+				__call__ = staticmethod(pending_type),
+			))
+
+			result = pending_type()
+
+		else:
+			result = pending_type
+
+
 		if (type_set := self.lut_abc_to_type.get(abc)) is None:
 			type_set = self.lut_abc_to_type[abc] = set()
 
-		type_set.add(type)
+		type_set.add(pending_type)
 
-		if (abc_set := self.lut_type_to_abc.get(type)) is None:
-			abc_set = self.lut_type_to_abc[type] = set()
+		if (abc_set := self.lut_type_to_abc.get(pending_type)) is None:
+			abc_set = self.lut_type_to_abc[pending_type] = set()
 
 		abc_set.add(abc)
 
-		cache_key = (type, abc)
+		cache_key = (pending_type, abc)
 		self.cache.add(cache_key)
+
+		return result
 
 
 
@@ -101,8 +119,8 @@ class ABC_Node:
 
 
 	def __call__(self, target):	#Used as decorator to register ABC
-		ABC_REGISTRY.register(target, self)
-		return target
+		return ABC_REGISTRY.register(target, self)
+
 
 	def __repr__(self):
 		return f'{type(self).__qualname__}({self.path!r})'
@@ -137,8 +155,8 @@ class ABC_Node_Reference:
 			return self._target == other
 
 	def __call__(self, target):	#Used as decorator to register ABC
-		ABC_REGISTRY.register(target, self._target)
-		return target
+		return ABC_REGISTRY.register(target, self._target)
+
 
 	def __repr__(self):
 		return f'{type(self).__qualname__}({self._target.path!r})'

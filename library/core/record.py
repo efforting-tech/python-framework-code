@@ -1,16 +1,24 @@
 from dataclasses import dataclass
 from typing import Optional
-from .. import Strict_Symbol as S, Symbol as DFS
+from .. import Strict_Symbol as S, Symbol as DFS, ABC
 
 from . import enum as E
 
+from ..introspection import stack_limit
+
+REPR_STACK_LIMIT = stack_limit(2)
+
+
 #Record is used very early so we need to forward declare some symbols here
 DFS.Member.Kind.Positional_or_Named
+DFS.Member.Kind.Positional
+DFS.Member.Kind.Named
 DFS.Member.Kind.All_Positional
 DFS.Member.Kind.All_named
 DFS.Not_Set
 E.convert_symbol_to_enum(S.Member.Kind._target)
 
+factory_context = None
 
 class Core_Record:
 	def __init_subclass__(cls):
@@ -46,77 +54,98 @@ class Core_Record:
 		#for name, info in pending_fields.items():
 			#print(name, info)
 
-	def __init__(self, *positionals, **named):
 
+	def __init__(self, *positionals, **named):
+		#TODO - care about type/ensure_type ?
+		global factory_context
 		positionals = list(positionals)
 
 		cls = type(self)
 		for name, info in cls._record_fields.items():
 
-			value = S.Not_Set	#TODO - This should not be needed unless we made a mistake in the logic under here - maybe we should instead have a special value for raising exceptions rather than silently assuming "not set"
+			pending_value = S.Not_Set
 
-			if positionals:
-				assert name not in named
+			if info.kind == S.Member.Kind.Positional_or_Named:
+				if positionals:
+					assert name not in named
+					pending_value = positionals.pop(0)
+				else:
+					pending_value = named.pop(name, S.Not_Set)
 
-				if info.kind == S.Member.Kind.Positional_or_Named:
-					value = positionals.pop(0)
+			elif info.kind == S.Member.Kind.Positional:
+				if positionals:
+					assert name not in named
+					pending_value = positionals.pop(0)
 
+			elif info.kind == S.Member.Kind.Named:
+				pending_value = named.pop(name, S.Not_Set)
 
-				elif info.kind == S.Member.Kind.All_Positional:
-					value = tuple(positionals)
-					positionals.clear()
+			elif info.kind == S.Member.Kind.All_Positional:
+				pending_value = tuple(positionals)
+				positionals.clear()
+
+			elif info.kind == S.Member.Kind.All_Named:
+				pending_value = dict(named)
+				named.clear()
 
 			else:
-				MISS = object()
-				if info.kind == S.Member.Kind.All_Positional:
-					value = ()
-				elif info.kind == S.Member.Kind.Positional_or_Named:
-					if (value := named.pop(name, MISS)) is MISS or value == S.Not_Set:
-						if info.factory:				#TODO - support contextual factories
-							value = info.factory()
-						else:
-							continue
-				elif info.kind == S.Member.Kind.All_Named:
-					value = dict(named)
-					named.clear()
+				raise Exception(info.kind)
 
-			if target_type := info.type:
-				if et := info.ensure_type:
-					if not isinstance(value, target_type):
-						print('TARGET', target_type, value)
-						print(et.convert(value, target_type))
-						exit()
-						#value = target_type(value)
+			if pending_value == S.Not_Set:
+				factory_context = dict(
+					parent = factory_context,
+					name = name,
+					info = info,
+					positionals = positionals,
+					named = named,
+					instance = self,
+				)
 
-				assert isinstance(value, target_type), f'Unable to set {type(self)}.{name} ({info.owner}). Expected type {target_type} but got {type(value)}.'
+				if info.factory:				#TODO - support contextual factories
+					if isinstance(info.factory, ABC.Factory.Contextual):
+						pending_value = info.factory(factory_context)
+					else:
+						pending_value = info.factory()
+
+				factory_context = factory_context['parent']
 
 
-			if value != S.Not_Set:
-				super().__setattr__(name, value)
+			if pending_value != S.Not_Set:
+				super().__setattr__(name, pending_value)
+
+
 
 		assert not positionals, f'Unexpected positional arguments: {positionals}'
 		assert not named, f'Unexpected keyword arguments: {named}'
 
 
 
+
+
 	def __repr__(self):
 
-		pieces = list()
-		MISS = object()
-		for f, i in type(self)._record_fields.items():
+		with REPR_STACK_LIMIT:
+			try:
+				pieces = list()
+				MISS = object()
+				for f, i in type(self)._record_fields.items():
 
-			if i.repr is False:
-				pass
-			elif callable(i.repr):
-				pieces.append(i.repr(self, f, i))
-			elif (value := getattr(self, f, MISS)) is MISS:
-				pieces.append(f'{f}=N/A')
-			else:
-				pieces.append(f'{f}={value!r}')
+					if i.repr is False:
+						pass
+					elif callable(i.repr):
+						pieces.append(i.repr(self, f, i))
+					elif (value := getattr(self, f, MISS)) is MISS:
+						pieces.append(f'{f}=N/A')
+					else:
+						pieces.append(f'{f}={value!r}')
 
+				inner = ' '.join(filter(bool, pieces))
 
-		inner = ' '.join(pieces)
+			except RecursionError:
+				inner = '\N{HORIZONTAL ELLIPSIS}'
+
 		return f'{type(self).__qualname__}({inner})'
+
 
 class Record(Core_Record):
 	def __setattr__(self, name, value):

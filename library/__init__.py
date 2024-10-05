@@ -22,6 +22,12 @@ SYMBOL_DEFINITION = '''
 
 	E Action
 		Raise_Exception
+		Default
+
+	E Export
+		Auto
+		Yes
+		No
 
 	Member
 		E Kind
@@ -29,12 +35,20 @@ SYMBOL_DEFINITION = '''
 			All_Positional
 			All_Named
 
+	Type_System
+		E Merge_Mode
+			Replace
+			Update
+
 
 
 '''
 
 #TODO - Add the ABC tree
 ABC_DEFINITION = '''
+
+	Factory
+		Contextual
 
 
 '''

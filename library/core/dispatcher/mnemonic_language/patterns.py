@@ -1,3 +1,7 @@
+def words(input_str):
+	words = input_str.split()
+	return rf"{r'\s+'.join(words)}"
+
 def terminal(input_str):
 	words = input_str.split()
 	return rf"{r'\s+'.join(words)}:?"
@@ -34,5 +38,4 @@ def non_spaces(required_count, optional_count=0, end_with_pattern=False):
 		result += r'(.*)'
 
 	return result
-
 

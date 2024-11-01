@@ -1,0 +1,19 @@
+Define language: mnemonic template language 1
+	Alias: mtl-1
+
+	Goal:
+		This language will express statements and inline expressions.
+
+
+
+
+	Define tokenizer: tokenizer
+
+		waterfall token table:
+			name					type		symbol
+			----					------		------
+			left_wrapper			literal		«
+			right_wrapper						»
+			escaped_left_wrapper				\«
+			escaped_right_wrapper				\»
+			text					default

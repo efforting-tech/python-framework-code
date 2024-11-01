@@ -74,3 +74,4 @@ def take_while_consequtive(predicate, source):
 			yield i
 			yield from take_while(predicate, iterator)
 			break
+

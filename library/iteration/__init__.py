@@ -1,6 +1,8 @@
-from .. import symbol
-from ..record.base.public import Structure
-from ..record import member as M
+from .. import Symbol as S
+#from ..record.base.public import Structure
+#from ..record import member as M
+
+from ..core import record as R
 
 from collections import deque
 
@@ -17,18 +19,18 @@ class branchable_iterator:
 	def push(self, item):
 		self.pending.appendleft(item)
 
-	def peek(self, default=symbol.action.raise_exception):
+	def peek(self, default=S.Action.Raise_Exception):
 		try:
 			item = self.pop()
 			self.push(item)
 			return item
 		except StopIteration:
-			if default is symbol.action.raise_exception:
+			if default is S.Action.Raise_Exception:
 				raise
 			else:
 				return default
 
-	def pop(self, default=symbol.action.raise_exception):
+	def pop(self, default=S.Action.Raise_Exception):
 		if self.pending:
 			return self.pending.popleft()
 		else:
@@ -36,7 +38,7 @@ class branchable_iterator:
 			try:
 				return next(self.source)
 			except StopIteration:
-				if default is symbol.action.raise_exception:
+				if default is S.Action.Raise_Exception:
 					raise
 				else:
 					return default
@@ -80,8 +82,8 @@ class branchable_iterator:
 	__next__ = pop
 
 
-class Switchable_Iterator(Structure):
-	source = M.positional()
+class Switchable_Iterator(R.Record):
+	source: R.Field()
 
 	def __iter__(self):
 		while True:

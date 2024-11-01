@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
-from .. import Strict_Symbol as S, Symbol as DFS, ABC
+from .. import Symbol as S, Symbol as DFS, ABC
 
-from . import enum as E
 
 from ..introspection import stack_limit
 
@@ -10,13 +9,6 @@ REPR_STACK_LIMIT = stack_limit(2)
 
 
 #Record is used very early so we need to forward declare some symbols here
-DFS.Member.Kind.Positional_or_Named
-DFS.Member.Kind.Positional
-DFS.Member.Kind.Named
-DFS.Member.Kind.All_Positional
-DFS.Member.Kind.All_named
-DFS.Not_Set
-E.convert_symbol_to_enum(S.Member.Kind._target)
 
 factory_context = None
 
@@ -37,12 +29,26 @@ class Core_Record:
 						assert not info.owner or info.owner is base	#TODO - not sure if this will happen during normal ops
 						info.owner = base
 
+						if info.kind is S.Member.Kind.Hierarchial:
+							if cls is base:
+								continue
+
+							#print('HI!', base, getattr(base, name), '→', cls)
+
+							setattr(cls, name, getattr(base, name).create_child(getattr(cls, name, None)))
+
+
+
+
+
+
 
 					#TODO - maybe we should have Field_Replace as well which would take ownership. Then we could also have abstract fields which would be just like Field but be required to be implemented down the line
 					case Field_Update():
-						new_state = pending_fields[name].__getstate__()
+						new_state = dict(pending_fields[name].__getstate__())	#BUGFIX - do not make shallow copy
 						new_state.update(info)
 						pending_fields[name] = Field(**new_state)
+
 
 					case unhandled:
 						raise Exception(unhandled)
@@ -88,8 +94,15 @@ class Core_Record:
 				pending_value = dict(named)
 				named.clear()
 
+			#NOTE - later we may want named subsets of things
+			elif info.kind in (S.Member.Kind.Internal, S.Member.Kind.Hierarchial):
+				pass
+
 			else:
 				raise Exception(info.kind)
+
+			if pending_value == S.Not_Set and info.default is not S.Not_Set:	#TODO - we have some mixed == and is because we had a silly idea for the symbols. We should get back to is
+				pending_value = info.default
 
 			if pending_value == S.Not_Set:
 				factory_context = dict(
@@ -101,14 +114,13 @@ class Core_Record:
 					instance = self,
 				)
 
-				if info.factory:				#TODO - support contextual factories
+				if info.factory:
 					if isinstance(info.factory, ABC.Factory.Contextual):
 						pending_value = info.factory(factory_context)
 					else:
 						pending_value = info.factory()
 
 				factory_context = factory_context['parent']
-
 
 			if pending_value != S.Not_Set:
 				super().__setattr__(name, pending_value)
@@ -169,6 +181,15 @@ class Dynamic_Record(Core_Record):
 			super().__setattr__(name, value)
 
 
+@ABC.Factory.Contextual
+@dataclass
+class Bound_Factory:
+	target:			callable
+
+	def __call__(self, context):
+		return self.target(context['instance'])
+
+
 
 @dataclass
 class Core_Field_Record:
@@ -178,6 +199,7 @@ class Core_Field_Record:
 	owner:			Optional[type] = None
 	factory:		Optional[callable] = None
 	repr:			Optional[callable] = True
+	default:		Optional[object] = S.Not_Set
 	kind:			object = S.Member.Kind.Positional_or_Named	#TODO fix up
 
 class Field(Core_Field_Record):

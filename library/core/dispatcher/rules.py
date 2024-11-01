@@ -1,6 +1,8 @@
 from .. import record as R
 from ... import ABC
 
+#TODO - we should probably remove regex_rule and unconditional_rule here and just use the data conditions
+
 #TODO - maybe the action field should be renamed, maybe value is better, but then instead of rule maybe we should call it conditional value?
 #TODO - think about whether we should think about API around things utilizing aggregators
 
@@ -29,6 +31,14 @@ class Regex_Rule(Core_Rule):	#TODO - override signature so we can have action in
 
 	def match(self, item):
 		return self.pattern.fullmatch(item)
+
+class Generic_Rule(Core_Rule):	#TODO - override signature so we can have action in core_rule but still have regex_rule(cond, act)
+	condition: R.Field()
+	action: R.Field() = True
+
+	def match(self, item):
+		return self.condition.check(item)
+
 
 class Unconditional_Rule(Core_Rule):
 	action: R.Field() = True

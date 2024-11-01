@@ -1,0 +1,111 @@
+Meta commentary:
+	This commentary is regarding how this document is structured since we have not formalized that yet.
+	When referencing a named object in a specific context we will have to look up what perspective to take.
+	For instance, here we may have some sort of "developer perspective" that is an implicit setting of documentation in a software project.
+
+	In the language definition of Define Software Project we may have something like
+		Set default documentation perspective: software planning
+
+Define Software Project:
+
+	Goal:
+
+		Create a template processor that uses {mtl-1}.
+
+
+
+
+Sketch: Definition of objectives
+	Note: We should probably have a way to define a namespace we operate in so it becomes evident if we make a typo (rather than just matching some other parent object)
+
+	Goal: Template Processor
+
+		Pipeline: Defining a template
+
+			Source: {Template} - A string containing the template
+				Description: § Include Explanation for Template
+
+			Process: Tokenize {Template} into {Tokenized Template}
+			Process: Parse {Tokenized Template} into {Template AST}
+
+			Final product: {Template AST}
+
+		Pipeline: Applying a template
+
+			Source: {Template AST}
+			Source: {Template Context} - Context used for rending the template
+
+			Intermediate: Intermediate Render
+				Description: This is a text tree where a node can be a place holder or a node with a title that is a sequence consisting of placeholders and string literals.
+				Motivation: By using this intermediate format we can use a common process for the final render, be that to a text tree or a text string.
+
+			Process: Render {Template AST} into {Intermediate Render}
+			Process: Render {Intermediate Render} into {Final Result}
+
+			Final product: {Final Result}
+
+
+
+
+
+Explanation for Template:
+
+	Below is a typical template shown
+
+	§ Show Examples/Template/T1
+
+Language: Template Language
+
+
+Attachments:
+	Directory: Examples/Template
+		Text Tree of Template Language: T1
+
+			This is regular text
+				§ Note: This is a template statement
+					This belongs to the statement
+					And so does this
+
+				But this is part of the regular text
+				We can of course use an «Inline Expression» in the template
+
+
+Directory: Template
+	Tokenizer: Main
+		Literal Token:		«
+			Enter Tokenizer: Inline
+
+		Literal Token:		»
+			Raise Exception
+
+		Default:
+			Emit Value as {Template Base Dir}/Token/Text
+
+	Tokenizer: Inline
+		Literal Token:		»
+			Return
+
+		Default:
+			Emit Value as {Template Base Dir}/Token/Inline
+
+
+
+
+
+Sketch: Tokenization
+
+	Python
+		#This is a specification for a tokenizer
+		main = Tokenization_Specifier('main')
+		inline = Tokenization_Specifier('inline')
+
+		main.register_literal_token('«', A.Enter_Tokenizer(inline))
+		main.register_literal_token('»', A.Raise_Exception)
+		main.register_default(A.Emit(A.Wrap(Text)))
+
+		inline.register_literal_token('»', A.Return)
+		inline.register_default(A.Emit(A.Wrap(Inline)))
+
+PERSPECTIVES?
+
+Connect code and experiments to docs

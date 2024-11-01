@@ -1,9 +1,9 @@
-from ... import Strict_Symbol as SS	#TODO - we should use strict_symbol in most places
+from ... import Symbol as S
 from ..state_machine import State_Manager, Transition
 from .. import record as R
 import random
 
-AS = SS.Aggregator.Status
+AS = S.Aggregator.Status
 
 class Aggregator(R.Record):
 	state_manager = State_Manager(AS, dict(
@@ -38,7 +38,7 @@ class Aggregator(R.Record):
 
 
 class First_Result(Aggregator):
-	value: R.Field() = SS.Not_Set
+	value: R.Field() = S.Not_Set
 
 	def __iter__(self):
 		yield self.value
@@ -84,7 +84,7 @@ class Sorted_List(Aggregator):
 		return sorted(self._value, key=self.key, reverse=self.reverse)
 
 class Last_Result(Aggregator):
-	value: R.Field() = SS.Not_Set
+	value: R.Field() = S.Not_Set
 
 	def __iter__(self):
 		yield self.value
@@ -108,7 +108,7 @@ class Random_Result(Aggregator):
 		if self._options:
 			return random.choice(self._options)
 		else:
-			return SS.Not_Set
+			return S.Not_Set
 
 class Counter(Aggregator):
 	value: R.Field(factory=dict)

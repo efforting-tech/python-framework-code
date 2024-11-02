@@ -88,5 +88,9 @@ expression.register_default(A.Emit(A.Wrap(Expression)))
 P = MVP_Tokenizer_Factory.implement_tokenizer(top)
 
 #print(P.tokenize('hello «world»!'))
-print(P.tokenize('hello {world}!'))
+#print(P.tokenize('hello {world}!'))
+print(P.tokenize('hello [world]!'))
+print(P.tokenize('hello [big {world}]!').tokens)
+print(P.tokenize('a[b[c]]').tokens)
+
 # print(P.tokenize('hello [optional {thing}]!'))

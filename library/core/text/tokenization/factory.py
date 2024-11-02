@@ -166,6 +166,8 @@ class MVP_Enter_Tokenizer(MVP_Action):
 
 	def process(self, state):
 		state.push_tokenizer(self.tokenizer)
+		state.push_result_tokens([])
+		state.push_wrapper(self.wrapper)
 		state.token_stream.source = String_Interface.regex_tokenize(state.text, state.sub_tokenizer.tokens, state.token.match.end())
 
 class MVP_Emit_Value(MVP_Action):
@@ -195,6 +197,12 @@ class MVP_Return_From_Tokenizer(MVP_Action):
 	@staticmethod
 	def process(state):
 		state.pop_tokenizer()
+		result_tokens = state.pop_result_tokens()
+
+		if wrapper := state.pop_wrapper():
+			result_tokens = wrapper(result_tokens)
+
+		state.result.tokens.append(result_tokens)
 		state.token_stream.source = String_Interface.regex_tokenize(state.text, state.sub_tokenizer.tokens, state.token.match.end())
 
 
@@ -364,18 +372,38 @@ class Tokenization_State(R.Record):
 	result: R.Field()
 	text: R.Field()
 	sub_tokenizer: R.Field()
+	wrapper: R.Field() = None
 	token_stream: R.Field()
 	action: R.Field()
 	token: R.Field()
 	tokenizer_stack: R.Field(factory=Stack)
-	return_event_stack: R.Field(factory=Stack)
+	wrapper_stack: R.Field(factory=Stack)
+	result_tokens_stack: R.Field(factory=Stack)
 
-	def push_on_return_event_callback(self, callback):
-		self.return_event_stack.push(callback)
+	#TODO - maybe we can simplify this a bunch and just use the Stack interface
+	def push_result_tokens(self, result_tokens):
+		self.result_tokens_stack.push(self.result.tokens)
+		self.result.tokens = result_tokens
+
+	def pop_result_tokens(self):
+		result_tokens = self.result.tokens
+		self.result.tokens = self.result_tokens_stack.pop()
+		return result_tokens
 
 	def push_tokenizer(self, sub_tokenizer):
 		self.tokenizer_stack.push(self.sub_tokenizer)
 		self.sub_tokenizer = sub_tokenizer
 
 	def pop_tokenizer(self):
+		sub_tokenizer = self.sub_tokenizer
 		self.sub_tokenizer = self.tokenizer_stack.pop()
+		return sub_tokenizer
+
+	def push_wrapper(self, wrapper):
+		self.wrapper_stack.push(self.wrapper)
+		self.wrapper = wrapper
+
+	def pop_wrapper(self):
+		wrapper = self.wrapper
+		self.wrapper = self.wrapper_stack.pop()
+		return wrapper

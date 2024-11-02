@@ -1,4 +1,4 @@
-from . import Tokenization_Result, A, Literal_Match, Tokenization_Specifier, Include_Tokenizer, Rule
+from . import Tokenization_Result, A, Literal_Match, Tokenization_Specifier, Include_Tokenizer, Rule, Match_Anything
 from ... import record as R
 from ....iteration import Switchable_Iterator
 from ....str.interface import String_Interface
@@ -15,252 +15,13 @@ def present_text_with_marker(text, pos):
 
 
 
-class implemented_tokenizer(R.Record):
-	sub_tokenizers: R.Field()
-	main: R.Field()
 
-
-	def tokenize(self, text, start=0, strict=True):
-		result = Tokenization_Result(text, start)
-		state = tokenization_state(self, result, text)
-
-		sub_tokenizer = state.sub_tokenizer = self.sub_tokenizers[self.main]
-		token_stream = Switchable_Iterator(String_Interface.regex_tokenize(text, sub_tokenizer.tokens, start))
-		state.token_stream = token_stream
-
-
-		for token in token_stream:
-
-			print(token)
-
-			action = state.action = state.sub_tokenizer.actions[token.token]
-			state.token = token
-			action.process(state)
-			result.end = token.match.end()
-
-		result.finalized = len(state.tokenizer_stack) == 0
-		if strict and not result.finalized:
-			raise Exception()
-
-		return result
-
-
-class implemented_sub_tokenizer(R.Record):
-	tokens: R.Field()
-	actions: R.Field()
-
-
-class tokenization_state(R.Record):
-	tokenizer: R.Field()
-	result: R.Field()
-	text: R.Field()
-	sub_tokenizer: R.Field()
-	token_stream: R.Field()
+class Implemented_Rule(R.Record):
+	condition: R.Field()
 	action: R.Field()
-	token: R.Field()
-	tokenizer_stack: R.Field(factory=Stack)
-	return_event_stack: R.Field(factory=Stack)
 
-	def push_on_return_event_callback(self, callback):
-		self.return_event_stack.push(callback)
 
-	def push_tokenizer(self, sub_tokenizer):
-		self.tokenizer_stack.push(self.sub_tokenizer)
-		self.sub_tokenizer = sub_tokenizer
-
-	def pop_tokenizer(self):
-		self.sub_tokenizer = self.tokenizer_stack.pop()
-
-class implemented_action(R.Record):
-	pass
-
-class enter_tokenizer(implemented_action):
-	tokenizer: R.Field()
-
-	def process(self, state):
-		state.push_tokenizer(state.tokenizer.sub_tokenizers[self.tokenizer])
-		state.token_stream.source = String_Interface.regex_tokenize(state.text, state.sub_tokenizer.tokens, state.token.match.end())
-
-
-class wrapped_chain_tokenizer(implemented_action):
-	tokenizer: R.Field()
-	wrapper: R.Field()
-
-	def process(self, state):
-
-		def finished_chain(result):
-			#todo - pop-tokenizer here
-			print('RESULT!', result)
-			exit()
-
-		state.push_on_return_event_callback(finished_chain)
-		#present_text_with_marker(state.text, state.result.end)
-
-		state.push_tokenizer(state.tokenizer.sub_tokenizers[self.tokenizer])
-		state.token_stream.source = String_Interface.regex_tokenize(state.text, state.sub_tokenizer.tokens, state.token.match.end())
-
-
-
-class emit_value(implemented_action):
-	value: R.Field()
-
-	def process(self, state):
-		value = self.value.process(state)
-		state.result.emit(value)
-
-
-class wrap_value(implemented_action):
-	wrapper: R.Field()
-
-	def process(self, state):
-		value = self.wrapper(state.token.match.group())
-		return value
-
-class raise_exception(implemented_action):
-	exception: R.Field()
-
-	def process(self, state):
-		raise Exception(f'{self.exception}: {state}')
-
-class return_from_tokenizer(implemented_action):
-
-	@staticmethod
-	def process(state):
-		state.pop_tokenizer()
-		state.token_stream.source = String_Interface.regex_tokenize(state.text, state.sub_tokenizer.tokens, state.token.match.end())
-
-
-def create_action(action):
-	match action:
-		case A.Enter_Tokenizer(target):
-			return enter_tokenizer(target.name)
-
-		case A.Wrapped_Chain_Tokenizer(target, wrapper):
-			return wrapped_chain_tokenizer(target.name, wrapper)
-
-		case A.Emit(value):
-			return emit_value(create_action(value))
-
-		case A.Wrap(wrapper):
-			return wrap_value(wrapper)
-
-		case _ if action is A.Raise_Exception:
-			return raise_exception('Unspecified Exception')
-
-		case _ if action is A.Return:
-			return return_from_tokenizer
-
-		case unhandled:
-			raise Exception(action)
-
-def create_token(condition):
-	match condition:
-		case Literal_Match(value):
-			return re.compile(re.escape(value))
-
-		case unhandled:
-			raise Exception(condition)
-
-
-def Implement_Tokenizer(tokenizers_to_process):
-	result = dict()
-	main = None
-	for tokenizer in tokenizers_to_process:
-		pending_tokens = list()
-		pending_actions = list()
-		for rule in tokenizer.rules:
-			pending_tokens.append(create_token(rule.condition))
-			pending_actions.append(create_action(rule.action))
-
-		if tokenizer.default_action:
-			pending_tokens.append(None)
-			pending_actions.append(create_action(tokenizer.default_action))
-
-		# if tokenizer.chain:
-		# 	pending_tokens.append(None)
-		# 	pending_actions.append(process_chain(tokenizer.chain))
-
-
-		sub_tokenizer = result[tokenizer.name] = implemented_sub_tokenizer(pending_tokens, pending_actions)
-		if not main:
-			main = tokenizer.name
-
-	return implemented_tokenizer(result, main)
-
-
-
-# def compute_dependencies(target, dependency_graph):
-# 	match target:
-# 		case Tokenization_Specifier():
-
-# 			if target not in dependency_graph:
-# 				dependency_graph[target] = set()
-
-# 				yield target
-# 				for rule in target.rules:
-# 					for dependency in compute_dependencies(rule, dependency_graph):
-# 						print(dependency, '→', target)
-# 						dependency_graph[target].add(dependency)
-
-# 				for dependency in compute_dependencies(target.wrapper, dependency_graph):
-# 					print(dependency, '→', target)
-# 					dependency_graph[target].add(dependency)
-
-# 		case Include_Tokenizer(tokenizer):
-# 			yield from compute_dependencies(tokenizer, dependency_graph)
-
-# 		case Rule():
-# 			yield from compute_dependencies(target.action, dependency_graph)
-
-# 		case _ if target in (None, A.Return, A.Raise_Exception):
-# 			pass
-
-# 		case A.Enter_Tokenizer(target=tokenizer):
-# 			tuple(compute_dependencies(tokenizer, dependency_graph))
-
-# 		case unhandled:
-# 			raise Exception(target)
-
-
-
-
-
-# def iter_references(target):
-
-# 	match target:
-# 		case Tokenization_Specifier():
-# 			yield ('>', target)
-# 			for rule in target.rules:
-# 				yield from iter_references(rule)
-
-# 			yield from iter_references(target.wrapper)
-
-# 			yield ('<', target)
-
-# 		case Include_Tokenizer(tokenizer):
-# 			yield from iter_references(tokenizer)
-
-# 		case Rule():
-# 			yield from iter_references(target.action)
-
-# 		case _ if target in (None, A.Return, A.Raise_Exception):
-# 			pass
-
-# 		case A.Enter_Tokenizer(target=tokenizer):
-# 			yield from iter_references(tokenizer)
-
-# 		case unhandled:
-# 			raise Exception(target)
-
-
-# def compute_dependencies(target):
-
-# 	for ref in iter_references(target):
-# 		print(ref)
-
-
-
-class dependency_computer(R.Record):
+class Dependency_Computer(R.Record):
 	#stack: R.Field(factory=R.Bound_Factory(Context_Stack))
 	tokenizer: R.Field() = None
 	seen: R.Field(factory=set)
@@ -331,13 +92,14 @@ class dependency_computer(R.Record):
 
 			seen.add(item)
 
-			yield item.target
-
-			for sub_item in rev_dep.get(item, ()):
+			for sub_item in include_map.get(item, ()):
 				yield from dependency_order(sub_item)
+
+			yield item.target
 
 		def assert_no_cycles(item, previous):
 			if item in previous:
+				#TODO - should cut from first occurance of "item"
 				cycle = ' → '.join(t.target.name for t in (*previous, item))
 				raise Exception(f'Cycle detected between tokenizers: {cycle}')
 
@@ -345,21 +107,10 @@ class dependency_computer(R.Record):
 			for p in include_map[item]:
 				assert_no_cycles(p, previous)
 
-		for leaf in self.get_leaf_references():
-			assert_no_cycles(leaf, dict())
-			yield from dependency_order(leaf)
-
-
-	# def assert_no_cycles(self, item, previous):
-	# 	print('ITEM', item.target.name, 'PREV', *(p.target.name for p in previous))
-
-
-		# if item in previous:
-		# 	print('CYCLE DETECTED', item.target.name)
-		# previous.add(item)
-
-		# for sub_item in rev_dep.get(item, ()):
-		# 	assert_no_cycles(sub_item, previous)
+		for b in self.root_branches:
+			for entry in dependency_order(b):
+				assert_no_cycles(entry, dict())
+				yield entry
 
 
 
@@ -404,41 +155,227 @@ class dependency_computer(R.Record):
 
 
 
-def Implement_Tokenizer2(tokenizer):
+#TODO - maybe move the MVP stuff to its own place?
 
-	r = dependency_computer.compute_dependencies(tokenizer)
-	for i in r.compute_implementation_order():
-		print(i)
+class MVP_Action(R.Record):
+	pass
 
-	# exit()
+class MVP_Enter_Tokenizer(MVP_Action):
+	tokenizer: R.Field()
+	wrapper: R.Field() = None
 
-	# print(*(i.name for i in r.get_all()))
-	# print()
+	def process(self, state):
+		state.push_tokenizer(self.tokenizer)
+		state.token_stream.source = String_Interface.regex_tokenize(state.text, state.sub_tokenizer.tokens, state.token.match.end())
+
+class MVP_Emit_Value(MVP_Action):
+	value: R.Field()
+
+	def process(self, state):
+		value = self.value.process(state)
+		state.result.emit(value)
+
+class MVP_Wrap_Value(MVP_Action):
+	wrapper: R.Field()
+
+	def process(self, state):
+		value = self.wrapper(state.token.match.group())
+		return value
+
+class MVP_Raise_Exception(MVP_Action):
+	exception: R.Field()
+
+	def process(self, state):
+		raise NotImplementedError
+		raise Exception(f'{self.exception}: {state}')
+
+#TODO - I think we should have a better way for no data actions - Possibly akin to a derived symbol?
+#		In the end we probably want something that behaves like a singleton
+class MVP_Return_From_Tokenizer(MVP_Action):
+	@staticmethod
+	def process(state):
+		state.pop_tokenizer()
+		state.token_stream.source = String_Interface.regex_tokenize(state.text, state.sub_tokenizer.tokens, state.token.match.end())
 
 
-	# for a, b in r.iter_dependencies():
-	# 	print(a.name, b.name)
+class MVP_Sub_Tokenizer(R.Record):
+	source_spec: R.Field()
+	source_rules: R.Field()
+	tokens: R.Field()
+	actions: R.Field()
+	#default_action: R.Field() = None
 
 
 
+class MVP_Tokenizer_Factory(R.Record):
+	lut_rules_by_spec: R.Field(factory=dict)
+	lut_acceleration_structure_by_spec: R.Field(factory=dict)
+	lut_acceleration_structure_by_name: R.Field(factory=dict)
+	ingress: R.Field() = None
 
-	#print()
-	#for key, value in dg.items():
-		#print(key.name, *sorted(v.name for v in value))
+	@classmethod
+	def implement_tokenizer(cls, top):
+		factory = cls()
+
+		r = Dependency_Computer.compute_dependencies(top)
+		implo = r.compute_implementation_order()
+
+		#Step 1 - Collate rules
+		for spec in implo:
+			factory.lut_rules_by_spec[spec] = list()
+			for rule in spec.rules:
+				implemented_rules = factory.implement_rules(rule)
+				factory.lut_rules_by_spec[spec].extend(implemented_rules)
 
 
-	#This is not correct
-	# TODO we need to find a way to resolve the dependency graph
+			if spec.default_action:
+				factory.lut_rules_by_spec[spec].append(Implemented_Rule(Match_Anything, factory.implement_action(spec.default_action)))
 
 
-	# print()
+		#Step 2 - Create acceleration structures
+		for spec, rules in factory.lut_rules_by_spec.items():
+			factory.lut_acceleration_structure_by_name[spec.name] = factory.lut_acceleration_structure_by_spec[spec] = factory.create_acceleration_structure_for_rules(spec, rules)
 
-	# deps = set()
-	# for v in dg.values():
-	# 	deps |= v
 
-	# all = set(dg.keys()) | deps
-	# free = all - deps
+		for acceleration_structure in factory.lut_acceleration_structure_by_spec.values():
+			#Post processing
+			acceleration_structure.tokens = tuple(acceleration_structure.tokens)
+			acceleration_structure.actions = tuple(map(factory.resolve_action, acceleration_structure.actions))
 
-	# print('all', sorted(v.name for v in all))
-	# print('free', sorted(v.name for v in free))
+
+		#Step 3 - Finalize
+		factory.ingress = factory.lut_acceleration_structure_by_spec[top]
+		return factory
+
+
+	def create_acceleration_structure_for_rules(self, spec, rules):
+
+		result = MVP_Sub_Tokenizer(spec, rules)
+
+		regular_rules = [r for r in rules if r.condition is not Match_Anything]
+		default_rules = [r for r in rules if r.condition is Match_Anything]
+
+		result.tokens = [r.condition for r in regular_rules]
+		result.actions = [r.action for r in regular_rules]
+
+		match default_rules:
+			case []:
+				pass
+
+			case [default_rule]:
+				#result.default_action = default_rule.action
+				result.tokens.append(None)
+				result.actions.append(default_rule.action)
+
+			case unhandled:
+				raise Exception(default_rules)
+
+		return result
+
+
+	def resolve_action(self, action):
+		match action:
+
+			case MVP_Enter_Tokenizer(tokenizer, wrapper):
+				return MVP_Enter_Tokenizer(self.lut_acceleration_structure_by_name[tokenizer], wrapper)
+
+
+			case MVP_Emit_Value(value):
+				return MVP_Emit_Value(self.resolve_action(value))
+
+			case MVP_Wrap_Value() | MVP_Raise_Exception():
+				return action
+
+			case _ if action is MVP_Return_From_Tokenizer:
+				return action
+
+			case unhandled:
+				raise Exception(unhandled)
+
+	def create_tokens(self, source):
+		match source:
+			case Literal_Match(value):
+				return re.compile(re.escape(value))
+
+			case unhandled:
+				raise Exception(unhandled)
+
+	def implement_action(self, source):
+		match source:
+			case A.Enter_Tokenizer(target, wrapper=wrapper):
+				return MVP_Enter_Tokenizer(target.name, wrapper=wrapper)
+
+			case A.Wrapped_Chain_Tokenizer(target, wrapper):
+				return wrapped_chain_tokenizer(target.name, wrapper)
+
+			case A.Emit(value):
+				return MVP_Emit_Value(self.implement_action(value))
+
+			case A.Wrap(wrapper):
+				return MVP_Wrap_Value(wrapper)
+
+			case _ if source is A.Raise_Exception:
+				return MVP_Raise_Exception('Unspecified Exception')
+
+			case _ if source is A.Return:
+				return MVP_Return_From_Tokenizer
+
+			case unhandled:
+				raise Exception(source)
+
+
+	def implement_rules(self, source):
+		#Returns lists of rules since certain rules include other rules
+		match source:
+			case Rule():
+				return [Implemented_Rule(self.create_tokens(source.condition), self.implement_action(source.action))]
+
+			case Include_Tokenizer(spec):
+				return self.lut_rules_by_spec[spec]
+
+			case unhandled:
+				raise Exception(unhandled)
+
+
+
+	def tokenize(self, text, start=0, strict=True):
+		result = Tokenization_Result(text, start)
+		state = Tokenization_State(self, result, text, self.ingress)
+
+		token_stream = Switchable_Iterator(String_Interface.regex_tokenize(text, state.sub_tokenizer.tokens, start))
+		state.token_stream = token_stream
+
+		for token in token_stream:
+			action = state.action = state.sub_tokenizer.actions[token.token]
+			state.token = token
+			action.process(state)
+			result.end = token.match.end()
+
+		result.finalized = len(state.tokenizer_stack) == 0
+		if strict and not result.finalized:
+			raise Exception()
+
+		return result
+
+
+
+class Tokenization_State(R.Record):
+	tokenizer: R.Field()
+	result: R.Field()
+	text: R.Field()
+	sub_tokenizer: R.Field()
+	token_stream: R.Field()
+	action: R.Field()
+	token: R.Field()
+	tokenizer_stack: R.Field(factory=Stack)
+	return_event_stack: R.Field(factory=Stack)
+
+	def push_on_return_event_callback(self, callback):
+		self.return_event_stack.push(callback)
+
+	def push_tokenizer(self, sub_tokenizer):
+		self.tokenizer_stack.push(self.sub_tokenizer)
+		self.sub_tokenizer = sub_tokenizer
+
+	def pop_tokenizer(self):
+		self.sub_tokenizer = self.tokenizer_stack.pop()

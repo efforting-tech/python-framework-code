@@ -25,6 +25,9 @@ class A:
 	Return = Symbol('Return')
 
 
+Match_Anything = Symbol('Match_Anything')
+
+
 class Literal_Match(R.Record):
 	value: R.Field()
 

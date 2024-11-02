@@ -3,7 +3,7 @@
 
 from efforting.mvp6.core import record as R
 from efforting.mvp6.core.text.tokenization import Tokenization_Specifier, A
-from efforting.mvp6.core.text.tokenization.factory import Implement_Tokenizer, Implement_Tokenizer2
+from efforting.mvp6.core.text.tokenization.factory import MVP_Tokenizer_Factory
 
 
 
@@ -66,6 +66,7 @@ common = Tokenization_Specifier('common')
 expression = Tokenization_Specifier('expression')
 
 main.register_literal_token(']', A.Return)
+main.register_literal_token('}', A.Raise_Exception)
 main.include_tokenizer(common)
 
 common.register_literal_token('{', A.Enter_Tokenizer(expression))
@@ -73,9 +74,10 @@ common.register_literal_token('[', A.Enter_Tokenizer(main, wrapper=Optional))
 common.register_default(A.Emit(A.Wrap(Literal)))
 
 #common.include_tokenizer(top)	#NOTE - this is to test cyclic deps
+#common.include_tokenizer(common)
 
 
-top.include_tokenizer(main)
+top.include_tokenizer(common)
 top.register_literal_token('}', A.Raise_Exception)
 top.register_literal_token(']', A.Raise_Exception)
 
@@ -83,7 +85,8 @@ expression.register_literal_token('}', A.Return)
 expression.register_default(A.Emit(A.Wrap(Expression)))
 
 
-P = Implement_Tokenizer2(top)
+P = MVP_Tokenizer_Factory.implement_tokenizer(top)
 
-# #print(P.tokenize('hello «world»!'))
+#print(P.tokenize('hello «world»!'))
+print(P.tokenize('hello {world}!'))
 # print(P.tokenize('hello [optional {thing}]!'))

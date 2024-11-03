@@ -1,4 +1,4 @@
-from . import Tokenization_Result, A, Literal_Match, Tokenization_Specifier, Include_Tokenizer, Rule, Match_Anything
+from . import Tokenization_Result, A, Literal_Match, Tokenization_Specifier, Include_Tokenizer, Rule, Match_Anything, Regex_Match
 from ... import record as R
 from ....iteration import Switchable_Iterator
 from ....str.interface import String_Interface
@@ -147,6 +147,13 @@ class Dependency_Computer(R.Record):
 			case A.Enter_Tokenizer(target=tokenizer):
 				with self.stack(tokenizer=None):
 					self.feed(tokenizer)
+
+			case A.Emit(value=value):
+				self.feed(value)
+
+			case A.Wrap():
+				pass
+
 
 			case unhandled:
 				raise Exception(item)
@@ -304,6 +311,9 @@ class MVP_Tokenizer_Factory(R.Record):
 		match source:
 			case Literal_Match(value):
 				return re.compile(re.escape(value))
+
+			case Regex_Match(value):
+				return re.compile(value)
 
 			case unhandled:
 				raise Exception(unhandled)

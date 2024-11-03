@@ -31,6 +31,9 @@ Match_Anything = Symbol('Match_Anything')
 class Literal_Match(R.Record):
 	value: R.Field()
 
+class Regex_Match(R.Record):
+	value: R.Field()
+
 class Rule(R.Record):
 	condition: R.Field()
 	action: R.Field()
@@ -49,6 +52,9 @@ class Tokenization_Specifier(R.Record):
 
 	def register_literal_token(self, token, action):
 		self.rules.append(Rule(Literal_Match(token), action))
+
+	def register_regex_token(self, token, action):
+		self.rules.append(Rule(Regex_Match(token), action))
 
 	def include_tokenizer(self, tokenizer):
 		self.rules.append(Include_Tokenizer(tokenizer))

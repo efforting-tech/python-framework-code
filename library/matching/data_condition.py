@@ -27,7 +27,7 @@ class Comparative_Data_Condition_Interface(Structure):
 
 class Sequential_Data_Condition_Interface:
 	def __eq__(self, other):
-		return type(self) is type(other) and super().__eq__(self, other)
+		return type(self) is type(other) and super().__eq__(self, other)		#Do we need the type comparison here?
 
 class Sequence_Data_Condition(Sequence, Data_Condition):
 	pass
@@ -70,6 +70,7 @@ class Type_Decendent(Comparative_Data_Condition):
 	#Like subclass but without including the top level
 	pass
 
+#TODO - should this not include positional? Other interfaces?
 class Structure_Match(Comparative_Data_Condition):
 	value = M.all_named()
 
@@ -120,8 +121,8 @@ class Mnemonic(Comparative_Data_Condition):
 class Repeat(Data_Condition):
 	element_condition = M.positional(default=None, repr_condition=bool)
 	look_ahead_stop_condition = M.positional(default=None, repr_condition=bool)
-	#min_count = M.positional(default=None)
-	#max_count = M.positional(default=None)
+	min_count = M.positional(default=None)
+	max_count = M.positional(default=None)
 
 
 @lambda x: x()	#TODO improve
@@ -132,8 +133,16 @@ class Always_True(Data_Condition):
 class Never_True(Data_Condition):
 	pass
 
+
+@lambda x: x()	#TODO improve
+class Lazy_Expansion(Data_Condition):
+	pass
+
 def Branch(*items):
 	return Any(True, *items)
+
+def Optional(sub_condition):
+	return Repeat(sub_condition, min_count=0, max_count=1)
 
 def Capture_Remaining(capture, element_condition=None):
 	return Repeat(element_condition) & Capture(capture)

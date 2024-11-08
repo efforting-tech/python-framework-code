@@ -334,3 +334,8 @@ class Type_LUT_Reducer(Translator):
 
 
 
+
+	def reduce(self, left, right):
+		state, result = self.dispatch_pair(left, right)
+		assert state, f'No reducer for {(type(left), type(right))}.'
+		return result

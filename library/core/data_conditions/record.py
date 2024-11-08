@@ -86,7 +86,6 @@ class Direct_Superclass_of(Abstract_Superclass_of):
 	def check(self, item):
 		return item in self.type.__bases__
 
-
 class Equality(Abstract_Value_Condition):
 	def check(self, item):
 		return item == self.value
@@ -214,6 +213,8 @@ class Item_Condition(Abstract_Property_Condition):
 
 		return False
 
+
+
 class Return_Condition(Abstract_Property_Condition):
 	sub_condition: R.Field()
 	positional: R.Field(factory=tuple)
@@ -229,3 +230,6 @@ class Return_Condition(Abstract_Property_Condition):
 				pass
 
 		return False
+
+def Optional(sub_condition):
+	return Subset_of_Subconditions(sub_condition)

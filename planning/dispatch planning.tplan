@@ -1,0 +1,86 @@
+Required Parameter: filtering
+	Option: filtering
+		Label: Filtering
+
+	Default Option: nonfiltering
+		Label: Non-filtering
+
+
+Optional Parameter: mutating
+	Option: mut
+		Label: Mutating
+
+	Option: nonmut
+		Label: Non-mutating
+
+Optional Parameter: commutative
+	Option: com
+		Label: Commutative
+
+	Option: noncom
+		Label: Non-commutative
+
+Optional Parameter: collection
+	Option: bin
+		Label: Binary
+
+	Option: set
+		Label: Set
+
+Class: comp
+	Label: Comparator
+	Implications: mutating.nonmut
+
+	Group: N-ary comparison
+		Class: {commutative}_{collection}_comp
+			Description: «commutative.label.capitalize()» «collection.label.lower()» comparator
+
+		Class: unary_comp
+			Description: Unary comparator
+
+
+Class: tfo
+	Label: Transformer
+	Implications: mutating.mut
+
+Class: resolv
+	Label: Resolver
+
+Class: filt
+	Label: Filter
+	Implications: filtering.filtering
+
+
+Class: eval
+	Label: Evaluator
+
+	Class: prio_eval
+		Label: Priority Evaluator
+
+	Class: score_eval
+		Label: Score Evaluator
+
+Class: clfy
+	Label: Classifier
+
+Class: feat_ana
+	Label: Feature Analyzer
+
+Class: group_clfy
+	Label: Group Classifier
+
+Class: proc
+	Label: Processor
+
+Class: iter
+	Label: Iterator
+
+Class: aggr
+	Label: Aggregator
+
+Class: tla
+	Label: Translator
+
+Class: gen
+	Label: Generator
+

@@ -23,6 +23,8 @@ Semantic class hierarchy:
 		Processor
 		Iterator
 
+		Computer
+
 	Regulations
 
 	Aggregator
@@ -30,6 +32,8 @@ Semantic class hierarchy:
 		Sorter
 
 	Generator
+
+
 
 Roles:
 	Abstract Class: Dispatcher

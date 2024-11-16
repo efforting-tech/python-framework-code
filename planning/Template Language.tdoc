@@ -106,6 +106,8 @@ Sketch: Tokenization
 		inline.register_literal_token('»', A.Return)
 		inline.register_default(A.Emit(A.Wrap(Inline)))
 
-PERSPECTIVES?
+Note:
 
-Connect code and experiments to docs
+	PERSPECTIVES?
+
+	Connect code and experiments to docs

@@ -1,6 +1,7 @@
 import sys
 from .factory_helpers import Register_Interface
 
+#TODO - ABC
 class Local_Symbol:
 	def __init__(self, name):
 		self._name = name

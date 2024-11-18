@@ -106,6 +106,11 @@ class Core_Line_View(R.Record):
 		return '\n'.join(l.to_str(indention=indention) for l in self.lines)
 
 	@property
+	def is_empty(self):
+		return len(self.to_str()) == 0
+
+
+	@property
 	def first_line_index_with_content(self):
 		for i, l in enumerate(self.lines):
 			if l.is_empty:

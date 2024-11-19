@@ -3,6 +3,7 @@ from efforting.mvp6.core import record as R
 from efforting.mvp6.symbol_factory import Local_Symbol
 from efforting.mvp6.core.dispatcher.tree_view import Tree_View_Regex_Dispatcher, Tree_View_Dispatcher
 from efforting.mvp6.core.text import Immutable_Tree_View
+from efforting.mvp6.template_system.introspection import Dumper
 
 import re
 
@@ -301,13 +302,41 @@ def register_comment_handler(target, name, prefix_pattern):
 	))
 
 
-def register_terminal_sub_handler(target, name, processor, prefix_pattern):
+
+def register_terminal_text_handler(target, name, prefix_pattern):
+	#TODO - maybe make names configurable?
+	target.register(Node_Handler_Description(
+		pattern = f'{prefix_pattern}[:][{{text}}]',
+		ast = name,
+		body = LA.Store_Node_As('body'),
+		process_fields = dict(
+			title = lambda t: t.strip() if isinstance(t, str) else None,
+		),
+	))
+
+
+
+def register_terminal_handler(target, name, prefix_pattern, body_name='body'):
 	target.register(Node_Handler_Description(
 		pattern = f'{prefix_pattern}[:]',
 		ast = name,
-		body = LA.Store_Node_As('members', processor=processor),
+		body = LA.Store_Node_As(body_name),
 	))
 
+
+def register_terminal_sub_handler(target, name, processor, prefix_pattern, body_name='body'):
+	target.register(Node_Handler_Description(
+		pattern = f'{prefix_pattern}[:]',
+		ast = name,
+		body = LA.Store_Node_As(body_name, processor=processor),
+	))
+
+def register_identity_sub_handler(target, name, processor, prefix_pattern, body_name='body'):
+	target.register(Node_Handler_Description(
+		pattern = f'{prefix_pattern}[:] {{name}}',
+		ast = name,
+		body = LA.Store_Node_As(body_name, processor=processor),
+	))
 
 
 def csloi(text): #Comma separated list of identifiers
@@ -342,7 +371,7 @@ simple_ast_node_processor.register(Node_Handler_Description(
 ))
 
 
-register_terminal_sub_handler(processor_def, simple_ast_node_tree, simple_ast_node_processor, 'Create Simple AST Node Tree')
+register_terminal_sub_handler(processor_def, simple_ast_node_tree, simple_ast_node_processor, 'Create Simple AST Node Tree', body_name='members')
 
 
 r = processor_def.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
@@ -351,6 +380,13 @@ r = processor_def.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
 		abstract_note: title, body
 			note
 			meta_comment
+
+		processor: name, rules
+		abstract_rule: text, body
+			mnemonic_rule
+			regex_rule
+			literal_rule
+		unmatched_rule: body
 
 '''))
 
@@ -373,7 +409,74 @@ def implement_node_tree_iteratively(item, bases=(R.Record,)):
 		case unhandled:
 			raise Exception(unhandled)
 
-for i in implement_node_tree_iteratively(r.value):
-	globals()[i.__name__] = i
 
-print(note('stuff'))
+F = Tree_Processor_Factory(ast_directory={n.__name__: n for n in implement_node_tree_iteratively(r.value)})
+main = F.create_processor('main')
+processor_def = F.create_processor('processor_def')
+
+register_comment_handler(main, 'note', 'Note')
+
+register_comment_handler(main, 'meta_comment', 'Meta Commentary')
+register_identity_sub_handler(main, 'processor', processor_def, 'Processor', body_name='rules')
+
+register_terminal_text_handler(processor_def, 'mnemonic_rule', 'Mnemonic Rule')
+register_terminal_text_handler(processor_def, 'regex_rule', 'Regex Rule')
+register_terminal_text_handler(processor_def, 'literal_rule', 'Literal Rule')
+register_terminal_handler(processor_def, 'unmatched_rule', 'Unmatched Rule')
+
+
+r = main.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
+
+	note: Hello World
+		This is a note
+
+	Meta Commentary: Some meta comment
+
+	processor: test
+		mnemonic rule: Load The Thing
+			print("The thing should be loaded")
+
+		regex rule: magic
+			print("Regex match")
+
+		literal rule: literal
+			print("Literal match")
+
+		unmatched rule:
+			print("Default rule")
+
+
+'''))
+
+
+Dumper().dump(r)	#This is a terrible dumper but will have to do
+
+#OUTPUT:
+
+# Result_List: Result_List(_state=State(Symbol.Aggregator.Status.Working) error=None value=[note(…), meta_comment(…), processor(…)])
+#   [0] __main__.note:
+#     title: str: 'Hello World'
+#     body: efforting.mvp6.core.text.Immutable_Tree_View
+#       '\t\tThis is a note'
+#   [1] __main__.meta_comment:
+#     title: str: 'Some meta comment'
+#     body: efforting.mvp6.core.text.Immutable_Tree_View
+#       ''
+#   [2] __main__.processor:
+#     name: str: 'test'
+#     rules: list
+#       [0] __main__.mnemonic_rule:
+#         text: str: ' Load The Thing'
+#         body: efforting.mvp6.core.text.Immutable_Tree_View
+#           '\t\t\tprint("The thing should be loaded")'
+#       [1] __main__.regex_rule:
+#         text: str: ' magic'
+#         body: efforting.mvp6.core.text.Immutable_Tree_View
+#           '\t\t\tprint("Regex match")'
+#       [2] __main__.literal_rule:
+#         text: str: ' literal'
+#         body: efforting.mvp6.core.text.Immutable_Tree_View
+#           '\t\t\tprint("Literal match")'
+#       [3] __main__.unmatched_rule:
+#         body: efforting.mvp6.core.text.Immutable_Tree_View
+#           '\t\t\tprint("Default rule")'

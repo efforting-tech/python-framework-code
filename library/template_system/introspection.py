@@ -1,6 +1,10 @@
 from . import mnemonic_ast as MAST
 from ..core.dispatcher.aggregation import Result_List
+from ..core import record as R
+from ..symbol_factory import Local_Symbol
+from .. import ABC
 import sys
+
 
 
 #TODO - move these utilities
@@ -53,25 +57,52 @@ class Indention_Wrapper:
 	def indent(self):
 		return Indention_Wrapper_Context(self)
 
+MISS = Local_Symbol('MISS')
 
 class Dumper(Indention_Wrapper):
 
 	def print(self, text, end='\n'):
 		self.write(f'{text}{end}')
 
-	def dump(self, r):
+	def dump(self, r, title=None):
+
+		if title:
+			prefix = f'{title} '
+		else:
+			prefix = ''
+
 		match r:
 			case MAST.Tree():
-				self.print(f'{type(r).__qualname__}: {r.title!r}')
+				self.print(f'{prefix}{type(r).__module__}.{type(r).__qualname__}: {r.title!r}')
 				with self.indent():
 					self.dump(r.body)
 
 			case Result_List():
-				self.print(f'{type(r).__qualname__}: {r!r}')
+				self.print(f'{prefix}{type(r).__qualname__}: {r!r}')
 				with self.indent():
-					for sub_item in r.value:
-						self.dump(sub_item)
+					for index, sub_item in enumerate(r.value):
+						self.dump(sub_item, title=f'[{index}]')
+
+
+			case list():
+				self.print(f'{prefix}{type(r).__qualname__}')
+				with self.indent():
+					for index, sub_item in enumerate(r):
+						self.dump(sub_item, title=f'[{index}]')
+
+			case lv if isinstance(lv, ABC.Text.Line_View):	#TODO - this is a hack since ABC is broken
+				self.print(f'{prefix}{type(r).__module__}.{type(r).__qualname__}')
+
+				with self.indent():
+					for line in r.lines:
+						self.print(f'{line.text!r}')
+
+			case R.Record():
+				self.print(f'{prefix}{type(r).__module__}.{type(r).__qualname__}:')
+				with self.indent():
+					for field in r._record_fields:
+						self.dump(getattr(r, field, MISS), title=f'{field}:')
 
 			case unhandled:
-				self.print(f'{type(r).__qualname__}: {r!r}')
+				self.print(f'{prefix}{type(r).__qualname__}: {r!r}')
 

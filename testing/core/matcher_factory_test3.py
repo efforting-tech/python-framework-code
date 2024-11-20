@@ -1,8 +1,15 @@
+#This is based on matcher_factory_test2.py
+#The idea here is ultimately to be able to quickly define mnemonic processing systems but since one of the requirements are to separate AST definition from implementation
+#I am going to explore some MVP implementations of
+# ☑ Simple records
+# ☐ Mnemonic to AST translation - still not sure we really need this as an initial step - it is currently fairly easy to define the rules if we also define some helper functions like we do
+# ☐ Simple type LUT processor ← We are here
+# ☐ Combination of mnemonic AST translation and LUT processor into full mnemonic solution
 
 from efforting.mvp6.core import record as R
 from efforting.mvp6.symbol_factory import Local_Symbol
 from efforting.mvp6.core.dispatcher.tree_view import Tree_View_Regex_Dispatcher, Tree_View_Dispatcher
-from efforting.mvp6.core.text import Immutable_Tree_View
+from efforting.mvp6.core.text import Immutable_Tree_View, Mutable_Tree_View
 from efforting.mvp6.template_system.introspection import Dumper
 
 import re
@@ -303,10 +310,10 @@ def register_comment_handler(target, name, prefix_pattern):
 
 
 
-def register_terminal_text_handler(target, name, prefix_pattern, process_fields=dict()):
+def register_terminal_text_handler(target, name, prefix_pattern, suffix_pattern='{text}', process_fields=dict()):
 	#TODO - maybe make names configurable?
 	target.register(Node_Handler_Description(
-		pattern = f'{prefix_pattern}[:][{{text}}]',
+		pattern = f'{prefix_pattern}[:][{suffix_pattern}]',
 		ast = name,
 		body = LA.Store_Node_As('body'),
 		process_fields = dict(
@@ -323,6 +330,7 @@ def register_terminal_handler(target, name, prefix_pattern, body_name='body'):
 		ast = name,
 		body = LA.Store_Node_As(body_name),
 	))
+
 
 
 def register_terminal_sub_handler(target, name, processor, prefix_pattern, body_name='body'):
@@ -382,11 +390,15 @@ r = processor_def.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
 			note
 			meta_comment
 
-		processor: name, rules
-		abstract_rule: text, body
+		abstract_regulations: name, rules
+			mnemonic_regulations
+			python_based_type_lut_dispatcher
+
+		abstract_rule: pattern, body
 			mnemonic_rule
 			regex_rule
 			literal_rule
+			python_based_type_lut_dispatcher_rule: item_name
 
 		abstract_code_body: body
 			unmatched_rule
@@ -417,56 +429,78 @@ def implement_node_tree_iteratively(item, bases=(R.Record,)):
 
 F = Tree_Processor_Factory(ast_directory={n.__name__: n for n in implement_node_tree_iteratively(r.value)})
 main = F.create_processor('main')
-processor_def = F.create_processor('processor_def')
+mnemonic_regulations = F.create_processor('mnemonic_regulations')
 
 register_comment_handler(main, 'note', 'Note')
 
 register_comment_handler(main, 'meta_comment', 'Meta Commentary')
-register_identity_sub_handler(main, 'processor', processor_def, 'Processor Regulations', body_name='rules')
+register_identity_sub_handler(main, 'mnemonic_regulations', mnemonic_regulations, 'Mnemonic Regulations', body_name='rules')
 
-register_terminal_text_handler(processor_def, 'mnemonic_rule', 'Mnemonic Rule')
-register_terminal_text_handler(processor_def, 'regex_rule', 'Regex Rule')
-register_terminal_text_handler(processor_def, 'literal_rule', 'Literal Rule')
+register_terminal_text_handler(mnemonic_regulations, 'mnemonic_rule', 'Mnemonic Rule', '{text as pattern}')
+register_terminal_text_handler(mnemonic_regulations, 'regex_rule', 'Regex Rule', '{text as pattern}')
+register_terminal_text_handler(mnemonic_regulations, 'literal_rule', 'Literal Rule', '{text as pattern}')
 
-register_terminal_handler(processor_def, 'unmatched_rule', 'Unmatched Rule')
-register_terminal_handler(processor_def, 'ingress', 'Ingress')
-register_terminal_handler(processor_def, 'egress', 'Egress')
+register_terminal_handler(mnemonic_regulations, 'unmatched_rule', 'Unmatched Rule')
+register_terminal_handler(mnemonic_regulations, 'ingress', 'Ingress')
+register_terminal_handler(mnemonic_regulations, 'egress', 'Egress')
+
+python_based_type_lut_dispatcher = F.create_processor('python_based_type_lut_dispatcher')
+register_identity_sub_handler(main, 'python_based_type_lut_dispatcher', python_based_type_lut_dispatcher, 'python based type lut dispatcher', body_name='rules')
+
+register_terminal_handler(python_based_type_lut_dispatcher, 'python_based_type_lut_dispatcher_rule', '{name as pattern} as {name as item_name}')
+register_terminal_handler(python_based_type_lut_dispatcher, 'python_based_type_lut_dispatcher_rule', '{name as pattern}')
 
 
 
 r = main.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
 
-	note: Hello World
-		This is a note
+	python based type lut dispatcher: test_disp1
 
-	Meta Commentary: Some meta comment
+		note:
+			print('This is a note!', note)
 
-	processor regulations: test
-		ingress:
-			print("The ingress setup code always run")
-
-		egress:
-			print("The egress cleanup code always run too")
-
-		mnemonic rule: Load The {name as thing}
-			print("The thing should be loaded")
-
-		regex rule: magic
-			print("Regex match")
-
-		literal rule: literal
-			print("Literal match")
-
-		unmatched rule:
-			print("Default rule")
+		meta_comment as some_comment:
+			print('This is a note!', some_comment)
 
 
 '''))
 
 
-#Next step: create processor for this
+
+AST = type('AST', (type,), F.ast_directory)
+
+class dispatcher_implementer(R.Record):
+	'This particular version will create a new module we can execute'
+
+
+	python_code: R.Field(factory=Mutable_Tree_View)
+
+	def create_function(self, definition):
+		self.python_code.write(definition)
+		self.python_code.write_line()
+
+	def __call__(self, item):
+		match item:
+			case AST.python_based_type_lut_dispatcher(name, rule_list):
+				print(name)
+				for rule in rule_list:
+					self(rule)
+
+			case AST.python_based_type_lut_dispatcher_rule(pattern, body, item_name):
+				definition = Mutable_Tree_View.from_str(f'def {pattern}({item_name or pattern}):')
+				definition.write(body.normal(1))
+				self.create_function(definition)
+
+			case unhandled:
+				raise Exception(unhandled)
 
 
 
+DI = dispatcher_implementer()
+DI(r.value[0])
 
-Dumper().dump(r)	#This is a terrible dumper but will have to do
+print(DI.python_code.to_str())
+
+
+
+#Dumper().dump(r)	#This is a terrible dumper but will have to do

@@ -145,14 +145,14 @@ class Core_Line_View(R.Record):
 	def copy(self, adjust_indent=0, indention=Symbol.Default):
 		return type(self)([l.copy(adjust_indent=adjust_indent, indention=indention) for l in self])
 
-	def normal(self):
+	def normal(self, extra_adjustment=0):
 		if (fliwc := self.first_line_index_with_content) is None:
 			return type(self)()	#Create empty
 
 		lliwc = self.last_line_index_with_content
 
 		c = self[fliwc:lliwc+1]
-		return c.copy(adjust_indent=-(c.get_min_indent() or 0))
+		return c.copy(adjust_indent=extra_adjustment-(c.get_min_indent() or 0))
 
 	def normal_str(self, indention=Symbol.Default):	#Shorthand
 		return self.normal().to_str(indention=indention)

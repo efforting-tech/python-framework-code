@@ -9,6 +9,7 @@
 from efforting.mvp6.core import record as R
 from efforting.mvp6.symbol_factory import Local_Symbol
 from efforting.mvp6.core.dispatcher.tree_view import Tree_View_Regex_Dispatcher, Tree_View_Dispatcher
+
 from efforting.mvp6.core.text import Immutable_Tree_View, Mutable_Tree_View
 from efforting.mvp6.template_system.introspection import Dumper
 
@@ -201,6 +202,11 @@ class Node_Handler(R.Record):
 	def __call__(self, dispatcher, node, result):
 		match = result.value.match
 		fields = match.groupdict()
+
+		#TODO - use ABC for symbol
+		if not fields and not match.groups() and isinstance(self.ast, Local_Symbol):
+			return self.ast
+
 		field_names = tuple(self.ast._record_fields.keys())
 
 		named_idx = set(match.re.groupindex.values())
@@ -211,6 +217,7 @@ class Node_Handler(R.Record):
 
 			fields[field_names[positional_index]] = value
 			positional_index += 1
+
 
 
 		def create_ast():
@@ -331,6 +338,18 @@ def register_terminal_handler(target, name, prefix_pattern, body_name='body'):
 		body = LA.Store_Node_As(body_name),
 	))
 
+def register_terminal_handler2(target, name, pattern):
+	target.register(Node_Handler_Description(
+		pattern = f'{pattern}',
+		ast = name,
+	))
+
+def register_terminal_symbol(target, name, prefix_pattern):
+	target.register(Node_Handler_Description(
+		pattern = f'{prefix_pattern}[:]',
+		ast = name,
+	))
+
 
 
 def register_terminal_sub_handler(target, name, processor, prefix_pattern, body_name='body'):
@@ -356,10 +375,14 @@ def csloi(text): #Comma separated list of identifiers
 BSF = Tree_Processor_Factory()
 processor_def = BSF.create_processor('processor_def')
 simple_ast_node_processor = BSF.create_processor('simple_ast_node_processor')
+simple_symbol_processor = BSF.create_processor('simple_symbol_processor')
 
 
 simple_ast_node_tree = BSF.create_simple_ast_node('simple_ast_node_tree', 'members')
 simple_ast_type = BSF.create_simple_ast_node('simple_ast_type', 'name', 'members', 'children')
+simple_ast_symbols = BSF.create_simple_ast_node('simple_ast_symbols', 'members')
+symbol = BSF.create_simple_ast_node('symbol', 'name')
+
 
 simple_ast_node_processor.register(Node_Handler_Description(
 	pattern = '{name}[:]',
@@ -380,7 +403,13 @@ simple_ast_node_processor.register(Node_Handler_Description(
 ))
 
 
+simple_symbol_processor.register(Node_Handler_Description(
+	pattern = '{name}',
+	ast = symbol,
+))
+
 register_terminal_sub_handler(processor_def, simple_ast_node_tree, simple_ast_node_processor, 'Create Simple AST Node Tree', body_name='members')
+register_terminal_sub_handler(processor_def, simple_ast_symbols, simple_symbol_processor, 'Create Symbols', body_name='members')
 
 
 r = processor_def.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
@@ -399,11 +428,17 @@ r = processor_def.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
 			regex_rule
 			literal_rule
 			python_based_type_lut_dispatcher_rule: item_name
+			python_based_type_lut_dispatcher_rule_without_argument
+
+		add_argument: name, alias
 
 		abstract_code_body: body
 			unmatched_rule
 			ingress
 			egress
+
+	create symbols:
+		clear_arguments
 
 '''))
 
@@ -419,15 +454,19 @@ def implement_node_tree_iteratively(item, bases=(R.Record,)):
 				__annotations__ = {member_name: R.Field(default=None) for member_name in members or ()},
 			))
 
-			yield new_type
+			yield new_type.__name__, new_type
 			for child in children:
 				yield from implement_node_tree_iteratively(child, (new_type,))
+
+		case simple_ast_symbols(members):
+			for m in members:
+				yield m.name, Local_Symbol(m.name)
 
 		case unhandled:
 			raise Exception(unhandled)
 
 
-F = Tree_Processor_Factory(ast_directory={n.__name__: n for n in implement_node_tree_iteratively(r.value)})
+F = Tree_Processor_Factory(ast_directory=dict(implement_node_tree_iteratively(r.value)))
 main = F.create_processor('main')
 mnemonic_regulations = F.create_processor('mnemonic_regulations')
 
@@ -449,6 +488,12 @@ register_identity_sub_handler(main, 'python_based_type_lut_dispatcher', python_b
 
 register_terminal_handler(python_based_type_lut_dispatcher, 'python_based_type_lut_dispatcher_rule', '{name as pattern} as {name as item_name}')
 register_terminal_handler(python_based_type_lut_dispatcher, 'python_based_type_lut_dispatcher_rule', '{name as pattern}')
+register_terminal_handler(python_based_type_lut_dispatcher, 'python_based_type_lut_dispatcher_rule_without_argument', '{name as pattern} without argument')
+
+register_terminal_handler2(python_based_type_lut_dispatcher, 'add_argument', 'add argument[:] {name} as {name as alias}')
+register_terminal_handler2(python_based_type_lut_dispatcher, 'add_argument', 'add argument[:] {name}')
+
+register_terminal_symbol(python_based_type_lut_dispatcher, 'clear_arguments', 'clear arguments')
 
 
 
@@ -456,11 +501,18 @@ r = main.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
 
 	python based type lut dispatcher: test_disp1
 
+		clear arguments
+		add argument: dispatcher as self
+
 		note:
 			print('This is a note!', note)
 
 		meta_comment as some_comment:
 			print('This is a note!', some_comment)
+
+		clear arguments
+		thing without argument:
+			print('This is a thing')
 
 
 '''))
@@ -472,35 +524,112 @@ AST = type('AST', (type,), F.ast_directory)
 class dispatcher_implementer(R.Record):
 	'This particular version will create a new module we can execute'
 
-
+	name_prefix: R.Field() = None
 	python_code: R.Field(factory=Mutable_Tree_View)
+	arguments: R.Field(factory=dict)
+	function_signatures: R.Field(factory=dict)
+	name: R.Field() = None
 
-	def create_function(self, definition):
-		self.python_code.write(definition)
-		self.python_code.write_line()
 
 	def __call__(self, item):
 		match item:
 			case AST.python_based_type_lut_dispatcher(name, rule_list):
-				print(name)
+				self.name = name
 				for rule in rule_list:
 					self(rule)
 
-			case AST.python_based_type_lut_dispatcher_rule(pattern, body, item_name):
-				definition = Mutable_Tree_View.from_str(f'def {pattern}({item_name or pattern}):')
+			case AST.python_based_type_lut_dispatcher_rule(name, body, item_name):
+				assert name not in self.function_signatures
+				arguments = ', '.join((*self.arguments, f'{item_name or name}'))
+				definition = Mutable_Tree_View.from_str(f'def {name}({arguments}):')
 				definition.write(body.normal(1))
-				self.create_function(definition)
+				local_arguments = self.function_signatures[name] = dict(self.arguments)
+				local_arguments[name] = 'item'
+
+				self.python_code.write_line(f'@register_custom_function(dispatcher, {local_arguments!r}, {self.name_prefix}{name})')
+				self.python_code.write(definition)
+				self.python_code.write_line()
+
+			case AST.python_based_type_lut_dispatcher_rule_without_argument(name, body):
+				arguments = ', '.join(self.arguments)
+				definition = Mutable_Tree_View.from_str(f'def {name}({arguments}):')
+				definition.write(body.normal(1))
+				local_arguments = self.function_signatures[name] = dict(self.arguments)
+
+				self.python_code.write_line(f'@register_custom_function(dispatcher, {local_arguments!r}, {self.name_prefix}{name})')
+				self.python_code.write(definition)
+				self.python_code.write_line()
+
+			case AST.add_argument(name, alias):
+				self.arguments[alias or name] = name
+
+
+			case symbol if symbol is AST.clear_arguments:
+				self.arguments.clear()
+
 
 			case unhandled:
 				raise Exception(unhandled)
 
+#TODO - code below should be integrated in writer above
+#TODO - this thing should be tested
 
-
-DI = dispatcher_implementer()
+DI = dispatcher_implementer('AST.')
 DI(r.value[0])
 
-print(DI.python_code.to_str())
+print(DI.function_signatures)
+
+
+module_code = Mutable_Tree_View.from_str('''
+	from efforting.mvp6.core.dispatcher import Type_LUT_Dispatcher
+	import sys
+	class throwaway_context:
+		def __enter__(self):
+			self.calling_locals = sys._getframe(1).f_locals
+			self.snapshot = dict(self.calling_locals)
+
+		def __exit__(self, et, ev, tb):
+			self.calling_locals.clear()
+			self.calling_locals.update(self.snapshot)
+''').normal()
+
+module_code.write_line()
+
+module_code.write_line(f'class {DI.name}(R.Record):')
+
+module_code.write_line('\tdispatcher: R.Field(Type_LUT_Dispatcher)')
+
+
+module_code.write_line('\twith throwaway_context():')
+module_code.write(DI.python_code, +2)
+
+
+print(module_code.to_str())
 
 
 
-#Dumper().dump(r)	#This is a terrible dumper but will have to do
+
+# #Dumper().dump(r)	#This is a terrible dumper but will have to do
+
+# import sys
+# class throwaway_context:
+# 	def __enter__(self):
+# 		self.calling_locals = sys._getframe(1).f_locals
+# 		self.snapshot = dict(self.calling_locals)
+
+# 	def __exit__(self, et, ev, tb):
+# 		self.calling_locals.clear()
+# 		self.calling_locals.update(self.snapshot)
+
+# #DEMO
+# class test:
+# 	some_list = list()
+
+# 	with throwaway_context():
+# 		def stuff():
+# 			pass
+# 		some_list.append(stuff)
+
+
+# print(test.some_list) # [<function test.stuff at 0x76eb41663060>]
+# assert not hasattr(test, 'stuff') # Assertion passes

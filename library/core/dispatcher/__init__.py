@@ -198,6 +198,9 @@ class Type_LUT_Dispatcher(Core_Dispatcher):
 class ID_LUT_Dispatcher(Core_Dispatcher):
 	regulations: R.Field_Update(factory=ID_LUT_Regulations)
 
+class LUT_Dispatcher(Core_Dispatcher):
+	regulations: R.Field_Update(factory=LUT_Regulations)
+
 
 class Type_LUT_Translator(Type_LUT_Dispatcher):
 	def dispatch_item(self, item):

@@ -12,6 +12,7 @@ from efforting.mvp6.core.dispatcher.tree_view import Tree_View_Regex_Dispatcher,
 
 from efforting.mvp6.core.text import Immutable_Tree_View, Mutable_Tree_View
 from efforting.mvp6.template_system.introspection import Dumper
+from efforting.mvp6 import ABC
 
 import re
 
@@ -429,6 +430,7 @@ r = processor_def.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
 			literal_rule
 			python_based_type_lut_dispatcher_rule: item_name
 			python_based_type_lut_dispatcher_rule_without_argument
+			process_symbol
 
 		add_argument: name, alias
 
@@ -437,8 +439,14 @@ r = processor_def.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
 			ingress
 			egress
 
+
+
+		thing
+
 	create symbols:
 		clear_arguments
+
+
 
 '''))
 
@@ -495,6 +503,8 @@ register_terminal_handler2(python_based_type_lut_dispatcher, 'add_argument', 'ad
 
 register_terminal_symbol(python_based_type_lut_dispatcher, 'clear_arguments', 'clear arguments')
 
+register_terminal_handler(python_based_type_lut_dispatcher, 'process_symbol', 'symbol[:] {name}')
+
 
 
 r = main.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
@@ -513,6 +523,10 @@ r = main.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
 		clear arguments
 		thing without argument:
 			print('This is a thing')
+
+		add argument: dispatcher as self
+		symbol: clear_arguments
+			print('This is a specific symbol')
 
 
 '''))
@@ -563,6 +577,14 @@ class dispatcher_implementer(R.Record):
 			case AST.add_argument(name, alias):
 				self.arguments[alias or name] = name
 
+			case AST.process_symbol(name, body):
+				arguments = ', '.join(self.arguments)
+				definition = Mutable_Tree_View.from_str(f'def {name}({arguments}):')
+				definition.write(body.normal(1))
+
+				self.python_code.write_line(f'@register_custom_function(symbol_dispatcher, {{}}, {self.name_prefix}{name})')
+				self.python_code.write(definition)
+				self.python_code.write_line()
 
 			case symbol if symbol is AST.clear_arguments:
 				self.arguments.clear()
@@ -579,9 +601,10 @@ DI(r.value[0])
 
 print(DI.function_signatures)
 
+from efforting.mvp6.core.dispatcher import Type_LUT_Dispatcher
 
 module_code = Mutable_Tree_View.from_str('''
-	from efforting.mvp6.core.dispatcher import Type_LUT_Dispatcher
+	from efforting.mvp6.core.dispatcher import Type_LUT_Dispatcher, LUT_Dispatcher
 	import sys
 	class throwaway_context:
 		def __enter__(self):
@@ -596,40 +619,142 @@ module_code = Mutable_Tree_View.from_str('''
 module_code.write_line()
 
 module_code.write_line(f'class {DI.name}(R.Record):')
+#module_code.write_line('\tdispatcher: R.Field(factory=fc)')
+module_code.write_line('\tdispatcher = Type_LUT_Dispatcher()')
+module_code.write_line('\tsymbol_dispatcher = LUT_Dispatcher()')
 
-module_code.write_line('\tdispatcher: R.Field(Type_LUT_Dispatcher)')
+
+@ABC.Factory.Contextual
+def fc(context):
+	return Type_LUT_Dispatcher(type(context['instance']).dispatcher_regulations)
+
 
 
 module_code.write_line('\twith throwaway_context():')
 module_code.write(DI.python_code, +2)
 
+module_code.write(Immutable_Tree_View.from_str('''
+	@register_custom_function(dispatcher, {'self': 'dispatcher', 'symbol': 'item'}, Local_Symbol)
+	def dispatch_symbol(self, symbol):
+		return self.symbol_dispatcher.dispatch_item(symbol).value.rule.action(self, symbol)
+'''), +1)
+
+#NOTE - the problem right now has something to do with the nested dispatching - possibly with our custom register function
+#		we need to tidy up this mess!
+
+module_code.write(Immutable_Tree_View.from_str('''
+	def dispatch_item(self, item):
+		return self.dispatcher.dispatch_item(item).value.rule.action(self, item)
+
+'''))
+
+
+
+
+class custom_handler(R.Record):
+	function: R.Field()
+	arguments: R.Field()
+
+	def __call__(self, dispatcher, item):
+		lut = dict(
+			dispatcher = dispatcher,
+			item = item,
+		)
+		return self.function(*map(lut.__getitem__, self.arguments.values()))
+
+
+class register_custom_function(R.Record):
+	regulations: R.Field()
+	arguments: R.Field()
+	condition: R.Field()
+
+	def __call__(self, function):
+		self.regulations.register_function(self.condition)(custom_handler(function, self.arguments))
+
+		return function
+
+
+new_scope = dict(
+	Type_LUT_Dispatcher = Type_LUT_Dispatcher,
+	AST = AST,
+	ABC = ABC,
+	Local_Symbol = Local_Symbol,
+	R = R,
+	register_custom_function = register_custom_function,
+	fc = fc,
+)
+
+#self.python_code.write_line(f'@register_custom_function(dispatcher, {local_arguments!r}, {self.name_prefix}{name})')
+
+
 
 print(module_code.to_str())
+exec(module_code.to_str(), new_scope)
+
+test_disp1 = new_scope['test_disp1']
+
+td = test_disp1()
+
+td.dispatch_item(AST.note('Hello'))
+td.dispatch_item(AST.meta_comment('Hello'))
+td.dispatch_item(AST.thing())
+td.dispatch_item(AST.clear_arguments)
 
 
+#OUTPUT
 
-
-# #Dumper().dump(r)	#This is a terrible dumper but will have to do
-
+# {'note': {'self': 'dispatcher', 'note': 'item'}, 'meta_comment': {'self': 'dispatcher', 'meta_comment': 'item'}, 'thing': {}}
+# from efforting.mvp6.core.dispatcher import Type_LUT_Dispatcher, LUT_Dispatcher
 # import sys
 # class throwaway_context:
-# 	def __enter__(self):
-# 		self.calling_locals = sys._getframe(1).f_locals
-# 		self.snapshot = dict(self.calling_locals)
+#         def __enter__(self):
+#                 self.calling_locals = sys._getframe(1).f_locals
+#                 self.snapshot = dict(self.calling_locals)
 
-# 	def __exit__(self, et, ev, tb):
-# 		self.calling_locals.clear()
-# 		self.calling_locals.update(self.snapshot)
+#         def __exit__(self, et, ev, tb):
+#                 self.calling_locals.clear()
+#                 self.calling_locals.update(self.snapshot)
 
-# #DEMO
-# class test:
-# 	some_list = list()
+# class test_disp1(R.Record):
+#         dispatcher = Type_LUT_Dispatcher()
+#         symbol_dispatcher = LUT_Dispatcher()
+#         with throwaway_context():
+#                 @register_custom_function(dispatcher, {'self': 'dispatcher', 'note': 'item'}, AST.note)
+#                 def note(self, note):
+#                         print('This is a note!', note)
 
-# 	with throwaway_context():
-# 		def stuff():
-# 			pass
-# 		some_list.append(stuff)
+#                 @register_custom_function(dispatcher, {'self': 'dispatcher', 'meta_comment': 'item'}, AST.meta_comment)
+#                 def meta_comment(self, some_comment):
+#                         print('This is a note!', some_comment)
+
+#                 @register_custom_function(dispatcher, {}, AST.thing)
+#                 def thing():
+#                         print('This is a thing')
+
+#                 @register_custom_function(symbol_dispatcher, {}, AST.clear_arguments)
+#                 def clear_arguments(self):
+#                         print('This is a specific symbol')
 
 
-# print(test.some_list) # [<function test.stuff at 0x76eb41663060>]
-# assert not hasattr(test, 'stuff') # Assertion passes
+#                 @register_custom_function(dispatcher, {'self': 'dispatcher', 'symbol': 'item'}, Local_Symbol)
+#                 def dispatch_symbol(self, symbol):
+#                         return self.symbol_dispatcher.dispatch_item(symbol).value.rule.action(self, symbol)
+
+#         def dispatch_item(self, item):
+#                 return self.dispatcher.dispatch_item(item).value.rule.action(self, item)
+
+# This is a note! note(title='Hello' body=None)
+# This is a note! meta_comment(title='Hello' body=None)
+# This is a thing
+# Traceback (most recent call last):
+#   File "/srv/datacore2/devilholk/Projects/efforting.tech/github/efforting-mvp6/testing/core/matcher_factory_test3.py", line 701, in <module>
+#     td.dispatch_item(AST.clear_arguments)
+#   File "<string>", line 38, in dispatch_item
+#   File "/srv/datacore2/devilholk/Projects/efforting.tech/github/efforting-mvp6/testing/core/matcher_factory_test3.py", line 663, in __call__
+#     return self.function(*map(lut.__getitem__, self.arguments.values()))
+#            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#   File "<string>", line 35, in dispatch_symbol
+#   File "/srv/datacore2/devilholk/Projects/efforting.tech/github/efforting-mvp6/testing/core/matcher_factory_test3.py", line 663, in __call__
+#     return self.function(*map(lut.__getitem__, self.arguments.values()))
+#            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# TypeError: test_disp1.clear_arguments() missing 1 required positional argument: 'self'

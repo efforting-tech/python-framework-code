@@ -1,7 +1,9 @@
 import sys
 from .factory_helpers import Register_Interface
+from . import ABC
 
-#TODO - ABC
+
+@ABC.Symbol
 class Local_Symbol:
 	def __init__(self, name):
 		self._name = name
@@ -9,6 +11,7 @@ class Local_Symbol:
 	def __repr__(self):
 		return f'L{self._name!r}'
 
+@ABC.Symbol
 class Symbol:
 	_REPR_PREFIX = 'S'
 	def __init__(self, name, parent=None, auto_graft=None):

@@ -7,6 +7,7 @@ class A:
 	class Enter_Tokenizer(R.Record):
 		target: R.Field()
 		wrapper: R.Field(default=None)
+		unpack: R.Field(default=False)
 
 	class Wrapped_Chain_Tokenizer(R.Record):
 		target: R.Field()
@@ -19,6 +20,9 @@ class A:
 		value: R.Field()
 
 	class Wrap(R.Record):
+		wrapper: R.Field()
+
+	class Wrap_Match(R.Record):
 		wrapper: R.Field()
 
 	Raise_Exception = Symbol('Raise_Exception')

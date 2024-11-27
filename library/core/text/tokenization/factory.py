@@ -170,11 +170,13 @@ class MVP_Action(R.Record):
 class MVP_Enter_Tokenizer(MVP_Action):
 	tokenizer: R.Field()
 	wrapper: R.Field() = None
+	unpack: R.Field() = False
 
 	def process(self, state):
 		state.push_tokenizer(self.tokenizer)
 		state.push_result_tokens([])
 		state.push_wrapper(self.wrapper)
+		state.push_unpack(self.unpack)
 		state.token_stream.source = String_Interface.regex_tokenize(state.text, state.sub_tokenizer.tokens, state.token.match.end())
 
 class MVP_Emit_Value(MVP_Action):
@@ -191,15 +193,30 @@ class MVP_Wrap_Value(MVP_Action):
 		value = self.wrapper(state.token.match.group())
 		return value
 
+class MVP_Wrap_Match(MVP_Action):
+	wrapper: R.Field()
+
+	def process(self, state):
+		value = self.wrapper(state.token.match)
+		return value
+
 class MVP_Raise_Exception(MVP_Action):
 	exception: R.Field()
 
 	def process(self, state):
-		raise NotImplementedError
-		raise Exception(f'{self.exception}: {state}')
+		#Now we just assume self.exception is a string but we may have it be a type or factory later
+		raise Exception(f'Exception {self.exception!r} when encountering {state.token} on line {state.source}')
+
+		# print(state.result.end)
+		# print(state.token)
+		# raise NotImplementedError
+		# raise Exception(f'{self.exception}: {state}')
 
 #TODO - I think we should have a better way for no data actions - Possibly akin to a derived symbol?
 #		In the end we probably want something that behaves like a singleton
+
+#TODO - We need to figure out a good way of adding tracking information, maybe as a side channel
+
 class MVP_Return_From_Tokenizer(MVP_Action):
 	@staticmethod
 	def process(state):
@@ -209,7 +226,11 @@ class MVP_Return_From_Tokenizer(MVP_Action):
 		if wrapper := state.pop_wrapper():
 			result_tokens = wrapper(result_tokens)
 
-		state.result.tokens.append(result_tokens)
+		if state.unpack:
+			state.result.tokens.extend(result_tokens)
+		else:
+			state.result.tokens.append(result_tokens)
+
 		state.token_stream.source = String_Interface.regex_tokenize(state.text, state.sub_tokenizer.tokens, state.token.match.end())
 
 
@@ -291,14 +312,13 @@ class MVP_Tokenizer_Factory(R.Record):
 	def resolve_action(self, action):
 		match action:
 
-			case MVP_Enter_Tokenizer(tokenizer, wrapper):
-				return MVP_Enter_Tokenizer(self.lut_acceleration_structure_by_name[tokenizer], wrapper)
-
+			case MVP_Enter_Tokenizer(tokenizer, wrapper, unpack):
+				return MVP_Enter_Tokenizer(self.lut_acceleration_structure_by_name[tokenizer], wrapper, unpack)
 
 			case MVP_Emit_Value(value):
 				return MVP_Emit_Value(self.resolve_action(value))
 
-			case MVP_Wrap_Value() | MVP_Raise_Exception():
+			case MVP_Wrap_Value() | MVP_Wrap_Match() | MVP_Raise_Exception():
 				return action
 
 			case _ if action is MVP_Return_From_Tokenizer:
@@ -320,8 +340,8 @@ class MVP_Tokenizer_Factory(R.Record):
 
 	def implement_action(self, source):
 		match source:
-			case A.Enter_Tokenizer(target, wrapper=wrapper):
-				return MVP_Enter_Tokenizer(target.name, wrapper=wrapper)
+			case A.Enter_Tokenizer(target, wrapper=wrapper, unpack=unpack):
+				return MVP_Enter_Tokenizer(target.name, wrapper=wrapper, unpack=unpack)
 
 			case A.Wrapped_Chain_Tokenizer(target, wrapper):
 				return wrapped_chain_tokenizer(target.name, wrapper)
@@ -331,6 +351,9 @@ class MVP_Tokenizer_Factory(R.Record):
 
 			case A.Wrap(wrapper):
 				return MVP_Wrap_Value(wrapper)
+
+			case A.Wrap_Match(wrapper):
+				return MVP_Wrap_Match(wrapper)
 
 			case _ if source is A.Raise_Exception:
 				return MVP_Raise_Exception('Unspecified Exception')
@@ -356,9 +379,9 @@ class MVP_Tokenizer_Factory(R.Record):
 
 
 
-	def tokenize(self, text, start=0, strict=True):
+	def tokenize(self, text, start=0, strict=True, source=None):
 		result = Tokenization_Result(text, start)
-		state = Tokenization_State(self, result, text, self.ingress)
+		state = Tokenization_State(self, result, text, self.ingress, source)
 
 		token_stream = Switchable_Iterator(String_Interface.regex_tokenize(text, state.sub_tokenizer.tokens, start))
 		state.token_stream = token_stream
@@ -382,12 +405,15 @@ class Tokenization_State(R.Record):
 	result: R.Field()
 	text: R.Field()
 	sub_tokenizer: R.Field()
+	source: R.Field() = None
 	wrapper: R.Field() = None
 	token_stream: R.Field()
 	action: R.Field()
 	token: R.Field()
+	unpack: R.Field() = False
 	tokenizer_stack: R.Field(factory=Stack)
 	wrapper_stack: R.Field(factory=Stack)
+	unpack_stack: R.Field(factory=Stack)
 	result_tokens_stack: R.Field(factory=Stack)
 
 	#TODO - maybe we can simplify this a bunch and just use the Stack interface
@@ -417,3 +443,13 @@ class Tokenization_State(R.Record):
 		wrapper = self.wrapper
 		self.wrapper = self.wrapper_stack.pop()
 		return wrapper
+
+
+	def push_unpack(self, unpack):
+		self.unpack_stack.push(self.unpack)
+		self.unpack = unpack
+
+	def pop_unpack(self):
+		unpack = self.unpack
+		self.unpack = self.unpack_stack.pop()
+		return unpack

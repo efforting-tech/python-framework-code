@@ -2,6 +2,8 @@ from .. import typing as TY
 from .. import record as R
 from ... import ABC, Symbol
 
+#TODO - should keep track of line indices or other source tracking (parents and so on)
+
 #TODO - move to core string utils
 def expand_tabs_in_line(line, tab_width=4):
 	result = ''

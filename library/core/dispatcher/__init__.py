@@ -157,6 +157,9 @@ class Core_Dispatcher(R.Record):
 	def register_function(self, *positional, **named):
 		return self.regulations.register_function(*positional, **named)
 
+	def register_fallback_rule(self, rule):
+		self.regulations.fallback_rule = rule
+
 	def dispatch_item(self, item):
 		match_aggregator = self.item_aggregator_type()
 		self.regulations.aggregate_matches(match_aggregator, item)

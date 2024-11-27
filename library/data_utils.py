@@ -1,10 +1,10 @@
 from .record import member as M
 from .record.base.public import Structure
-from . import symbol
+from . import Symbol
 
 class Dict_As_Object_Read_Interface(Structure):
 	_target = M.positional()
-	_default = M.positional(symbol.action.raise_exception, repr=False)
+	_default = M.positional(Symbol.Action.Raise_Exception, repr=False)
 	#TODO - later we may provide a dispatcher for wrapping values but here we will simply wrap dict
 
 	def __dir__(self):
@@ -19,7 +19,7 @@ class Dict_As_Object_Read_Interface(Structure):
 			case list() | tuple():
 				return type(value)(map(self._resolve, value))
 
-			case action if action is symbol.action.raise_exception:
+			case action if action is Symbol.Action.Raise_Exception:
 				if key:
 					raise AttributeError(f'{key!r} not in {self._target!r}')	#TODO - improve
 				else:
@@ -39,3 +39,29 @@ class Dict_As_Object_Read_Interface(Structure):
 def unpack_dict(target, *keys):
 	yield from (target[k] for k in keys)
 
+
+def list_from_lines_with_content(text, strip=True):
+	if strip:
+		return list(filter(bool, map(str.strip, text.splitlines())))
+	else:
+		return list(filter(bool, text.splitlines()))
+
+
+def flatten(item):
+	match item:
+		case list() | map():
+			result = list()
+			for sub_item in item:
+				result.extend(flatten_if_present(sub_item))
+
+			return result
+
+		case otherwise:
+			return [otherwise]
+
+def flatten_if_present(item):
+	return list(filter(bool, flatten(item)))
+
+
+def csloi(text): #Comma separated list of identifiers
+	return tuple(filter(bool, map(str.strip, text.split(','))))

@@ -24,12 +24,16 @@ class Node_Handler_Description(R.Record):
 	additional_factories: R.Field(factory=dict)
 	body: R.Field() = MA.Requires_Empty
 
-class Node_Handler(R.Record):
+	bound: R.Field() = False
+
+
+
+class Abstract_Node_Handler(R.Record):
 	description: R.Field()
 	ast: R.Field()	#These should be resolved at this point
 	body: R.Field()
 
-	def __call__(self, dispatcher, node, result):
+	def process_node(self, target, dispatcher, node, result):
 		if (match := result.value.match) is not S.Miss:
 			fields = match.groupdict()
 
@@ -64,6 +68,7 @@ class Node_Handler(R.Record):
 					dispatcher = dispatcher,
 					node = node,
 					result = result,
+					target = target,
 				))
 
 
@@ -111,6 +116,15 @@ class Node_Handler(R.Record):
 			case unhandled:
 				raise Exception(unhandled)
 
+
+class Unbound_Node_Handler(Abstract_Node_Handler):
+	def __call__(self, dispatcher, node, result):
+		return self.process_node(None, dispatcher, node, result)
+
+class Bound_Node_Handler(Abstract_Node_Handler):
+	def __call__(self, target, dispatcher, node, result):
+		return self.process_node(target, dispatcher, node, result)
+
 class Tree_Processor_Factory(R.Record):
 	name: R.Field() = None
 	ast_directory: R.Field(factory=dict)
@@ -128,6 +142,9 @@ class Tree_Processor_Factory(R.Record):
 			ast = self.ast_directory[handler.ast]
 		else:
 			ast = handler.ast
+
+		Node_Handler = Bound_Node_Handler if handler.bound else Unbound_Node_Handler
+
 
 		if bool(handler.pattern) == bool(handler.regex): # Implementation note: Fails if both or neither are defined (logical XOR).
 			raise Exception(f'handler.pattern or handler.regex must be defined (mutually exclusive).')

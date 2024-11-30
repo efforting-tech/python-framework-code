@@ -200,6 +200,15 @@ class Immutable_Line_View(Core_Line_View):
 	def from_str(cls, value):	#NOTE - we must use different one for mutable sub classes
 		return cls(tuple(map(Immutable_Line.from_anything, value.splitlines())))
 
+	@classmethod
+	def from_lines(cls, lines):
+		return cls(tuple(map(Immutable_Line.from_anything, lines)))
+
+	@classmethod
+	def from_title_and_body(cls, title, body):
+		return cls(tuple(map(Immutable_Line.from_anything, (title, *body))))
+
+
 	def __init__(self, text=None):
 		#NOTE - we can't use match here because ABC nodes are not actually types
 
@@ -226,6 +235,13 @@ class Mutable_Line_View(Core_Line_View):
 	def from_str(cls, value):
 		return cls(list(map(Mutable_Line.from_anything, value.splitlines())))
 
+	@classmethod
+	def from_lines(cls, lines):
+		return cls(tuple(map(Mutable_Line.from_anything, lines)))
+
+	@classmethod
+	def from_title_and_body(cls, title, body):
+		return cls(tuple(map(Mutable_Line.from_anything, (title, *body))))
 
 
 

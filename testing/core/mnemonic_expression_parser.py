@@ -35,6 +35,15 @@ def mep_text_as_alias(dispatcher, node, result):
 	return MEP_Capture_Data(rf'(?P<{alias}>.+)', 'text', alias)
 
 
+@mnemonic_expression_parser.register_function(r'(?i:anything)')
+def mep_anything(dispatcher, node, result):
+	return MEP_Capture_Data(r'(.*)', 'anything', 'anything')
+
+@mnemonic_expression_parser.register_function(r'(?i:anything\s+as\s+(\w+))')
+def mep_anything_as_alias(dispatcher, node, result):
+	[alias] = result.value.match.groups()
+	return MEP_Capture_Data(rf'(?P<{alias}>.*)', 'anything', alias)
+
 
 
 

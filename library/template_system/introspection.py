@@ -3,7 +3,7 @@ from ..core.dispatcher.aggregation import Result_List
 from ..core import record as R
 from ..symbol_factory import Local_Symbol
 from .. import ABC
-import sys
+import sys, fnmatch
 
 
 
@@ -60,6 +60,7 @@ class Indention_Wrapper:
 MISS = Local_Symbol('MISS')
 
 class Dumper(Indention_Wrapper):
+	exlude_glob = None
 
 	def print(self, text, end='\n'):
 		self.write(f'{text}{end}')
@@ -84,7 +85,7 @@ class Dumper(Indention_Wrapper):
 						self.dump(sub_item, title=f'[{index}]')
 
 
-			case list():
+			case list() | tuple():
 				self.print(f'{prefix}{type(r).__qualname__}')
 				with self.indent():
 					for index, sub_item in enumerate(r):
@@ -98,10 +99,16 @@ class Dumper(Indention_Wrapper):
 						self.print(f'{line.text!r}')
 
 			case R.Record():
-				self.print(f'{prefix}{type(r).__module__}.{type(r).__qualname__}:')
+				path = f'{type(r).__module__}.{type(r).__qualname__}'
+				self.print(f'{prefix}{path}:')
 				with self.indent():
 					for field in r._record_fields:
-						self.dump(getattr(r, field, MISS), title=f'{field}:')
+						for eg in self.exlude_glob or ():
+							if fnmatch.fnmatch(f'{path}.{field}', eg):
+								#print('EXCLUDE', repr(f'{path}.{field}'))
+								break
+						else:
+							self.dump(getattr(r, field, MISS), title=f'{field}:')
 
 			case unhandled:
 				self.print(f'{prefix}{type(r).__qualname__}: {r!r}')

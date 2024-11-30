@@ -208,8 +208,11 @@ class template_implementation_context:
 ctx = template_implementation_context()
 
 res = tuple(iteratively_implement_template(ctx, r.value))
-print('-'*10)
-for item in res:
-	print(item)
 
+from efforting.mvp6.template_system.introspection import Dumper
+D = Dumper()
+D.exlude_glob = (
+	'*.source',
+)
 
+D.dump(res)	# https://gist.github.com/Mikael-Lovqvist/30f4944576b6fff4161f952059f67547

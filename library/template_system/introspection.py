@@ -74,19 +74,19 @@ class Dumper(Indention_Wrapper):
 
 		match r:
 			case MAST.Tree():
-				self.print(f'{prefix}{type(r).__module__}.{type(r).__qualname__}: {r.title!r}')
+				self.print(f'{prefix}{type(r).__module__}.{type(r).__qualname__}({r.title!r})')
 				with self.indent():
 					self.dump(r.body)
 
 			case Result_List():
-				self.print(f'{prefix}{type(r).__qualname__}: {r!r}')
+				self.print(f'{prefix}{type(r).__qualname__}({r!r})')
 				with self.indent():
 					for index, sub_item in enumerate(r.value):
 						self.dump(sub_item, title=f'[{index}]')
 
 
 			case list() | tuple():
-				self.print(f'{prefix}{type(r).__qualname__}')
+				self.print(f'{prefix}{type(r).__qualname__}(...)')
 				with self.indent():
 					for index, sub_item in enumerate(r):
 						self.dump(sub_item, title=f'[{index}]')
@@ -110,6 +110,10 @@ class Dumper(Indention_Wrapper):
 						else:
 							self.dump(getattr(r, field, MISS), title=f'{field}:')
 
+			case symbol if symbol is None:
+				self.print(f'{prefix}None')
+
+
 			case unhandled:
-				self.print(f'{prefix}{type(r).__qualname__}: {r!r}')
+				self.print(f'{prefix}{type(r).__qualname__}({r!r})')
 

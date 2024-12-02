@@ -1,3 +1,6 @@
+#Most recent note: This is starting to become a nice PoC for how we can bootstrap the template system. We should create a specific sub package for it.
+#In matcher_factory_test6.py we should utilize the things moved to the proper place and at some point we should get back to actually creating maching factories.
+
 #Yes - we are racking up quite a few of these experiments. Once the testing-directory goes into more of a unit testing type of direction this stuff will be cleaned up.
 #Having it as different revisions is fine but then it becomes somewhat inconvenient to open the older versions with my current setup.
 
@@ -24,9 +27,6 @@ r = MB.processor_def.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
 
 '''))
 
-
-
-
 F = Tree_Processor_Factory(ast_directory=dict(MI.implement_node_tree_iteratively(r.value)))
 F_AST = type('AST', (), dict(F.ast_directory))
 
@@ -34,49 +34,6 @@ F_AST = type('AST', (), dict(F.ast_directory))
 def parse_line(line, source=None):
 	result = MT.template_tokenizer.tokenize(line, source=source)
 	return result.tokens
-
-
-main = F.create_processor('main')
-
-
-main.register(Node_Handler_Description(
-	regex = '§(.*)',
-	ast = 'statement',
-	body = MA.Store_Node_As('body'),
-	additional_factories = dict(
-		title = lambda context: parse_line(context['result'].value.match.group(1), context['node']),
-		source = lambda context: context['node'],
-	),
-))
-
-main.register(Node_Handler_Description(
-	pattern = Default_Handler,
-	ast = 'node',
-	body = MA.Store_Node_As('body', processor=main),
-	additional_factories = dict(
-		title = lambda context: parse_line(context['node'].title, context['node']),
-		source = lambda context: context['node'],
-	),
-))
-
-
-r = main.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
-
-	This is a template.
-
-	§ Note: This is a statement
-		Part of statement
-
-	§ This statement is «note: indirect»
-		This is because it has expressions in its title
-		But if we want «indirect» expressions inside the statement body the statement itself must support it.
-
-	Here we have an «note: inline expression».
-		Here is sub «note: stuff»!
-
-'''))
-
-
 
 
 # Next step is to process the parsed tree into an AST of parsed template features
@@ -205,8 +162,47 @@ class template_implementation_context:
 			source = source,
 		), statement_node)
 
-ctx = template_implementation_context()
+main = F.create_processor('main')
 
+main.register(Node_Handler_Description(
+	regex = '§(.*)',
+	ast = 'statement',
+	body = MA.Store_Node_As('body'),
+	additional_factories = dict(
+		title = lambda context: parse_line(context['result'].value.match.group(1), context['node']),
+		source = lambda context: context['node'],
+	),
+))
+
+main.register(Node_Handler_Description(
+	pattern = Default_Handler,
+	ast = 'node',
+	body = MA.Store_Node_As('body', processor=main),
+	additional_factories = dict(
+		title = lambda context: parse_line(context['node'].title, context['node']),
+		source = lambda context: context['node'],
+	),
+))
+
+
+r = main.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
+
+	This is a template.
+
+	§ Note: This is a statement
+		Part of statement
+
+	§ This statement is «note: indirect»
+		This is because it has expressions in its title
+		But if we want «indirect» expressions inside the statement body the statement itself must support it.
+
+	Here we have an «note: inline expression».
+		Here is sub «note: stuff»!
+
+'''))
+
+
+ctx = template_implementation_context()
 res = tuple(iteratively_implement_template(ctx, r.value))
 
 from efforting.mvp6.template_system.introspection import Dumper

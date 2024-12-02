@@ -1,7 +1,8 @@
 from efforting.mvp6.core import record as R
 from efforting.mvp6.symbol_factory import Local_Symbol
 
-import mnemonic_bootstrap as MB
+
+from efforting.mvp6._mnemonic_bootstrap_layer import bootstrap_processor as MB
 
 def implement_node_tree_iteratively(item, bases=(R.Record,)):
 	match item:

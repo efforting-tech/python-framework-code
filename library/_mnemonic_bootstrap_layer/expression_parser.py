@@ -1,6 +1,7 @@
 from ..core import record as R
 from ..core.dispatcher.tree_view import Tree_View_Regex_Dispatcher
 from ..core.text import Immutable_Tree_View
+from ..data_utils import flatten_if_present
 
 from .tokenizer import Word, Text, Whitespace, Optional, Expression
 

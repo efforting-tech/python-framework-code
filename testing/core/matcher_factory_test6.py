@@ -1,7 +1,10 @@
-from efforting.mvp6._template_bootstrap_layer.processor import main
+from efforting.mvp6._template_bootstrap_layer.processor import main, inline_expression_processor, Node_Handler_Description
 from efforting.mvp6._template_bootstrap_layer.context import template_implementation_context
 from efforting.mvp6._template_bootstrap_layer.implementation import iteratively_implement_template
 from efforting.mvp6.core.text import Immutable_Tree_View
+
+#TODO - We are currently mutating inline_expression_processor but we should probably be mutating a context instead and have the processors setup so that they will defer to the context for any non standard patterns.
+#BUG - We are adding stuff after the catchall in inline_expression_processor
 
 from efforting.mvp6._template_bootstrap_layer.records import N_AST, CS_AST
 
@@ -21,7 +24,14 @@ r = main.dispatcher.dispatch_tree(Immutable_Tree_View.from_str('''
 	Here we have an «note: inline expression».
 		Here is sub «note: stuff»!
 
-	More Stuff
+	§ define pythonic inline expression: adjective
+		import random
+		return random.choice('stunning freaking interesting broken fascinating crazy insane'.split())
+
+	§ define pythonic inline expression: capitalize[:] {anything}
+		return anything.upper()
+
+	Experiments of «adjective» inline expressions both «capitalize: with» and without parameters
 
 '''))
 
@@ -56,6 +66,22 @@ class immutable_text_tree_template_renderer(abstract_template_renderer):
 			case CS_AST.inline_note():
 				pass
 
+			case CS_AST.unresolved_inline_expression(expression=expression):
+				#We will try to resolve this once
+				match ctx.compile_expression(title, expression):
+					case CS_AST.unresolved_inline_expression():
+						raise Exception(f'Unable to resolve inline expression: {expression!r}')
+
+					case str() as result:
+						return result
+
+
+					case unhandled:
+						return self._render_title(unhandled)	#Defer to outer renderer
+
+			case CS_AST.custom_inline_expression(function=function, parameters=parameters):
+				return function(*parameters)
+
 			case unhandled:
 				raise Exception(unhandled)
 
@@ -73,6 +99,32 @@ class immutable_text_tree_template_renderer(abstract_template_renderer):
 
 			case CS_AST.note():
 				pass
+
+			case CS_AST.define_pythonic_inline_expression(pattern=pattern, body=body):
+
+				def compile_function(context):
+					field_names = [f.name for f in context['node_handler'].description.field_list]	#TODO- worry about duplicate names
+					arguments = ', '.join(field_names)
+					result = Immutable_Tree_View.from_title_and_body(f'def pythonic_inline_expression({arguments}):', body.indented(normalized_indention=True))
+
+					#TODO - support contexts and stuff
+					scope = dict()
+					code = compile(result.to_str(), '<pythonic_inline_expression>', 'exec')
+					exec(code, scope)
+					return scope['pythonic_inline_expression']
+
+				inline_expression_processor.register(Node_Handler_Description(
+					pattern = pattern,
+					ast = CS_AST.custom_inline_expression,
+					generate_field_list = True,
+					additional_factories = dict(
+						source = (lambda context: context['target']['parent']),
+						function = compile_function,
+						parameters = (lambda context: context['result'].value.match.groups()),
+					),
+					bound = True,
+				))
+
 
 			case ():
 				return Immutable_Tree_View.from_str('\n')
@@ -94,3 +146,15 @@ tr = immutable_text_tree_template_renderer(res)
 result = tr.render()
 print('-'*20)
 print(result.to_str())
+
+#OUTPUT:
+
+# indirect statement NOT IMPLEMENTED YET: title [' This statement is ', inline_note(source=statement(…) title='indirect' body=None)] body Immutable_Tree_View(lines=(Immutable_Line(text='\t\tThis is because it has expressions in its title'), Immutable_Line(text='\t\tBut if we want «indirect» expressions inside the statement body the statement itself must support it.')))
+# --------------------
+# This is a template.
+
+# Here we have an .
+#         Here is sub !
+
+# Experiments of insane inline expressions both WITH and without parameters
+

@@ -6,7 +6,7 @@ from ..core.dispatcher.tree_view import Tree_View_Regex_Dispatcher
 from ..symbol_factory import Local_Symbol
 
 from . import actions as MA
-from .expression_parser import mnemonic_expression_parser, translate_tokens_to_regex
+from .expression_parser import mnemonic_expression_parser, translate_tokens_to_regex, translate_tokens_to_captures
 from .tokenizer import main_tokenizer
 
 import re
@@ -23,6 +23,9 @@ class Node_Handler_Description(R.Record):
 	process_fields: R.Field(factory=dict)
 	additional_factories: R.Field(factory=dict)
 	body: R.Field() = MA.Requires_Empty
+
+	generate_field_list: R.Field() = False
+	field_list: R.Field() = None
 
 	bound: R.Field() = False
 
@@ -154,6 +157,10 @@ class Tree_Processor_Factory(R.Record):
 
 		elif handler.pattern:
 			tokens = self.tokenizer.tokenize(handler.pattern).tokens
+
+			if handler.generate_field_list:
+				handler.field_list = translate_tokens_to_captures(tokens)
+
 			regex = re.compile(translate_tokens_to_regex(tokens), re.I)
 			self.dispatcher.register_function(regex)(Node_Handler(handler, ast, handler.body))
 		elif regex := handler.regex:

@@ -21,6 +21,11 @@ CS_AST = create_records('''
 			note
 			inline_note
 
+		define_pythonic_inline_expression: pattern, body
+
+		unresolved_inline_expression: expression
+		custom_inline_expression: function, parameters
+
 ''', 'CS_AST')
 
 

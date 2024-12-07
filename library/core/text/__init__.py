@@ -156,6 +156,12 @@ class Core_Line_View(R.Record):
 		c = self[fliwc:lliwc+1]
 		return c.copy(adjust_indent=extra_adjustment-(c.get_min_indent() or 0))
 
+	def indented(self, adjustment=1, normalized_indention=False):
+		if normalized_indention:
+			return self.copy(adjust_indent=adjustment-(self.get_min_indent() or 0))
+		else:
+			return self.copy(adjust_indent=adjustment)
+
 	def normal_str(self, indention=Symbol.Default):	#Shorthand
 		return self.normal().to_str(indention=indention)
 
@@ -207,6 +213,20 @@ class Immutable_Line_View(Core_Line_View):
 	@classmethod
 	def from_title_and_body(cls, title, body):
 		return cls(tuple(map(Immutable_Line.from_anything, (title, *body))))
+
+	#TODO implement these for all subclasses
+	@classmethod
+	def from_fragments(cls, fragments):
+		result = list()
+		for f in fragments:
+			match f:
+				case line_view if isinstance(line_view, ABC.Text.Line_View):	#TODO - proper handling of ABC
+					result.extend(map(Immutable_Line.from_anything, line_view.lines))
+
+				case unhandled:
+					raise Exception(f)
+
+		return cls(tuple(result))
 
 
 	def __init__(self, text=None):

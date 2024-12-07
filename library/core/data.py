@@ -141,3 +141,40 @@ class Identity_Reference:
 
 	def __repr__(self):
 		return f'<{self.__class__.__name__} to {self.target!r}>'
+
+
+class Abstract_Basic_Record:
+	def __init__(self, *positional_sources, **initializers):
+		for source in positional_sources:
+			match source:
+				case dict():
+					for key, value in source.items():
+						self.__setattr__(key, value)
+
+				case list() | Abstract_Basic_Record():
+					for key, value in source:
+						self.__setattr__(key, value)
+
+				case unhandled:
+					raise TypeError(type(source))
+
+		for key, value in initializers.items():
+			self.__setattr__(key, value)
+
+
+	def __dir__(self):
+		return sorted(iter(self))
+
+	def __iter__(self):
+		yield from self.__dict__.items()
+
+class Mutable_Basic_Record(Abstract_Basic_Record):
+	pass
+
+class Immutable_Basic_Record(Abstract_Basic_Record):
+	def __setattr__(self, key, value):
+		assert key not in self.__dict__, f'Attribute {key!r} already set for {self}.'
+		self.__dict__[key] = value
+
+	def __delattr__(self, key):
+		raise Exception(f'{self} is immutable.')

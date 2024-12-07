@@ -169,6 +169,7 @@ class Record(Core_Record):
 			assert info.mutable, f'Field {cls}.{name} ({info.owner}) is not mutable.'
 			super().__setattr__(name, value)
 
+#TODO - figure out why we wanted this and decide whether it is worthy of existing
 class Dynamic_Record(Core_Record):
 	def __setattr__(self, name, value):
 		if name.startswith('_'):

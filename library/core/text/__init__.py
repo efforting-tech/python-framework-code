@@ -92,6 +92,43 @@ class Mutable_Line(Core_Line):
 @ABC.Text.Line_View
 class Core_Line_View(R.Record):
 	lines:			R.Field(type=TY.Sequence(ABC.Text.Line))
+	parent:			R.Field() = None		#If parent is set we will track it with __getitem__
+
+
+
+
+	#NOTE - this is just a hack for now
+	def _resolve_root_index(self):
+		ptr = self
+		index = 0
+
+		while True:
+			match ptr:
+				case Core_Line_View():	#This should ultimately use ABC but since we are using a temporary implementation for this feature we will not for now
+					if ptr.parent:
+						if ptr is ptr.parent:
+							return ptr, index
+						ptr = ptr.parent
+					else:
+						return
+
+				case (p_ref, slice() as p_slice):
+					index += p_slice.start
+					ptr = p_ref
+
+				case unhandled:
+					raise Exception(unhandled)
+
+
+
+	#TODO - the whole parent thing is too messy now
+	@property
+	def root(self):
+		return self._resolve_root_index()[0]
+
+	@property
+	def root_index(self):
+		return self._resolve_root_index()[1]
 
 	def convert_tabs_to_spaces(self, spaces=4):
 		#TODO - the class should define a line type that is then used in the Field declaration
@@ -106,6 +143,7 @@ class Core_Line_View(R.Record):
 	def to_str(self, indention=Symbol.Default):
 		#TODO - should we have a type further down the type chain for custom newlines?
 		return '\n'.join(l.to_str(indention=indention) for l in self.lines)
+
 
 	@property
 	def is_empty(self):
@@ -194,7 +232,10 @@ class Core_Line_View(R.Record):
 
 	def __getitem__(self, index_or_slice):
 		if isinstance(index_or_slice, slice):
-			return type(self)(self.lines[index_or_slice])
+			if self.parent:
+				return type(self)(self.lines[index_or_slice], parent=(self.parent, index_or_slice))
+			else:
+				return type(self)(self.lines[index_or_slice])
 
 		return self.lines[index_or_slice]
 
@@ -223,13 +264,16 @@ class Immutable_Line_View(Core_Line_View):
 				case line_view if isinstance(line_view, ABC.Text.Line_View):	#TODO - proper handling of ABC
 					result.extend(map(Immutable_Line.from_anything, line_view.lines))
 
+				case str():
+					result.extend(map(Immutable_Line.from_anything, f.splitlines()))
+
 				case unhandled:
 					raise Exception(f)
 
 		return cls(tuple(result))
 
 
-	def __init__(self, text=None):
+	def __init__(self, text=None, **kw_args):	#TODO - we should not have to define our own init
 		#NOTE - we can't use match here because ABC nodes are not actually types
 
 		if text is None:
@@ -243,7 +287,7 @@ class Immutable_Line_View(Core_Line_View):
 		else:
 			raise TypeError(text)
 
-		super().__init__(lines)
+		super().__init__(lines, **kw_args)
 
 
 @ABC.Text.Line_View.Mutable
@@ -315,7 +359,7 @@ class Mutable_Line_View(Core_Line_View):
 
 		self.lines.insert(index, line)
 
-	def __init__(self, text=None):
+	def __init__(self, text=None, **kw_args):
 		#NOTE - we can't use match here because ABC nodes are not actually types
 
 
@@ -330,7 +374,7 @@ class Mutable_Line_View(Core_Line_View):
 		else:
 			raise TypeError(text)
 
-		super().__init__(lines)
+		super().__init__(lines, **kw_args)
 
 
 
@@ -378,7 +422,6 @@ class Core_Tree_View(Core_Line_View):
 			else:
 				last = i + 1
 
-				#if l.indent > first_indent:
 				if l.indent <= first_indent:
 					break
 
@@ -443,3 +486,5 @@ class Mutable_Tree_View(Core_Tree_View, Mutable_Line_View):
 
 	# 	else:
 	# 		super().write(source_item)
+
+

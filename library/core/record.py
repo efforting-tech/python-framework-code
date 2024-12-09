@@ -38,11 +38,6 @@ class Core_Record:
 							setattr(cls, name, getattr(base, name).create_child(getattr(cls, name, None)))
 
 
-
-
-
-
-
 					#TODO - maybe we should have Field_Replace as well which would take ownership. Then we could also have abstract fields which would be just like Field but be required to be implemented down the line
 					case Field_Update():
 						new_state = dict(pending_fields[name].__getstate__())	#BUGFIX - do not make shallow copy

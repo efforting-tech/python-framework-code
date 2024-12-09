@@ -46,6 +46,14 @@ def mep_anything_as_alias(dispatcher, node, result):
 	[alias] = result.value.match.groups()
 	return MEP_Capture_Data(rf'(?P<{alias}>.*)', 'anything', alias)
 
+@mnemonic_expression_parser.register_function(r'(?i:lazy text)')
+def mep_lazy_text(dispatcher, node, result):
+	return MEP_Capture_Data(r'(.+?)', 'text', 'text')
+
+@mnemonic_expression_parser.register_function(r'(?i:lazy text\s+as\s+(\w+))')
+def mep_lazy_text_as_alias(dispatcher, node, result):
+	[alias] = result.value.match.groups()
+	return MEP_Capture_Data(rf'(?P<{alias}>.+?)', 'text', alias)
 
 
 

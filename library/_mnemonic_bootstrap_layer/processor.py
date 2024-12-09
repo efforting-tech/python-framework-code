@@ -22,6 +22,7 @@ class Node_Handler_Description(R.Record):
 	ast: R.Field()
 	process_fields: R.Field(factory=dict)
 	additional_factories: R.Field(factory=dict)
+	additional_settings: R.Field(factory=dict)
 	body: R.Field() = MA.Requires_Empty
 
 	generate_field_list: R.Field() = False
@@ -60,6 +61,8 @@ class Abstract_Node_Handler(R.Record):
 			fields = dict()
 
 		def create_ast():
+			fields.update(self.description.additional_settings)
+
 			for f_name, f_val in tuple(fields.items()):
 				if (field_processor := self.description.process_fields.get(f_name)) is not None:
 					fields[f_name] = field_processor(f_val)
@@ -73,6 +76,7 @@ class Abstract_Node_Handler(R.Record):
 					result = result,
 					target = target,
 				))
+
 
 
 			return self.ast(**fields)

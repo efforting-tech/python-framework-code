@@ -5,7 +5,7 @@ F_AST = create_records('''
 	abstract_node: source
 		text: content
 
-		abstract_tree: title, body
+		abstract_tree: title, body, prefix_spacing, suffix_spacing
 			node
 			statement
 
@@ -21,10 +21,10 @@ CS_AST = create_records('''
 			note
 			inline_note
 
-		define_pythonic_inline_expression: pattern, body
+		define_pythonic_inline_expression: pattern, body, settings
 
 		unresolved_inline_expression: expression
-		custom_inline_expression: function, parameters
+		custom_inline_expression: function, parameters, additional_parameters
 
 ''', 'CS_AST')
 
@@ -32,7 +32,7 @@ CS_AST = create_records('''
 N_AST = create_records('''
 
 	ast_node: source
-		abstract_tree: title, body
+		abstract_tree: title, body, prefix_spacing, suffix_spacing
 			node
 			indirect_statement
 

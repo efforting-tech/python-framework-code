@@ -209,7 +209,7 @@ def load_abstract_base_classes():
 
 	def parse_abc_tree(parent, v):
 		for item in v.iter_nodes():
-			if title := title_extractor(item.title):
+			if item.title and (title := title_extractor(item.title)):
 				parse_abc_tree(parent.get_or_create(title), item.body)
 
 

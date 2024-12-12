@@ -38,7 +38,9 @@ class Abstract_Node_Handler(R.Record):
 	body: R.Field()
 
 	def process_node(self, target, dispatcher, node, result):
+		print('node.title', repr(node.title))
 		if (match := result.value.match) is not S.Miss:
+			print('MATCH', match)
 			fields = match.groupdict()
 
 			if not fields and not match.groups() and isinstance(self.ast, ABC.Symbol):
@@ -59,6 +61,7 @@ class Abstract_Node_Handler(R.Record):
 				return self.ast
 
 			fields = dict()
+
 
 		def create_ast():
 			fields.update(self.description.additional_settings)
@@ -81,12 +84,22 @@ class Abstract_Node_Handler(R.Record):
 
 			return self.ast(**fields)
 
+		print('Action for', self.body)
+
 		match self.body:
 
 			case MA.Store_Node_As(name, processor=processor):
 				match processor:
 					case Tree_Processor_Factory(dispatcher=sub_dispatcher):
-						fields[name] = sub_dispatcher.dispatch_tree(node.body).value	#TODO - maybe we want to have more control here, or be more explicit
+						if node.body:
+							print('node.body', repr(node.body.to_str()))	#FOUND THE PROBLEM! We are not properly enumerating the tree
+							print('node body tree', [n.title for n in node.body.iter_nodes()])
+							fields[name] = sub_dispatcher.dispatch_tree(node.body).value	#TODO - maybe we want to have more control here, or be more explicit
+						else:
+							print('No body!')
+							#TODO - we don't have any post processing here, should we? Assuming empty list
+							fields[name] = []
+
 
 					case cb if callable(cb):
 						raise NotImplementedError()

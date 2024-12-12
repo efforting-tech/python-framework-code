@@ -39,19 +39,23 @@ class Tree_View_Dispatcher(Dispatcher):
 			raise Exception(f'No match for {node.title!r} in {self!r}')	#TODO - default handler, better message
 
 	def dispatch_tree(self, node):
+		print('DT', [n.title for n in node.iter_nodes()])
 		result_aggregator = self.sequence_aggregator_type()
-		for sub_item in node.iter_nodes():
-			if not result_aggregator.accepting_work:
-				break
+		if node:
+			for sub_item in node.iter_nodes():
+				if not result_aggregator.accepting_work:
+					break
 
-			result_aggregator.aggregate(self.dispatch_node(sub_item))
+				result_aggregator.aggregate(self.dispatch_node(sub_item))
 
 		return result_aggregator
 
 
 	def dispatch_node(self, node):
+		print('DN', repr(node.to_str()), repr(node.title))
 		if (match := self.dispatch_item(node.title)) and match.value != S.Not_Set:
 			#Assume function for now
+			print(match.value.rule.action)
 			return match.value.rule.action(self, node, match)
 		else:
 			raise Exception(f'No match for {node.title!r} in {self!r}')	#TODO - default handler, better message

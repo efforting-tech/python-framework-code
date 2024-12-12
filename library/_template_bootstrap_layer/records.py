@@ -13,7 +13,6 @@ F_AST = create_records('''
 
 ''', 'F_AST')
 
-
 CS_AST = create_records('''
 
 	ast_node: source

@@ -29,13 +29,14 @@ class Indention_Wrapper:
 
 	def write(self, text):
 		self.pending += text
-		before, sep, after = self.pending.partition('\n')
 
-		if sep:
-			self.target.write(f'{self.level * self.indent_marker}{before}\n')
-			self.pending = after
-		else:
-			pass
+		while True:
+			before, sep, after = self.pending.partition('\n')
+			if sep:
+				self.target.write(f'{self.level * self.indent_marker}{before}\n')
+				self.pending = after
+			else:
+				break
 
 	def flush(self):
 		if self.pending:
@@ -46,6 +47,11 @@ class Indention_Wrapper:
 		self.pending = ''
 
 
+	def print(self, *text_pieces, end='\n', flush=False):
+		text = ' '.join(map(str, text_pieces))
+		self.write(f'{text}{end}')
+		if flush or end == '\n':
+			self.flush()
 
 
 	def increase_indent(self):
@@ -61,9 +67,6 @@ MISS = Local_Symbol('MISS')
 
 class Dumper(Indention_Wrapper):
 	exlude_glob = None
-
-	def print(self, text, end='\n'):
-		self.write(f'{text}{end}')
 
 	def dump(self, r, title=None):
 

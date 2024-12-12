@@ -31,6 +31,9 @@ def implement_node_tree_iteratively(item, bases=(R.Record,), module=None):
 			for m in members:
 				yield m.name, Local_Symbol(m.name)
 
+		case symbol if symbol is None:
+			pass
+
 		case unhandled:
 			raise Exception(unhandled)
 

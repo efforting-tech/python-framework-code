@@ -18,20 +18,21 @@ main.register(Node_Handler_Description(
 	),
 ))
 
-def calculate_prefix_spacing(context):
-	node = context['node']
-	root = node.root
-	index = node.root_index
-	spacing = 0
 
-	while index > 0:
-		index -= 1
-		if root.lines[index].is_empty:
-			spacing += 1
-		else:
-			break
+# def calculate_prefix_spacing(context):
+# 	node = context['node']
+# 	root = node.root
+# 	index = node.root_index
+# 	spacing = 0
 
-	return spacing
+# 	while index > 0:
+# 		index -= 1
+# 		if root.lines[index].is_empty:
+# 			spacing += 1
+# 		else:
+# 			break
+
+# 	return spacing
 
 
 
@@ -42,7 +43,7 @@ main.register(Node_Handler_Description(
 	additional_factories = dict(
 		title = (lambda context: parse_line(context['node'].title, context['node'])),
 		source = (lambda context: context['node']),
-		prefix_spacing = calculate_prefix_spacing,
+		#prefix_spacing = calculate_prefix_spacing,
 	),
 ))
 

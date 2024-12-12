@@ -92,7 +92,7 @@ class Mutable_Line(Core_Line):
 @ABC.Text.Line_View
 class Core_Line_View(R.Record):
 	lines:			R.Field(type=TY.Sequence(ABC.Text.Line))
-	parent:			R.Field() = None		#If parent is set we will track it with __getitem__
+	parent:			R.Field() = None		#If parent is set we will track it with __getitem__  (Though we might abandond this for a better tree view class)
 
 
 

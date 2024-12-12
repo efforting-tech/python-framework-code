@@ -1,6 +1,9 @@
+
 #This is testing out a tracking tree view that we need in order to continue matcher_factory_test6.py
 from efforting.mvp6.core.text import Immutable_Line_View
 from efforting.mvp6.core import record as R
+
+
 
 #TODO debug printer for text blocks
 
@@ -53,7 +56,9 @@ source = Immutable_Line_View.from_str('''
 
 
 
-
+#Maybe we really need to make some sort of difference whether it is a tree or a node
+#We should possibly also track levels and stuff for child views instead of trying to figure it out
+#TODO: We should rewrite this viewer in tracking_tree_view_3.py and make sure it works properly
 class Tree_View_Interface(R.Record):
 	line_view: R.Field()
 	index: R.Field() = 0
@@ -69,9 +74,12 @@ class Tree_View_Interface(R.Record):
 		if self.title:
 			return self.line_view[self.index].indent
 		else:
-			return self.line_view.get_min_indent()
+			return self.sub_view.get_min_indent()
 
 	def iter_nodes(self):
+		if self.empty:
+			return
+
 		local_indent = self.level
 		index = self.index
 		last_root_index = None
@@ -99,26 +107,43 @@ class Tree_View_Interface(R.Record):
 			if local_index > last_content_index:
 				yield Tree_View_Interface(self.line_view, last_content_index, local_index-last_content_index, True)
 
+	def to_str(self):
+		return '\n'.join(l.to_str() for l in self.line_view.lines[self.index:self.index+self.length])
 
 	@property
 	def body(self):
-		print(self.str_lines)
 		if self.title:
 			return Tree_View_Interface(self.line_view, self.index+1, self.length-1, False)
 
 	@property
 	def str_lines(self):
-		return tuple(l.text for l in self.line_view.lines[self.index:self.index+self.length])
+		return tuple(l.to_str() for l in self.line_view.lines[self.index:self.index+self.length])
 
 	@property
 	def sub_view(self):
 		return self.line_view[self.index:self.index+self.length]
 
+t = Tree_View_Interface(source, length=len(source.lines))
 
-t = Tree_View_Interface(source)
 
 
 #TODO - current issue is that when we dispatch tree we get empty nodes that we fail on
 
-from efforting.mvp6._template_bootstrap_layer.processor import main
-r = main.dispatcher.dispatch_tree(t)
+#DEBUG: Currently the problem is that we get an empty body because we don't have a title
+
+def dump_tree(t, i=0):
+	import textwrap
+	print(f"{'  '*i}{t}")
+	print(textwrap.indent(render_non_printables(t.to_str()), '  '*i))
+
+	for sub_node in t.iter_nodes():
+		dump_tree(sub_node, i+1)
+
+
+
+
+#dump_tree(t)
+
+#from efforting.mvp6._template_bootstrap_layer.processor import main
+#print('...')
+#r = main.dispatcher.dispatch_tree(t)

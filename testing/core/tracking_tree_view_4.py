@@ -1,6 +1,9 @@
 from efforting.mvp6.core import record as R
 from efforting.mvp6.core.text import Immutable_Line_View
 from efforting.mvp6.core.symbol import Enum
+from efforting.mvp6.core.dispatcher.tree_view import Tree_View_Dispatcher
+from efforting.mvp6.core.dispatcher.rules import Unconditional_Rule, Core_Rule, Regex_Rule
+from tracking_tree_view_2 import render_non_printables
 
 Tree_Node_Classification = Enum('Tree_Node_Classification',
 	'Empty',
@@ -99,7 +102,7 @@ class Tree_Node(R.Record):
 			yield from enumerate(self.state.source[self.start:self.start + self.length], self.start)
 
 	def to_str(self):
-		return '\n'.join(line.text for (index, line) in self.iter_lines())
+		return '\n'.join(line.to_str() for (index, line) in self.iter_lines())
 
 	def compute_min_indention_level(self):
 		lines = tuple(line.indent for (index, line) in self.iter_lines(True))
@@ -153,34 +156,95 @@ root = Tree_Node.from_str('''
 	Here is another node
 		With another body
 
-	And even more
+
+	Here is even more
 		freakin nodes
 		and such!
 
 ''')
 
 
-from efforting.mvp6.template_system.introspection import Indention_Wrapper, Indention_Wrapper_Context
-from tracking_tree_view_2 import render_non_printables
+import textwrap
+import re
+from efforting.mvp6 import ABC
+
+class Tree_View_Regex_Rule(Core_Rule):	#TODO - override signature so we can have action in core_rule but still have regex_rule(cond, act)
+	pattern: R.Field(type=ABC.Regex.Compiled)
+	action: R.Field() = True
+
+	def match(self, item):
+		return self.pattern.fullmatch(item.title)
 
 
-stderr = Indention_Wrapper()
-stderr_indent = Indention_Wrapper_Context(stderr)
+tvd = Tree_View_Dispatcher()
+@tvd.register(Tree_View_Regex_Rule, re.compile('^Here is(.*)'))
+def func(context, dispatcher, node, result):
+	print(f'We found yet {result.value.match.group(1).strip()} with {node.count_body_nodes()} sub nodes.')
+	if node.body:
+		print('Here are the sub nodes:')
+		for s in node.body.iter_nodes():
+			print(repr(s.to_str()))
+			#print(textwrap.indent(render_non_printables(s.to_str()), '  '))
 
 
-def dump_tree(node):
-	stderr.print(node, repr(node.title), node.classification)
-	stderr.print(render_non_printables(node.to_str()))
+class Core_Match(R.Record):
+	rule: R.Field()
 
-	if node.is_node and node.body:
-		with stderr_indent:
-			for sub_node in node.body.iter_nodes():
-				dump_tree(sub_node)
-	elif node.is_tree:
-		with stderr_indent:
-			for sub_node in node.iter_nodes():
-				dump_tree(sub_node)
+class Node_Classification_Match(Core_Match):
+	classification: R.Field()
+
+def represent_classification_set(self, field, info):
+	inner = ', '.join(sorted(i.__name__ for i in getattr(self, field)))
+	return f'{field}={{{inner}}}'
+
+class Node_Classification_Rule(Core_Rule):
+	classification_set: R.Field(repr=represent_classification_set)
+	action: R.Field() = True
+
+	def match(self, item):
+		if (classification := item.classification) in self.classification_set:
+			return Node_Classification_Match(self, classification)
 
 
-dump_tree(root)
+@tvd.register(Node_Classification_Rule, {
+	Tree_Node_Classification.Malformed_Tree,
+	Tree_Node_Classification.Malformed_Node,
+ })
+def dfunc(context, dispatcher, node, result):
+	print(f'Warning - skipping malformed node: {node}')
+
+
+
+
+
+#print(dir(tvd.regulations.fallback_rule))
+
+#print(tvd.regulations.fallback_rule.)
+
+tvd.bound_dispatch_tree('context', root)
+
+
+# from efforting.mvp6.template_system.introspection import Indention_Wrapper, Indention_Wrapper_Context
+# from tracking_tree_view_2 import render_non_printables
+
+
+# stderr = Indention_Wrapper()
+# stderr_indent = Indention_Wrapper_Context(stderr)
+
+
+# def dump_tree(node):
+# 	stderr.print(node, repr(node.title), node.classification)
+# 	stderr.print(render_non_printables(node.to_str()))
+
+# 	if node.is_node and node.body:
+# 		with stderr_indent:
+# 			for sub_node in node.body.iter_nodes():
+# 				dump_tree(sub_node)
+# 	elif node.is_tree:
+# 		with stderr_indent:
+# 			for sub_node in node.iter_nodes():
+# 				dump_tree(sub_node)
+
+
+# dump_tree(root)
 

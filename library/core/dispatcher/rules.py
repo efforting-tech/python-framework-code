@@ -1,6 +1,9 @@
 from .. import record as R
 from ... import ABC
 
+#TODO - conditions should probably be separate and then we just use a simple rule in all the places
+#		this will make it easier to reuse conditions in different rules
+
 #TODO - we should probably remove regex_rule and unconditional_rule here and just use the data conditions
 
 #TODO - maybe the action field should be renamed, maybe value is better, but then instead of rule maybe we should call it conditional value?

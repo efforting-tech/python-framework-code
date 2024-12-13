@@ -245,7 +245,7 @@ class Immutable_Line_View(Core_Line_View):
 
 	@classmethod
 	def from_str(cls, value):	#NOTE - we must use different one for mutable sub classes
-		return cls(tuple(map(Immutable_Line.from_anything, value.splitlines())))
+		return cls(tuple(map(Immutable_Line.from_anything, value.split('\n'))))		#NOTE - replaced splitlines with split but we should probably use a configuration option
 
 	@classmethod
 	def from_lines(cls, lines):
@@ -265,7 +265,7 @@ class Immutable_Line_View(Core_Line_View):
 					result.extend(map(Immutable_Line.from_anything, line_view.lines))
 
 				case str():
-					result.extend(map(Immutable_Line.from_anything, f.splitlines()))
+					result.extend(map(Immutable_Line.from_anything, f.split('\n')))		#NOTE - replaced splitlines with split but we should probably use a configuration option
 
 				case unhandled:
 					raise Exception(f)
@@ -279,7 +279,7 @@ class Immutable_Line_View(Core_Line_View):
 		if text is None:
 			lines = ()
 		elif isinstance(text, ABC.String):
-			lines = tuple(map(Immutable_Line, text.splitlines()))
+			lines = tuple(map(Immutable_Line, text.split('\n')))		#NOTE - replaced splitlines with split but we should probably use a configuration option
 		elif isinstance(text, ABC.Sequence):
 			#TODO - now we are just assuming this is a sequence of lines but we should really use the conversion system to make this flexible
 			assert isinstance(text, (tuple, list))
@@ -297,7 +297,7 @@ class Mutable_Line_View(Core_Line_View):
 
 	@classmethod
 	def from_str(cls, value):
-		return cls(list(map(Mutable_Line.from_anything, value.splitlines())))
+		return cls(list(map(Mutable_Line.from_anything, value.split('\n'))))		#NOTE - replaced splitlines with split but we should probably use a configuration option
 
 	@classmethod
 	def from_lines(cls, lines):
@@ -366,7 +366,7 @@ class Mutable_Line_View(Core_Line_View):
 		if text is None:
 			lines = list()
 		elif isinstance(text, ABC.String):
-			lines = list(map(Mutable_Line, text.splitlines()))
+			lines = list(map(Mutable_Line, text.split('\n')))		#NOTE - replaced splitlines with split but we should probably use a configuration option
 		elif isinstance(text, ABC.Sequence):
 			#TODO - now we are just assuming this is a sequence of lines but we should really use the conversion system to make this flexible
 			assert isinstance(text, (tuple, list))

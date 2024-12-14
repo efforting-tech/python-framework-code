@@ -1,7 +1,13 @@
 from efforting.mvp6._template_bootstrap_layer.processor import main, inline_expression_processor, Node_Handler_Description
 from efforting.mvp6._template_bootstrap_layer.context import template_implementation_context
 from efforting.mvp6._template_bootstrap_layer.implementation import iteratively_implement_template
-from efforting.mvp6.core.text import Immutable_Tree_View
+from efforting.mvp6.core.text.tree import Tree_Node
+
+
+#For keeping to regular ascii I am thinking
+# Statement prefix: ##==   escape: ##==!
+# Inline <<== expression ==>>
+# Escaped <<==! expression !==>>		These escapes should also inside the expression as well
 
 #TODO - I think what we really need now is an improved tree view where we can also store information about spacing between nodes
 #		Maybe we can render an Immutable_Tree_View into a better hierarchial variant specifically for source tracking
@@ -15,7 +21,7 @@ from efforting.mvp6.core.text import Immutable_Tree_View
 #BUG - next problem is the old problem with preserving blank spaces in nodes. We must investigate why this happens. If it is the Immutable_Tree_View or later.
 
 
-from efforting.mvp6._template_bootstrap_layer.records import N_AST, CS_AST
+from efforting.mvp6._template_bootstrap_layer.records import N_AST, CS_AST, F_AST
 
 from efforting.mvp6.core.data import Mutable_Basic_Record, Data_Stack
 
@@ -57,25 +63,29 @@ from efforting.mvp6.core.data import Mutable_Basic_Record, Data_Stack
 # '''))
 
 
-
-source = Immutable_Tree_View.from_str('''
+source = Tree_Node.from_str('''
 
 	A
 
+	§ note: Here is a note
+		With some content
 
+	«note: this inline note will cut off the above note»
 ''')
-source.parent = source
+
+
+
+#source.parent = source
 r = main.dispatcher.dispatch_tree(source)
 
 
 ctx = template_implementation_context()
+
+
+
 res = tuple(iteratively_implement_template(ctx, r.value))
 
 #res[-1].suffix_spacing = 1	#TODO - we are manually adding this now because we don't have a mechanism to calculate it yet
-
-print(res[0].body)	#Why is body = ()
-
-
 
 # EXPERIMENT
 
@@ -138,12 +148,12 @@ class immutable_text_tree_template_renderer(abstract_template_renderer):
 
 	def _render_body(self, item):
 		match item:
-			case N_AST.node(title=title, body=body):
+			case N_AST.node(title=title, body=body, indent=indent):
 				#print('node:', 'title', title, 'body', body)
 				rendered_title = self._render_title(title)
-				rendered_body = self._render_body(body)
+				rendered_body = self._render_body(body) # .indented(normalized_indention=True)
 				#print('node:', 'rendered_title', rendered_title, 'rendered_body', rendered_body)
-				return Immutable_Tree_View.from_title_and_body(rendered_title, rendered_body.indented(normalized_indention=True))
+				return Tree_Node.from_lines(l.rstrip() for l in Tree_Node.from_title_and_body(rendered_title, rendered_body).indented(indent))
 
 			case N_AST.indirect_statement(title=title, body=body):
 				print('indirect statement NOT IMPLEMENTED YET:', 'title', title, 'body', body)
@@ -168,7 +178,7 @@ class immutable_text_tree_template_renderer(abstract_template_renderer):
 				def compile_function(context):
 					field_names = [f.name for f in context['node_handler'].description.field_list]	#TODO- worry about duplicate names
 					arguments = ', '.join((*field_names, *additional_names))
-					result = Immutable_Tree_View.from_title_and_body(f'def pythonic_inline_expression({arguments}):', body.indented(normalized_indention=True))
+					result = Tree_Node.from_title_and_body(f'def pythonic_inline_expression({arguments}):', body.indented(normalized_indention=True))
 
 					#TODO - support contexts and stuff
 					scope = dict()
@@ -198,13 +208,15 @@ class immutable_text_tree_template_renderer(abstract_template_renderer):
 			case (*list_of_sub_items,):
 				fragments = list()
 				for sub_item in list_of_sub_items:
-					fragments.extend('\n' for i in range(sub_item.prefix_spacing))
+					#fragments.extend('\n' for i in range(sub_item.prefix_spacing))
 					if (sub_result := self._render_body(sub_item)) is not None:
 						fragments.append(sub_result)
-						fragments.extend('\n' for i in range(sub_item.suffix_spacing or 0))
+						#fragments.extend('\n' for i in range(sub_item.suffix_spacing or 0))
 
-				return Immutable_Tree_View.from_fragments(fragments)
+				return Tree_Node.from_fragments(fragments)
 
+			case F_AST.empty_lines(source, count):
+				return Tree_Node.from_empty_line_count(count)
 
 			case unhandled:
 				raise Exception(unhandled)
@@ -216,10 +228,12 @@ class immutable_text_tree_template_renderer(abstract_template_renderer):
 
 
 
+
+from tracking_tree_view_2 import render_non_printables
 tr = immutable_text_tree_template_renderer(res)
 result = tr.render()
-print('-'*20)
-print(result.to_str())
+print(render_non_printables(result.to_str()))
+
 
 #OUTPUT:
 

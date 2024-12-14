@@ -63,6 +63,9 @@ class Core_Line(R.Record):
 class Immutable_Line(Core_Line):
 	text: 			R.Field_Update(type=ABC.String, mutable=False)
 
+	def rstrip(self, chars=None):
+		return type(self)(self.text.rstrip(chars))
+
 	@classmethod
 	def from_anything(cls, value):
 		match value:

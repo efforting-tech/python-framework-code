@@ -35,6 +35,10 @@ main.register(Node_Handler_Description(
 # 	return spacing
 
 
+@main.dispatcher.register_empty_function()
+def empty(dispatcher, node, result):
+	return F_AST.empty_lines(node, len(node)-1)
+
 
 main.register(Node_Handler_Description(
 	pattern = Default_Handler,
@@ -43,6 +47,7 @@ main.register(Node_Handler_Description(
 	additional_factories = dict(
 		title = (lambda context: parse_line(context['node'].title, context['node'])),
 		source = (lambda context: context['node']),
+		indent = (lambda context: context['node'].title_indent),
 		#prefix_spacing = calculate_prefix_spacing,
 	),
 ))

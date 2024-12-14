@@ -27,12 +27,12 @@ def iteratively_implement_template(context, item):
 			for sub_item in list_of_items:
 				yield from iteratively_implement_template(context, sub_item)
 
-		case F_AST.node(source, title, body, prefix_spacing=prefix_spacing):
+		case F_AST.node(source, title, body, indent):
 			n_title = tuple(iteratively_implement_title(context, item, title))
 			n_body = tuple(iteratively_implement_template(context, body))
-			yield N_AST.node(item, n_title, n_body, prefix_spacing=prefix_spacing)
+			yield N_AST.node(item, n_title, n_body, indent)
 
-		case F_AST.statement(source, title, body, prefix_spacing=prefix_spacing):
+		case F_AST.statement(source, title, body):
 			match tuple(iteratively_implement_title(context, item, title)):
 				case [str(title_text)]:
 					#print('STATEMENT TEXT', title_text)
@@ -42,11 +42,14 @@ def iteratively_implement_template(context, item):
 					#One thing to consider here is that if the expression evaluates to a non indirect statement this statement could be treated like a direct one.
 					#But we may still opt to not do that in order to allow it to be interpreted differently at some future point in a different context.
 					#I guess this could be controlled by the context - we could have an optional optimization function we could call.
-					yield N_AST.indirect_statement(item, list_of_items, body, prefix_spacing=prefix_spacing)
+					yield N_AST.indirect_statement(item, list_of_items, body)
 
 				case unmatched:
 					raise Exception(unmatched)
 
+		case F_AST.empty_lines(source, count):
+			yield item
+
 		case unmatched:
-			raise Exception(type(item))
+			raise Exception(type(item), item)
 

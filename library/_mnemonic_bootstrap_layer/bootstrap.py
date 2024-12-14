@@ -5,9 +5,9 @@ from .processor import Tree_Processor_Factory, Node_Handler_Description
 
 #Bootstrap factory
 BSF = Tree_Processor_Factory()
-processor_def = BSF.create_processor('processor_def')
-simple_ast_node_processor = BSF.create_processor('simple_ast_node_processor')
-simple_symbol_processor = BSF.create_processor('simple_symbol_processor')
+processor_def = BSF.create_processor('processor_def', ignore_empty=True)
+simple_ast_node_processor = BSF.create_processor('simple_ast_node_processor', ignore_empty=True)
+simple_symbol_processor = BSF.create_processor('simple_symbol_processor', ignore_empty=True)
 
 simple_ast_node_tree = BSF.create_simple_ast_node('simple_ast_node_tree', 'members')
 simple_ast_type = BSF.create_simple_ast_node('simple_ast_type', 'name', 'members', 'children')
@@ -31,7 +31,6 @@ simple_ast_node_processor.register(Node_Handler_Description(
 		members = csloi,
 	),
 ))
-
 
 simple_symbol_processor.register(Node_Handler_Description(
 	pattern = '{name}',

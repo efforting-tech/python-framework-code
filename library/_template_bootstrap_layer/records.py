@@ -4,8 +4,8 @@ F_AST = create_records('''
 
 	abstract_node: source
 		text: content
-
-		abstract_tree: title, body, prefix_spacing, suffix_spacing
+		empty_lines: count
+		abstract_tree: title, body, indent
 			node
 			statement
 
@@ -31,7 +31,7 @@ CS_AST = create_records('''
 N_AST = create_records('''
 
 	ast_node: source
-		abstract_tree: title, body, prefix_spacing, suffix_spacing
+		abstract_tree: title, body, indent
 			node
 			indirect_statement
 

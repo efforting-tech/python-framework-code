@@ -1,9 +1,10 @@
-from efforting.mvp6.core import record as R
-from efforting.mvp6.core.text import Immutable_Line_View
-from efforting.mvp6.core.symbol import Enum
-from efforting.mvp6.core.dispatcher.tree_view import Tree_View_Dispatcher
-from efforting.mvp6.core.dispatcher.rules import Unconditional_Rule, Core_Rule, Regex_Rule
-from tracking_tree_view_2 import render_non_printables
+from ..symbol import Enum
+from .. import record as R
+from . import Immutable_Line_View
+
+#This is specifically for dealing with a line view as a tree
+#This should replace the current trees we have but we also need a mutable tree
+#So we will leave the old stuff in there til we have fixed this
 
 Tree_Node_Classification = Enum('Tree_Node_Classification',
 	'Empty',
@@ -13,7 +14,6 @@ Tree_Node_Classification = Enum('Tree_Node_Classification',
 	'Node',
 	'Unclassified',
 )
-
 
 
 
@@ -64,6 +64,18 @@ class Tree_Node(R.Record):
 		return self.state.source[self.start].text.strip()
 
 	@property
+	def title_text(self):
+		return self.state.source[self.start].text
+
+	@property
+	def title_line(self):
+		return self.state.source[self.start]
+
+	@property
+	def title_indent(self):
+		return self.state.source[self.start].indent
+
+	@property
 	def classification(self):
 
 		#Flags
@@ -91,9 +103,44 @@ class Tree_Node(R.Record):
 		return cls.from_line_view(Immutable_Line_View.from_str(text))
 
 	@classmethod
+	def from_lines(cls, lines):
+		return cls.from_line_view(Immutable_Line_View.from_lines(lines))
+
+	@classmethod
+	def from_empty_line_count(cls, count):
+		return cls.from_line_view(Immutable_Line_View.from_str('\n'*count))
+
+	@classmethod
+	def from_fragments(cls, fragments):
+		c_fragments = list()
+		for frag in fragments:	#NOTE - uggly hack for now - we should have a unified interface for these trees
+			if isinstance(frag, cls):
+				c_fragments.append(frag.state.source)
+			else:
+				c_fragments.append(frag)
+		return cls.from_line_view(Immutable_Line_View.from_fragments(c_fragments))
+
+	@classmethod
+	def from_title_and_body(cls, title, body):
+
+		c_body = list()
+		for frag in body:	#NOTE - uggly hack for now - we should have a unified interface for these trees
+			if isinstance(frag, cls):
+				c_body.append(frag.state.source)
+			else:
+				c_body.append(frag)
+
+
+
+		return cls.from_line_view(Immutable_Line_View.from_title_and_body(title, c_body))
+
+	@classmethod
 	def from_line_view(cls, view, **config_options):
 		config = Tree_State_Configuration(**config_options)
 		return cls(Tree_State(view, config), start=0, length=len(view))
+
+	def indented(self, adjustment=1, normalized_indention=False):
+		return type(self).from_line_view(self.state.source[self.start:self.start+self.length].indented(adjustment, normalized_indention))
 
 	def iter_lines(self, only_with_content=False):
 		if only_with_content:
@@ -110,6 +157,7 @@ class Tree_Node(R.Record):
 
 	def iter_nodes(self):
 		if (base_indent := self.compute_min_indention_level()) is None:
+			yield self	#TODO - is this correct?
 			return
 
 		last_index = next(self.iter_lines(False))[0]	#TODO - handle StopIteration
@@ -136,85 +184,30 @@ class Tree_Node(R.Record):
 						yield pending_chunk
 
 
-
 		if pending_chunk := emit_chunk(self.start + self.length):
 			#print('TAIL PEND', pending_chunk, repr(pending_chunk.to_str()))
 			if pending_chunk.length:
 				yield pending_chunk
 
+
+	def __iter__(self):
+		yield from self.state.source[self.start:self.start+self.length]
+
+	def __len__(self):
+		return self.length
+
+	def __getitem__(self, index_or_slice):
+		if isinstance(index_or_slice, slice):
+			return type(self).from_lines(self.state.source)
+		else:
+			return self.state.source[index_or_slice]
+
 	@property
 	def body(self):
-		if self.title:
+		if self.title and self.length:
 			if length := self.length - 1:
 				return Tree_Node(self.state, start=self.start+1, length=length)
 
 
-root = Tree_Node.from_str('''
-		Hello World!
-			This is a test
-
-	Here is another node
-		With another body
-
-
-	Here is even more
-		freakin nodes
-		and such!
-
-''')
-
-
-import textwrap
-import re
-from efforting.mvp6 import ABC
-
-class Tree_View_Regex_Rule(Core_Rule):	#TODO - override signature so we can have action in core_rule but still have regex_rule(cond, act)
-	pattern: R.Field(type=ABC.Regex.Compiled)
-	action: R.Field() = True
-
-	def match(self, item):
-		return self.pattern.fullmatch(item.title)
-
-
-tvd = Tree_View_Dispatcher()
-@tvd.register(Tree_View_Regex_Rule, re.compile('^Here is(.*)'))
-def func(context, dispatcher, node, result):
-	print(f'We found yet {result.value.match.group(1).strip()} with {node.count_body_nodes()} sub nodes.')
-	if node.body:
-		print('Here are the sub nodes:')
-		for s in node.body.iter_nodes():
-			print(repr(s.to_str()))
-			#print(textwrap.indent(render_non_printables(s.to_str()), '  '))
-
-
-class Core_Match(R.Record):
-	rule: R.Field()
-
-class Node_Classification_Match(Core_Match):
-	classification: R.Field()
-
-def represent_classification_set(self, field, info):
-	inner = ', '.join(sorted(i.__name__ for i in getattr(self, field)))
-	return f'{field}={{{inner}}}'
-
-class Node_Classification_Rule(Core_Rule):
-	classification_set: R.Field(repr=represent_classification_set)
-	action: R.Field() = True
-
-	def match(self, item):
-		if (classification := item.classification) in self.classification_set:
-			return Node_Classification_Match(self, classification)
-
-
-@tvd.register(Node_Classification_Rule, {
-	Tree_Node_Classification.Malformed_Tree,
-	Tree_Node_Classification.Malformed_Node,
- })
-def dfunc(context, dispatcher, node, result):
-	print(f'Warning - skipping malformed node: {node}')
-
-
-
-
-
-tvd.bound_dispatch_tree('context', root)
+	def __repr__(self):
+		return f'<{type(self).__qualname__} title={self.title!r} length={self.length}{"" if self.body else " EMPTY"}>'

@@ -1,4 +1,4 @@
-from ..core.text import Immutable_Tree_View
+from ..core.text.tree import Tree_Node
 from .tokenizer import template_tokenizer
 from .processor import template_statement_processor, inline_expression_processor
 
@@ -7,10 +7,14 @@ class template_implementation_context:
 		return inline_expression_processor.dispatcher.bound_dispatch_node(dict(
 			context = self,
 			parent = parent,
-		), Immutable_Tree_View.from_str(expression))
+		), Tree_Node.from_str(expression))
 
 	def compile_statement(self, source, title, body):
-		statement_node = Immutable_Tree_View.from_title_and_body(title, body.normal(1))
+
+		#TODO - we should look these up only on the title and then pass the body as an argument instead of reconstructing a new node
+
+		statement_node = Tree_Node.from_title_and_body(title, body.indented(normalized_indention=True))
+
 		return template_statement_processor.dispatcher.bound_dispatch_node(dict(
 			context = self,
 			source = source,

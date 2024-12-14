@@ -2,7 +2,8 @@ from .. import ABC
 from .. import Symbol as S
 from ..core import record as R
 from ..core.dispatcher.rules import Unconditional_Rule
-from ..core.dispatcher.tree_view import Tree_View_Regex_Dispatcher
+from ..core.dispatcher.tree_view import Tree_View_Dispatcher
+from ..core.text.tree import Tree_Node_Classification
 from ..symbol_factory import Local_Symbol
 
 from . import actions as MA
@@ -38,9 +39,7 @@ class Abstract_Node_Handler(R.Record):
 	body: R.Field()
 
 	def process_node(self, target, dispatcher, node, result):
-		print('node.title', repr(node.title))
 		if (match := result.value.match) is not S.Miss:
-			print('MATCH', match)
 			fields = match.groupdict()
 
 			if not fields and not match.groups() and isinstance(self.ast, ABC.Symbol):
@@ -84,21 +83,38 @@ class Abstract_Node_Handler(R.Record):
 
 			return self.ast(**fields)
 
-		print('Action for', self.body)
 
 		match self.body:
 
 			case MA.Store_Node_As(name, processor=processor):
 				match processor:
 					case Tree_Processor_Factory(dispatcher=sub_dispatcher):
+						#TODO - I don't think we should have a bunch of logic here at all
 						if node.body:
-							print('node.body', repr(node.body.to_str()))	#FOUND THE PROBLEM! We are not properly enumerating the tree
-							print('node body tree', [n.title for n in node.body.iter_nodes()])
-							fields[name] = sub_dispatcher.dispatch_tree(node.body).value	#TODO - maybe we want to have more control here, or be more explicit
+							fields[name] = sub_dispatcher.dispatch_tree(node.body).value
 						else:
-							print('No body!')
-							#TODO - we don't have any post processing here, should we? Assuming empty list
 							fields[name] = []
+							#print(node, len(node)-1)
+
+
+						# c = node.classification
+
+						# if c is Tree_Node_Classification.Tree:
+						# 	print('TREE', node)
+						# 	exit()
+						# 	#fields[name] = sub_dispatcher.dispatch_tree(node.body).value	#TODO - maybe we want to have more control here, or be more explicit
+						# elif c is Tree_Node_Classification.Node:
+						# 	fields[name] = sub_dispatcher.dispatch_tree(node.body).value	#TODO - maybe we want to have more control here, or be more explicit
+						# elif node.classification is Tree_Node_Classification.Empty:
+						# 	print('empty', repr(node.to_str()))
+						# 	#TODO - not sure what is going on here - maybe I should revisit the template building a bit
+						# 	fields[name] = sub_dispatcher.dispatch_tree(node.body).value	#TODO - maybe we want to have more control here, or be more explicit
+						# else:
+						# 	#TODO - we don't have any post processing here, should we? Assuming empty list
+						# 	print('NOT EMTP!Y', node, node.classification, repr(node.to_str()))
+						# 	exit()
+						# 	pass
+						# 	#fields[name] = sub_dispatcher.dispatch_tree(node).value	#TODO - maybe we want to have more control here, or be more explicit
 
 
 					case cb if callable(cb):
@@ -124,7 +140,7 @@ class Abstract_Node_Handler(R.Record):
 
 
 			case symbol if symbol is MA.Requires_Empty:
-				assert not node.body.to_str().strip()
+				assert not node.body #.to_str().strip()
 				match self.ast:
 					case Local_Symbol():
 						assert not fields
@@ -150,11 +166,16 @@ class Tree_Processor_Factory(R.Record):
 	ast_directory: R.Field(factory=dict)
 	processor_directory: R.Field(factory=dict)
 	tokenizer: R.Field() = main_tokenizer
-	dispatcher: R.Field(factory=Tree_View_Regex_Dispatcher)
+	dispatcher: R.Field(factory=Tree_View_Dispatcher)
 
-	def create_processor(self, name, ast_directory=None, processor_directory=None, tokenizer=None):
+	def create_processor(self, name, ast_directory=None, processor_directory=None, tokenizer=None, ignore_empty=False):
 		result = self.processor_directory[name] = Tree_Processor_Factory(name, ast_directory or self.ast_directory, processor_directory or self.processor_directory, tokenizer or self.tokenizer)
+		if ignore_empty:
+			result.set_ignore_empty_function()
 		return result
+
+	def set_ignore_empty_function(self):
+		self.dispatcher.register_empty_function()(lambda *x: None)	#TODO - should be a symbol that means no action but this is not implemented in core.dispatcher.tree_view yet
 
 	def register(self, handler):
 
@@ -179,9 +200,9 @@ class Tree_Processor_Factory(R.Record):
 				handler.field_list = translate_tokens_to_captures(tokens)
 
 			regex = re.compile(translate_tokens_to_regex(tokens), re.I)
-			self.dispatcher.register_function(regex)(Node_Handler(handler, ast, handler.body))
+			self.dispatcher.register_regex_function(regex)(Node_Handler(handler, ast, handler.body))
 		elif regex := handler.regex:
-			self.dispatcher.register_function(regex)(Node_Handler(handler, ast, handler.body))
+			self.dispatcher.register_regex_function(regex)(Node_Handler(handler, ast, handler.body))
 
 
 

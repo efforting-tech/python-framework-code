@@ -153,7 +153,7 @@ class Dependency_Computer(R.Record):
 			case A.Emit(value=value):
 				self.feed(value)
 
-			case A.Wrap() | str():
+			case A.Wrap() | A.Wrap_Match() | str() | A.Literal():
 				pass
 
 
@@ -185,12 +185,12 @@ class MVP_Emit_Value(MVP_Action):
 	value: R.Field()
 
 	def process(self, state):
-		if isinstance(self.value, MVP_Action):
+		value = self.value
+		while isinstance(value, MVP_Action):
 			value = self.value.process(state)
-		else:
-			value = self.value
 
 		state.result.emit(value)
+
 
 class MVP_Wrap_Value(MVP_Action):
 	wrapper: R.Field()
@@ -201,9 +201,11 @@ class MVP_Wrap_Value(MVP_Action):
 
 class MVP_Wrap_Match(MVP_Action):
 	wrapper: R.Field()
+	forward_positionals: R.Field()
+	forward_named: R.Field()
 
 	def process(self, state):
-		value = self.wrapper(state.token.match)
+		value = self.wrapper(state.token.match, *self.forward_positionals, **self.forward_named)
 		return value
 
 class MVP_Raise_Exception(MVP_Action):
@@ -238,6 +240,7 @@ class MVP_Return_From_Tokenizer(MVP_Action):
 			state.result.tokens.append(result_tokens)
 
 		state.token_stream.source = String_Interface.regex_tokenize(state.text, state.sub_tokenizer.tokens, state.token.match.end())
+
 
 
 class MVP_Sub_Tokenizer(R.Record):
@@ -315,19 +318,25 @@ class MVP_Tokenizer_Factory(R.Record):
 		return result
 
 
-	def resolve_action(self, action):
+	def resolve_action(self, action, strict=True):
 		match action:
 
 			case MVP_Enter_Tokenizer(tokenizer, wrapper, unpack):
 				return MVP_Enter_Tokenizer(self.lut_acceleration_structure_by_name[tokenizer], wrapper, unpack)
 
 			case MVP_Emit_Value(value):
-				return MVP_Emit_Value(self.resolve_action(value))
+				return MVP_Emit_Value(self.resolve_action(value, strict=False))
 
-			case MVP_Wrap_Value() | MVP_Wrap_Match() | MVP_Raise_Exception() | str():
+			case MVP_Wrap_Value() | MVP_Wrap_Match() | MVP_Raise_Exception():
 				return action
 
 			case _ if action is MVP_Return_From_Tokenizer:
+				return action
+
+			case MVP_Action():
+				raise Exception(unhandled)
+
+			case unhandled if strict == False:
 				return action
 
 			case unhandled:
@@ -358,11 +367,11 @@ class MVP_Tokenizer_Factory(R.Record):
 			case A.Wrap(wrapper):
 				return MVP_Wrap_Value(wrapper)
 
-			case A.Wrap_Match(wrapper):
-				return MVP_Wrap_Match(wrapper)
+			case A.Wrap_Match(wrapper, positional, named):
+				return MVP_Wrap_Match(wrapper, positional, named)
 
-			case str(value):
-				return value
+			case str(value) | A.Literal(value=value):
+				return MVP_Emit_Value(value)
 
 			case _ if source is A.Raise_Exception:
 				return MVP_Raise_Exception('Unspecified Exception')

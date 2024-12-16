@@ -17,11 +17,16 @@ class Action_Sequence(R.Record):
 class Emit(R.Record):
 	value: R.Field()
 
+class Literal(R.Record):
+	value: R.Field()
+
 class Wrap(R.Record):
 	wrapper: R.Field()
 
 class Wrap_Match(R.Record):
 	wrapper: R.Field()
+	forward_positionals: R.Field(kind=S.Member.Kind.All_Positional)
+	forward_named: R.Field(kind=S.Member.Kind.All_Named)
 
 Raise_Exception = Symbol('Raise_Exception')
 Return = Symbol('Return')

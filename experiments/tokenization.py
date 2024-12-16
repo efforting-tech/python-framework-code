@@ -2,6 +2,7 @@ from efforting.tech.template1.core.text.tokenization import Tokenization_Specifi
 from efforting.tech.template1.core.text.tokenization import actions as A
 from efforting.tech.template1.core import records as R
 from efforting.tech.template1.core.text.tokenization.factory import MVP_Tokenizer_Factory
+from efforting.tech.template1.core.symbols import Symbol
 
 #This is a good start - next session we should do the indention line thing (also see core.text)
 
@@ -16,21 +17,36 @@ class Abstract_Token(R.Record):
 class Raw_Expression(Abstract_Token):
 	pass
 
+class Indention(Abstract_Token):
+	pass
+
 class Text(Abstract_Token):
 	pass
 
+class Escape(Abstract_Token):
+	escaped: R.Field()
 
+class Token(Abstract_Token):
+	type: R.Field()
+
+NEW_LINE = Symbol('NEW_LINE')
+STATEMENT = Symbol('STATEMENT')
 
 #This is a specification for a tokenizer
+tt_common = Tokenization_Specifier('tt_common')
 tt_spec = Tokenization_Specifier('tt_spec')
 tt_expression = Tokenization_Specifier('tt_expression')
 tt_escape = Tokenization_Specifier('tt_escape')
 
-tt_escape.register_literal_token('<<==!', A.Emit('<<=='))	#TODO - we should have a way to know the original so we can recreate original text
-tt_escape.register_literal_token('!==>>', A.Emit('==>>'))
 
+tt_common.register_regex_token(r'(?m:^[\t ]+)', A.Emit(A.Wrap_Match(Indention)))	#NOTE - allowing zero width matching here hangs the regex, so we will have to check lines manually
+tt_common.register_regex_token(r'\n', A.Emit(A.Wrap_Match(Token, NEW_LINE)))
 
-#TODO - escape sequence for tt_spec? ChatGPT suggests: tt_expression.register_escape_sequence('\\»', A.Emit(A.Wrap_Literal('»')))
+tt_escape.include_tokenizer(tt_common)
+tt_escape.register_literal_token('<<==!', A.Emit(A.Wrap_Match(Escape, '<<==')))
+tt_escape.register_literal_token('!==>>', A.Emit(A.Wrap_Match(Escape, '==>>')))
+tt_escape.register_literal_token('##==!', A.Emit(A.Wrap_Match(Escape, '##==')))
+
 
 tt_expression.include_tokenizer(tt_escape)
 tt_expression.register_literal_token('==>>', A.Return)
@@ -40,13 +56,106 @@ tt_expression.register_default(A.Emit(A.Wrap_Match(Raw_Expression)))
 tt_spec.include_tokenizer(tt_escape)
 tt_spec.register_literal_token('==>>', A.Raise_Exception)
 tt_spec.register_literal_token('<<==', A.Enter_Tokenizer(tt_expression, unpack=True))
+tt_spec.register_literal_token('##==', A.Emit(A.Wrap_Match(Token, STATEMENT)))
+
 tt_spec.register_default(A.Emit(A.Wrap_Match(Text)))
 
 template_tokenizer = MVP_Tokenizer_Factory.implement_tokenizer(tt_spec)
 
-print(template_tokenizer.tokenize('''
+tokens = template_tokenizer.tokenize('''
 
 	Hello World! Here is the <<== inline expression ==>>!
 	This is a <<==! literal thing
 
-'''))
+	##==! Not a statement
+
+	##== IS as a statement
+		with a body too
+
+''').tokens
+
+
+def split_tokens_into_lines(tokens, start=0, preserve_ends=True):
+	last = start
+	for index, item in enumerate(tokens[start:], start):
+		match item:
+			case Token(type=token_type) if token_type is NEW_LINE:
+				count = index - last
+				if count:
+					yield last, index - (0 if preserve_ends else 1)
+				last = index + 1
+
+	index += 1
+	count = index - last
+	if count:
+		print(last, index, count)
+		yield last, index
+
+
+def freeze(item):
+	match item:
+		case set():
+			return frozen_set(map(freeze, item))
+
+		case dict():	#dict does preserve insertion order so we don't reorder it
+			return tuple(map(freeze, item.items()))
+
+		case tuple():
+			return tuple(map(freeze, item))
+
+		case bytes() | str() | int() | float() | type():
+			return item
+
+		case unhandled:
+			raise Exception(item)
+
+
+
+
+
+import math, colorsys
+
+def value_to_color_spiral(value):
+	# Spiral parameters
+	num_spins =3
+	hue = value
+	saturation = 0.6 + 0.4 * math.sin(2 * math.pi * num_spins * value)
+	lightness = 0.5 + 0.3 * math.cos(2 * math.pi * num_spins * value)
+
+	# Convert HSL to RGB
+	r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation**0.4)
+	return int(r * 255), int(g * 255), int(b * 255)
+
+
+
+
+state_set = set()
+
+lines = tuple(split_tokens_into_lines(tokens, preserve_ends=True))
+for (l, r) in lines:
+	for t in tokens[l:r+1]:
+		t_state = dict(t.__getstate__())
+		match = t_state.pop('match')
+		t_state['__class__'] = type(t)
+		state_set.add(freeze(t_state))
+
+color = dict()
+for i, s in enumerate(sorted(state_set, key=repr)):
+	R, G, B = value_to_color_spiral(i / len(state_set))
+	color[s] = f"\033[38;2;{R};{G};{B}m"
+
+
+
+del state_set
+
+result = ''
+for (l, r) in lines:
+	for t in tokens[l:r+1]:
+		t_state = dict(t.__getstate__())
+		match = t_state.pop('match')
+		t_state['__class__'] = type(t)
+		printable = match.group().replace('\n', '↵\n').replace(' ', '␣').replace('\t', '↹ ')
+
+		result += f'{color[freeze(t_state)]}{printable}'
+
+print(result, end='\033[0m')

@@ -16,7 +16,7 @@ Symbol = S('Symbol',
 	S('Not_Set'),
 	S('Member',
 		E('Kind',
-			EM('Positional_or_Named'),
+			EM('Positional_or_Named'),	#TODO - add descriptions to these factories
 			EM('Positional'),
 			EM('Named'),
 			EM('All_Positional'),

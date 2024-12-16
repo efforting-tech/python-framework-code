@@ -3,9 +3,7 @@ from efforting.tech.template1.core.text.tokenization import actions as A
 from efforting.tech.template1.core import records as R
 from efforting.tech.template1.core.text.tokenization.factory import MVP_Tokenizer_Factory
 from efforting.tech.template1.core.symbols import Symbol
-
-#This is a good start - next session we should do the indention line thing (also see core.text)
-
+import math, colorsys
 
 class Abstract_Token(R.Record):
 	match: R.Field()
@@ -110,11 +108,6 @@ def freeze(item):
 			raise Exception(item)
 
 
-
-
-
-import math, colorsys
-
 def value_to_color_spiral(value):
 	# Spiral parameters
 	num_spins =3
@@ -126,36 +119,3 @@ def value_to_color_spiral(value):
 	r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation**0.4)
 	return int(r * 255), int(g * 255), int(b * 255)
 
-
-
-
-state_set = set()
-
-lines = tuple(split_tokens_into_lines(tokens, preserve_ends=True))
-for (l, r) in lines:
-	for t in tokens[l:r+1]:
-		t_state = dict(t.__getstate__())
-		match = t_state.pop('match')
-		t_state['__class__'] = type(t)
-		state_set.add(freeze(t_state))
-
-color = dict()
-for i, s in enumerate(sorted(state_set, key=repr)):
-	R, G, B = value_to_color_spiral(i / len(state_set))
-	color[s] = f"\033[38;2;{R};{G};{B}m"
-
-
-
-del state_set
-
-result = ''
-for (l, r) in lines:
-	for t in tokens[l:r+1]:
-		t_state = dict(t.__getstate__())
-		match = t_state.pop('match')
-		t_state['__class__'] = type(t)
-		printable = match.group().replace('\n', '↵\n').replace(' ', '␣').replace('\t', '↹ ')
-
-		result += f'{color[freeze(t_state)]}{printable}'
-
-print(result, end='\033[0m')

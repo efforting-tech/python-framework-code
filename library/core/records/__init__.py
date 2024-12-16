@@ -107,11 +107,21 @@ class Core_Record:
 					instance = self,
 				)
 
-				if info.factory:
-					if isinstance(info.factory, ABC.Factory.Contextual):
-						pending_value = info.factory(factory_context)
-					else:
+				match info.factory:
+					case ABC.Factory.Contextual() as factory:
+						pending_value = factory(factory_context)
+
+					case str() as function_name:
+						pending_value = getattr(self, function_name)()
+
+					case function if callable(function):
 						pending_value = info.factory()
+
+					case nothing if nothing is None:
+						pass
+
+					case unhandled:
+						raise TypeError(info.factory)
 
 				factory_context = factory_context['parent']
 

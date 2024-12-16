@@ -84,8 +84,9 @@ def split_tokens_into_lines(tokens, start=0, preserve_ends=True):
 	index += 1
 	count = index - last
 	if count:
-		print(last, index, count)
-		yield last, index
+		#NOTE - this logic has not been properly thought through but it works in this one instance
+		#print(last, index, count)
+		yield last, index - 1
 
 
 def freeze(item):

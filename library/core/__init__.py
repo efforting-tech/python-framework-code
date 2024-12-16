@@ -27,6 +27,12 @@ Symbol = S('Symbol',
 	E('Action',
 		EM('Raise_Exception'),
 	),
+	E('Indention_Mode',
+		EM('Default'),
+		EM('Spaces'),
+		EM('Tabulators'),
+		EM('Mixed'),
+	),
 )
 
 set_enum_qual_names(Symbol, skip_root=True)

@@ -77,10 +77,8 @@ def split_tokens_into_lines(tokens, start=0, preserve_ends=True):
 	last = start
 	for index, item in enumerate(tokens[start:], start):
 		match item:
-			case Token(type=token_type) if token_type is NEW_LINE:
-				count = index - last
-				if count:
-					yield last, index - (0 if preserve_ends else 1)
+			case Token(type=token_type) if token_type is NEW_LINE:		#Because we match a non zero width character we can be sure that the line is at least one token in length.
+				yield last, index - (0 if preserve_ends else 1)
 				last = index + 1
 
 	index += 1

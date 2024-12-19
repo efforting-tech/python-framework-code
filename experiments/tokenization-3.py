@@ -17,7 +17,9 @@ text = '''
 	##== IS as a statement
 		with a body too
 
+
 '''
+
 
 
 @ABC.Factory.Contextual
@@ -162,6 +164,10 @@ class Tree_Reference(R.Record):
 	children: R.Field(factory='_init_children')
 	indention_mode: R.Field() = S.Indention_Mode.Tabulators
 
+	@property
+	def line_count(self):
+		return self.last_line - self.first_line + 1
+
 	def _init_last_line(self):
 		return len(self.document) - 1
 
@@ -170,29 +176,34 @@ class Tree_Reference(R.Record):
 
 		result = list()
 		last_index = self.first_line
-		#last_index = next(self.iter_lines(False))[0]	#TODO - handle StopIteration
 
-		def add_chunk(index):
+		def add_chunk(index, can_be_whole=False):
 			nonlocal last_index
-			if (last_index, index) == (self.first_line, self.last_line):
+			#print((last_index, index), (self.first_line, self.last_line))
+			if (not can_be_whole) and (last_index, index) == (self.first_line, self.last_line):
 				return
-			print('Add chunk', last_index, index, '..', self.first_line, self.last_line)
-			result.append(Tree_Reference(self.document, last_index, index))
+			#print('Add chunk', last_index, index, '..', self.first_line, self.last_line)
+
+			result.append(Tree_Reference(self.document, last_index, index-1))
 			last_index = index
 
 		for index, line in self.iter_lines(True):
 			indent = self.compute_indent(index)
 			if indent == base_indent:
-				add_chunk(index)
+				#print(repr(line.text))
+				#if not result and index > self.first_line:
+					#print('Possible head', add_chunk(index - 1))
+				add_chunk(index, True)
 
-		#Adding the tail causes infinite recursion now, we might need to guard it
 		add_chunk(self.last_line)
+		#print('result', result)
+
 
 		return tuple(result)
 
 
 	def iter_lines(self, only_with_content=False):
-		for index in range(self.first_line, self.last_line - self.first_line + 1):
+		for index in range(self.first_line, self.last_line + 1):
 			line = self.document[index]
 			if only_with_content and not line.body_span:
 				continue
@@ -202,6 +213,10 @@ class Tree_Reference(R.Record):
 	def title(self):
 		if body_text := self.document[self.first_line].body_text:
 			return body_text.strip()
+
+	@property
+	def text(self):
+		return '\n'.join(l.text for i, l in self.iter_lines())
 
 	@property
 	def title_line(self):
@@ -235,8 +250,16 @@ class Tree_Reference(R.Record):
 
 tr = Tree_Reference(Document(text))
 
+# print('-'*50)
+
+# for i, l in tr.iter_lines():
+# 	print(f'{l.text!r:80}{l}')
+
+# print('-'*50)
+
 for index, child in enumerate(tr.children):
-	print(index, repr(child.title))
+	print(index, repr(child.title), repr(child.text))
+
 #print(repr(tr.title))
 
 #root = Tree_Reference.from_str(text)
@@ -245,3 +268,33 @@ for index, child in enumerate(tr.children):
 
 # for line in Document(text):
 # 	print(line.first_non_indent_token, repr(line.indent), repr(line.body))
+
+state_set = set()
+for index, line in tr.iter_lines():
+	l, r = line.start, line.end
+	for t in tr.document.tokens[l:r+1]:
+		t_state = dict(t.__getstate__())
+		match = t_state.pop('match')
+		t_state['__class__'] = type(t)
+		state_set.add(freeze(t_state))
+
+
+color = dict()
+for i, s in enumerate(sorted(state_set, key=repr)):
+	R, G, B = value_to_color_spiral(i / len(state_set))
+	color[s] = f"\033[38;2;{R};{G};{B}m"
+
+
+result = ''
+for index, line in tr.iter_lines():
+	l, r = line.start, line.end
+
+	for t in tr.document.tokens[l:r+1]:
+		t_state = dict(t.__getstate__())
+		match = t_state.pop('match')
+		t_state['__class__'] = type(t)
+		printable = match.group().replace('\n', '↵\n').replace(' ', '␣').replace('\t', '↹ ')
+
+		result += f'{color[freeze(t_state)]}{printable}'
+
+print(result, end='\033[0m')

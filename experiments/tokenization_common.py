@@ -60,19 +60,6 @@ tt_spec.register_default(A.Emit(A.Wrap_Match(Text)))
 
 template_tokenizer = MVP_Tokenizer_Factory.implement_tokenizer(tt_spec)
 
-tokens = template_tokenizer.tokenize('''
-
-	Hello World! Here is the <<== inline expression ==>>!
-	This is a <<==! literal thing
-
-	##==! Not a statement
-
-	##== IS as a statement
-		with a body too
-
-''').tokens
-
-
 def split_tokens_into_lines(tokens, start=0, preserve_ends=True):
 	last = start
 	for index, item in enumerate(tokens[start:], start):

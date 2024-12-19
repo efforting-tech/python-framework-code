@@ -7,18 +7,25 @@ import re
 #In this experiment we will investigate how we can turn this into a tree
 #We will also identify lines that represent statements - this will be different from our traditional regex based criteria since we must check the first token of the line
 
-text = '''
+# text = '''
 
-	Hello World! Here is the <<== inline expression ==>>!
-	This is a <<==! literal thing
-\t
-	##==! Not a statement
+# 	Hello World! Here is the <<== inline expression ==>>!
+# 	This is a <<==! literal thing
+# \t
+# 	##==! Not a statement
 
-	##== IS as a statement
-		with a body too
+# 	##== IS as a statement
+# 		with a body too
+
+# <<==HELLO==>>'''
 
 
-'''
+
+#Experiment
+
+text = '''<<==HELLO==>> TAIL
+HEAD <<==HELLO==>>
+FINAL <<==HELLO==>>'''
 
 
 
@@ -177,28 +184,23 @@ class Tree_Reference(R.Record):
 		result = list()
 		last_index = self.first_line
 
-		def add_chunk(index, can_be_whole=False):
+		def add_chunk(index, is_last=False):
 			nonlocal last_index
-			#print((last_index, index), (self.first_line, self.last_line))
-			if (not can_be_whole) and (last_index, index) == (self.first_line, self.last_line):
+			if is_last and (last_index, index) == (self.first_line, self.last_line):
 				return
-			#print('Add chunk', last_index, index, '..', self.first_line, self.last_line)
 
-			result.append(Tree_Reference(self.document, last_index, index-1))
+			if is_last and last_index > index - 1:
+				result.append(Tree_Reference(self.document, last_index, index))
+			else:
+				result.append(Tree_Reference(self.document, last_index, index-1))
 			last_index = index
 
 		for index, line in self.iter_lines(True):
 			indent = self.compute_indent(index)
 			if indent == base_indent:
-				#print(repr(line.text))
-				#if not result and index > self.first_line:
-					#print('Possible head', add_chunk(index - 1))
-				add_chunk(index, True)
+				add_chunk(index)
 
-		add_chunk(self.last_line)
-		#print('result', result)
-
-
+		add_chunk(self.last_line, True)
 		return tuple(result)
 
 
@@ -250,51 +252,78 @@ class Tree_Reference(R.Record):
 
 tr = Tree_Reference(Document(text))
 
-# print('-'*50)
-
-# for i, l in tr.iter_lines():
-# 	print(f'{l.text!r:80}{l}')
-
-# print('-'*50)
 
 for index, child in enumerate(tr.children):
-	print(index, repr(child.title), repr(child.text))
+	print(index, child.first_line, child.last_line)
+	for index, line in child.iter_lines():
+		print('   ', repr(line.text))
 
-#print(repr(tr.title))
+#OUTPUT 1
 
-#root = Tree_Reference.from_str(text)
-
-
-
-# for line in Document(text):
-# 	print(line.first_non_indent_token, repr(line.indent), repr(line.body))
-
-state_set = set()
-for index, line in tr.iter_lines():
-	l, r = line.start, line.end
-	for t in tr.document.tokens[l:r+1]:
-		t_state = dict(t.__getstate__())
-		match = t_state.pop('match')
-		t_state['__class__'] = type(t)
-		state_set.add(freeze(t_state))
+# 0 0 -1
+# 1 0 0
+#     'HELLO==>> TAIL\n'
+# 2 1 1
+#     'HEAD <<==HELLO==>>\n'
+# 3 2 2
+#     'FINAL <<==HELLO'
 
 
-color = dict()
-for i, s in enumerate(sorted(state_set, key=repr)):
-	R, G, B = value_to_color_spiral(i / len(state_set))
-	color[s] = f"\033[38;2;{R};{G};{B}m"
+
+def format_tree_and_color_by_token(tree, color_function=value_to_color_spiral):
+	state_set = set()
+	previous_position = 0
+	for index, line in tree.iter_lines():
+		l, r = line.start, line.end
+		for t in tree.document.tokens[l:r+1]:
+			t_state = dict(t.__getstate__())
+			match = t_state.pop('match')
+			t_state['__class__'] = type(t)
+
+			if (head_length := match.start() - previous_position):
+				state_set.add(None)
+
+			state_set.add(freeze(t_state))
+			previous_position = match.end()
 
 
-result = ''
-for index, line in tr.iter_lines():
-	l, r = line.start, line.end
+	color = dict()
+	for i, s in enumerate(sorted(state_set, key=repr)):
+		R, G, B = color_function(i / len(state_set))
+		color[s] = f"\033[38;2;{R};{G};{B}m"
 
-	for t in tr.document.tokens[l:r+1]:
-		t_state = dict(t.__getstate__())
-		match = t_state.pop('match')
-		t_state['__class__'] = type(t)
-		printable = match.group().replace('\n', '↵\n').replace(' ', '␣').replace('\t', '↹ ')
+	result = ''
+	previous_position = 0
+	for index, line in tree.iter_lines():
+		l, r = line.start, line.end
 
-		result += f'{color[freeze(t_state)]}{printable}'
+		for t in tree.document.tokens[l:r+1]:
+			t_state = dict(t.__getstate__())
+			match = t_state.pop('match')
+			t_state['__class__'] = type(t)
+			printable = match.group().replace('\n', '↵\n').replace(' ', '␣').replace('\t', '↹ ')
 
-print(result, end='\033[0m')
+			if (head_length := match.start() - previous_position):
+				state_set.add(None)
+				inner = tree.document.text[previous_position:match.start()]
+				result += f'{color[None]}{inner}'
+
+			result += f'{color[freeze(t_state)]}{printable}'
+			previous_position = match.end()
+
+	tail = tree.document.text[previous_position:]
+	if tail:
+		result += f'{color[None]}{tail}'
+
+
+	result += '\033[0m'
+	return result
+
+print(format_tree_and_color_by_token(tr))
+
+#OUTPUT 2 (nicely colored)
+
+# <<==HELLO==>>␣TAIL↵
+# HEAD␣<<==HELLO==>>↵
+# FINAL␣<<==HELLO==>>
+

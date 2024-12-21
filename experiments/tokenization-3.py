@@ -194,7 +194,8 @@ class Tree_Reference(R.Record):
 			if is_last and last_index > index - 1:
 				result.append(Tree_Reference(self.document, last_index, index))
 			else:
-				result.append(Tree_Reference(self.document, last_index, index-1))
+				if index > 0:
+					result.append(Tree_Reference(self.document, last_index, index-1))
 			last_index = index
 
 		for index, line in self.iter_lines(True):
@@ -255,10 +256,10 @@ class Tree_Reference(R.Record):
 tr = Tree_Reference(Document(text))
 
 
-#for index, child in enumerate(tr.children):
-	#print(index, child.first_line, child.last_line)
-	#for index, line in child.iter_lines():
-		#print('   ', repr(line.tokens))
+for index, child in enumerate(tr.children):
+	print(index, child.first_line, child.last_line, repr(child.title))
+	for index, line in child.iter_lines():
+		print('   ', repr(line.text))
 
 #OUTPUT 1
 

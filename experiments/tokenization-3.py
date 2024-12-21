@@ -24,7 +24,9 @@ import re
 #Experiment
 
 text = '''<<==HELLO==>> TAIL
-HEAD <<==HELLO==>>
+HEAD <<==HELLO <<==!NESTED HELLO!==>> ==>>
+##== Statement
+	with body
 FINAL <<==HELLO==>>'''
 
 
@@ -253,10 +255,10 @@ class Tree_Reference(R.Record):
 tr = Tree_Reference(Document(text))
 
 
-for index, child in enumerate(tr.children):
-	print(index, child.first_line, child.last_line)
-	for index, line in child.iter_lines():
-		print('   ', repr(line.text))
+#for index, child in enumerate(tr.children):
+	#print(index, child.first_line, child.last_line)
+	#for index, line in child.iter_lines():
+		#print('   ', repr(line.tokens))
 
 #OUTPUT 1
 
@@ -280,8 +282,8 @@ def format_tree_and_color_by_token(tree, color_function=value_to_color_spiral):
 			match = t_state.pop('match')
 			t_state['__class__'] = type(t)
 
-			if (head_length := match.start() - previous_position):
-				state_set.add(None)
+			#if (head_length := match.start() - previous_position):
+			#	state_set.add(None)
 
 			state_set.add(freeze(t_state))
 			previous_position = match.end()
@@ -304,22 +306,37 @@ def format_tree_and_color_by_token(tree, color_function=value_to_color_spiral):
 			printable = match.group().replace('\n', '↵\n').replace(' ', '␣').replace('\t', '↹ ')
 
 			if (head_length := match.start() - previous_position):
-				state_set.add(None)
+				#state_set.add(None)
 				inner = tree.document.text[previous_position:match.start()]
-				result += f'{color[None]}{inner}'
+				#result += f'{color[None]}{inner}'
+				result += f'\033[7;39m{inner}\033[0m'
+
+
 
 			result += f'{color[freeze(t_state)]}{printable}'
 			previous_position = match.end()
 
 	tail = tree.document.text[previous_position:]
 	if tail:
-		result += f'{color[None]}{tail}'
+		#result += f'{color[None]}{tail}'
+		result += f'\033[7;39m{tail}\033[0m'
 
 
 	result += '\033[0m'
-	return result
+	return result, color
 
-print(format_tree_and_color_by_token(tr))
+result, colors = format_tree_and_color_by_token(tr)
+import textwrap
+
+print('\033[1;4mResult\033[0m')
+print(textwrap.indent(result, '    '))
+print()
+print('\033[1;4mLegend\033[0m')
+for key, col in sorted(colors.items(), key=repr):
+	d = dict(key)
+	c = d.pop('__class__')
+	di = ' '.join(f'{k}={v!r}' for k,v in d.items())
+	print(f'    {col}\033[3m{c.__qualname__}({di})\033[0m')
 
 #OUTPUT 2 (nicely colored)
 

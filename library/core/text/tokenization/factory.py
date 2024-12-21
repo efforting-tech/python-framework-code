@@ -143,7 +143,10 @@ class Dependency_Computer(R.Record):
 			case Rule():
 				self.feed(item.action)
 
-			case _ if item in (None, A.Return, A.Raise_Exception):
+			case A.Return():
+				pass
+
+			case _ if item in (None, A.Raise_Exception):
 				pass
 
 			case A.Enter_Tokenizer(target=tokenizer):
@@ -173,10 +176,19 @@ class MVP_Enter_Tokenizer(MVP_Action):
 	tokenizer: R.Field()
 	wrapper: R.Field() = None
 	unpack: R.Field() = False
+	attach_ingress: R.Field() = False
 
 	def process(self, state):
+		sub_result = list()
+
+		if self.attach_ingress:
+			if isinstance(self.attach_ingress, MVP_Action):
+				sub_result.append(self.attach_ingress.process(state))
+			else:
+				sub_result.append(state.token)
+
 		state.push_tokenizer(self.tokenizer)
-		state.push_result_tokens([])
+		state.push_result_tokens(sub_result)
 		state.push_wrapper(self.wrapper)
 		state.push_unpack(self.unpack)
 		state.token_stream.source = String_Interface.regex_tokenize(state.text, state.sub_tokenizer.tokens, state.token.match.end())
@@ -226,10 +238,17 @@ class MVP_Raise_Exception(MVP_Action):
 #TODO - We need to figure out a good way of adding tracking information, maybe as a side channel
 
 class MVP_Return_From_Tokenizer(MVP_Action):
-	@staticmethod
-	def process(state):
+	attach_egress: R.Field() = False
+
+	def process(self, state):
 		state.pop_tokenizer()
 		result_tokens = state.pop_result_tokens()
+
+		if self.attach_egress:
+			if isinstance(self.attach_egress, MVP_Action):
+				result_tokens.append(self.attach_egress.process(state))
+			else:
+				result_tokens.append(state.token)
 
 		if wrapper := state.pop_wrapper():
 			result_tokens = wrapper(result_tokens)
@@ -321,8 +340,8 @@ class MVP_Tokenizer_Factory(R.Record):
 	def resolve_action(self, action, strict=True):
 		match action:
 
-			case MVP_Enter_Tokenizer(tokenizer, wrapper, unpack):
-				return MVP_Enter_Tokenizer(self.lut_acceleration_structure_by_name[tokenizer], wrapper, unpack)
+			case MVP_Enter_Tokenizer(tokenizer, wrapper, unpack, attach_ingress):
+				return MVP_Enter_Tokenizer(self.lut_acceleration_structure_by_name[tokenizer], wrapper, unpack, attach_ingress=attach_ingress)
 
 			case MVP_Emit_Value(value):
 				return MVP_Emit_Value(self.resolve_action(value, strict=False))
@@ -330,11 +349,11 @@ class MVP_Tokenizer_Factory(R.Record):
 			case MVP_Wrap_Value() | MVP_Wrap_Match() | MVP_Raise_Exception():
 				return action
 
-			case _ if action is MVP_Return_From_Tokenizer:
+			case MVP_Return_From_Tokenizer():
 				return action
 
 			case MVP_Action():
-				raise Exception(unhandled)
+				raise Exception(action)
 
 			case unhandled if strict == False:
 				return action
@@ -355,8 +374,10 @@ class MVP_Tokenizer_Factory(R.Record):
 
 	def implement_action(self, source):
 		match source:
-			case A.Enter_Tokenizer(target, wrapper=wrapper, unpack=unpack):
-				return MVP_Enter_Tokenizer(target.name, wrapper=wrapper, unpack=unpack)
+			case A.Enter_Tokenizer(target, wrapper=wrapper, unpack=unpack, attach_ingress=attach_ingress):
+				if not isinstance(attach_ingress, bool):
+					attach_ingress = self.implement_action(attach_ingress)
+				return MVP_Enter_Tokenizer(target.name, wrapper=wrapper, unpack=unpack, attach_ingress=attach_ingress)
 
 			case A.Wrapped_Chain_Tokenizer(target, wrapper):
 				return wrapped_chain_tokenizer(target.name, wrapper)
@@ -370,14 +391,16 @@ class MVP_Tokenizer_Factory(R.Record):
 			case A.Wrap_Match(wrapper, positional, named):
 				return MVP_Wrap_Match(wrapper, positional, named)
 
+			case A.Return(attach_egress=attach_egress):
+				if not isinstance(attach_egress, bool):
+					attach_egress = self.implement_action(attach_egress)
+				return MVP_Return_From_Tokenizer(attach_egress=attach_egress)
+
 			case str(value) | A.Literal(value=value):
 				return MVP_Emit_Value(value)
 
 			case _ if source is A.Raise_Exception:
 				return MVP_Raise_Exception('Unspecified Exception')
-
-			case _ if source is A.Return:
-				return MVP_Return_From_Tokenizer
 
 			case unhandled:
 				raise Exception(source)
@@ -429,6 +452,7 @@ class Tokenization_State(R.Record):
 	action: R.Field()
 	token: R.Field()
 	unpack: R.Field() = False
+
 	tokenizer_stack: R.Field(factory=Stack)
 	wrapper_stack: R.Field(factory=Stack)
 	unpack_stack: R.Field(factory=Stack)
@@ -471,3 +495,4 @@ class Tokenization_State(R.Record):
 		unpack = self.unpack
 		self.unpack = self.unpack_stack.pop()
 		return unpack
+

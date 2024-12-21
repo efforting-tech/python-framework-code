@@ -28,6 +28,10 @@ class Symbol(type):
 	def __call__(self):
 		raise Exception('Symbols are singletons')
 
+	def __repr__(self):
+		return f'{self.__module__}.{self.__qualname__}'
+
+
 class Enum(Symbol):
 	pass
 

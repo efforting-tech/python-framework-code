@@ -24,11 +24,13 @@ class Text(Abstract_Token):
 class Escape(Abstract_Token):
 	escaped: R.Field()
 
+
 class Token(Abstract_Token):
 	type: R.Field()
 
 NEW_LINE = Symbol('NEW_LINE')
 STATEMENT = Symbol('STATEMENT')
+KEY_TOKEN = Symbol('KEY_TOKEN')
 
 #This is a specification for a tokenizer
 tt_common = Tokenization_Specifier('tt_common')
@@ -47,13 +49,13 @@ tt_escape.register_literal_token('##==!', A.Emit(A.Wrap_Match(Escape, '##==')))
 
 
 tt_expression.include_tokenizer(tt_escape)
-tt_expression.register_literal_token('==>>', A.Return)
+tt_expression.register_literal_token('==>>', A.Return(attach_egress=A.Wrap_Match(Token, KEY_TOKEN)))
 tt_expression.register_default(A.Emit(A.Wrap_Match(Raw_Expression)))
 
 
 tt_spec.include_tokenizer(tt_escape)
 tt_spec.register_literal_token('==>>', A.Raise_Exception)
-tt_spec.register_literal_token('<<==', A.Enter_Tokenizer(tt_expression, unpack=True))
+tt_spec.register_literal_token('<<==', A.Enter_Tokenizer(tt_expression, unpack=True, attach_ingress=A.Wrap_Match(Token, KEY_TOKEN)))
 tt_spec.register_literal_token('##==', A.Emit(A.Wrap_Match(Token, STATEMENT)))
 
 tt_spec.register_default(A.Emit(A.Wrap_Match(Text)))

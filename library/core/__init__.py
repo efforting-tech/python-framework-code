@@ -14,6 +14,7 @@ set_qual_names(ABC, skip_root=True)
 
 Symbol = S('Symbol',
 	S('Not_Set'),
+	S('Automatic'),
 	S('Member',
 		E('Kind',
 			EM('Positional_or_Named'),	#TODO - add descriptions to these factories

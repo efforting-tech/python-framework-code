@@ -14,6 +14,9 @@ set_qual_names(ABC, skip_root=True)
 
 Symbol = S('Symbol',
 	S('Not_Set'),
+	S('Table',
+		S('Row_Index'),
+	),
 	S('Automatic'),
 	S('Member',
 		E('Kind',
@@ -23,7 +26,7 @@ Symbol = S('Symbol',
 			EM('All_Positional'),
 			EM('All_Named'),
 			EM('Hierarchial'),	#TODO - what was the purpose?
-		)
+		),
 	),
 	E('Action',
 		EM('Raise_Exception'),

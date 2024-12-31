@@ -27,4 +27,4 @@ class Document(R.Record):
 
 	def __getitem__(self, index):
 		l, r = self.lines[index]
-		return Line_Reference(self, l, r)
+		return Line_Reference(self, index, l, r)

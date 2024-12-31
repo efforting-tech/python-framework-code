@@ -125,8 +125,29 @@ class Core_Record:
 
 				factory_context = factory_context['parent']
 
+
+			match info.post_process:
+				# case ABC.Factory.Contextual() as factory:
+				# 	pending_value = factory(factory_context)
+
+				case str() as function_name:
+					pending_value = getattr(self, function_name)(pending_value)
+
+				# case function if callable(function):
+				# 	pending_value = info.factory()
+
+				case nothing if nothing is None:
+					pass
+
+				case unhandled:
+					raise TypeError(info.factory)
+
+
+
 			if pending_value != S.Not_Set:
 				super().__setattr__(name, pending_value)
+
+
 
 
 
@@ -202,6 +223,7 @@ class Core_Field_Record:
 	mutable:		Optional[bool] = True
 	owner:			Optional[type] = None
 	factory:		Optional[callable] = None
+	post_process:	Optional[callable] = None
 	repr:			Optional[callable] = True
 	default:		Optional[object] = S.Not_Set
 	kind:			object = S.Member.Kind.Positional_or_Named	#TODO fix up

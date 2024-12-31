@@ -9,6 +9,21 @@ from efforting.tech.template1.core.mnemonic_language import value_to_color_spira
 from efforting.tech.template1.core import records as R
 from efforting.tech.template1.core import Symbol as S
 
+def block_repr(block):
+	match block:
+		case tuple() | list() | set() | frozenset():
+			return type(block)(map(block_repr, block))
+
+		case Block(first_line=FL, last_line=LL):
+			return f'{FL}..{LL}'
+
+		case symbol if symbol is None:
+			return '-'
+
+		case otherwise:
+			return repr(otherwise)
+
+
 
 dump_log = Indented_Socket_Log_Writer('localhost', 5002)
 dump_log.clear()
@@ -25,18 +40,25 @@ b1
 z'''
 
 
+# text = '''\
+# hello
+# 	world
+# '''
+
+
 text = '''\
-hello
-world
+		a
+	b
+	c
+d
 '''
 
 
-# text = '''\
-# 		a
-# 	b
-# 	c
-# d
-# '''
+
+class Tree_Node(R.Record):
+	block: R.Field(repr=lambda instance, field, info: block_repr(instance.block))	#TODO - we should use ABC to have different types of repr-functions, contextual and non contextual
+	title: R.Field()	= None
+	body: R.Field(factory=list)
 
 
 
@@ -86,23 +108,12 @@ dump_log.print()
 
 t = Basic_Dict_Table()
 
-def block_repr(block):
-	match block:
-		case tuple() | list() | set() | frozenset():
-			return type(block)(map(block_repr, block))
 
-		case Block(first_line=FL, last_line=LL):
-			return f'{FL}..{LL}'
-
-		case symbol if symbol is None:
-			return '-'
-
-		case otherwise:
-			return repr(otherwise)
 
 
 class Block_To_Tree_Node_Translator(R.Record):
 	indention_mode: R.Field() = S.Indention_Mode.Tabulators	#Note that we don't really support this yet
+	debug_seen_nodes: R.Field(factory=dict)
 
 	def compute_line_indent(self, line):
 		if self.indention_mode is S.Indention_Mode.Tabulators:
@@ -113,69 +124,93 @@ class Block_To_Tree_Node_Translator(R.Record):
 			raise NotImplementedError()
 
 	def hbt_split_by_indent_level(self, block, level):
-		#Requirements: blocks in body must be at the proper level and have a title
-
 		previous = None
-		head = None
-		body = list()
 		for index, line in block.iter_absolute_lines(True):
 			if index > 0 and self.compute_line_indent(line) == level:
-				if previous is None:
-					head = block[previous:index]
-					dump_log.print('HEAD', index, block_repr(head))
-				else:
-					body.append(block[previous:index])
-					dump_log.print('BODY', previous, index, block_repr(block[previous:index]))
+				yield block[previous:index]
 				previous = index
 
-		if False:
-			head = block[previous:]
-			dump_log.print('HEAD', previous, block_repr(head))
-		else:
-			tail = block[previous:]
-			dump_log.print('TAIL', previous, block_repr(tail))
-			body.append(tail)
+		yield block[previous:]
 
-		return head, body
-
-
-	def translate(self, block, level=0):
+	def translate(self, block, level=0, parent=None):
 		title = None
 
+		if block and self.compute_line_indent(block[0]) == level:	#A title is only valid on the right level
+			title = block[0].text.strip()
 
-		head, body = self.hbt_split_by_indent_level(block, level)
+		head = None
+		body = list(self.hbt_split_by_indent_level(block, level))
+		if body and body[0] and self.compute_line_indent(body[0][0]) > level:
+			head = body.pop(0)
+
+		#TODO - why do we need to do this?
+		if body and body[0].span == block.span:
+			body.pop(0)
+
+		if not (head or body or title):
+			return
 
 
+		child_nodes = list()
+
+		new_node = Tree_Node(block, title, child_nodes)
+
+
+		if parent is None:	#Create root node
+			parent = Tree_Node(block)
+			node_name = f'N{len(self.debug_seen_nodes)+1}'
+			self.debug_seen_nodes[parent] = node_name
+
+			t.add_row(
+				node = node_name,
+				parent = '(root)',
+				block = block_repr(block),
+				level = level,
+				title = repr(title) if title is not None else '-',
+				head = block_repr(head),
+				body = block_repr(body),
+			)
+
+		parent.body.append(new_node)
+
+
+
+		node_name = f'N{len(self.debug_seen_nodes)+1}'
+		self.debug_seen_nodes[new_node] = node_name
 
 		t.add_row(
-			node = f'N{len(t)+1}',
+			node = node_name,
+			parent = self.debug_seen_nodes[parent] if parent else '-',
+			block = block_repr(block),
+			level = level,
 			title = repr(title) if title is not None else '-',
 			head = block_repr(head),
 			body = block_repr(body),
 		)
 
+		if head:
+			self.translate(head, level+1, parent=new_node)
 
-Block_To_Tree_Node_Translator().translate(B)
+		if body:
+			for body_node in body:
+				self.translate(body_node, level, parent=new_node)
+
+		return new_node
+
+
+root = Block_To_Tree_Node_Translator().translate(B)
 
 print(t.format())
 
 
-
-
-exit()
-
-
-root = Tree_Node.from_tree_block(B)
+print()
 
 
 def dump_node(node):
-	dump_log.print('NODE', repr(node.title), node.block.span, node.level)
-
-	if node.block.span == (0, 0):
-		print(tuple(node.iter_nodes()))
+	dump_log.print('NODE', node.block.span, node.title)
 
 	with dump_log.indent():
-		for sub_node in node.iter_nodes():
+		for sub_node in node.body:
 			dump_node(sub_node)
 
 dump_node(root)

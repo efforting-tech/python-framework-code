@@ -2,12 +2,35 @@ from .. import records as R, Symbol as S
 
 
 
+#TODO - define API for row types and add optional runtime check
+
 
 class Sequence_Based_Row:
-	pass
+	@staticmethod
+	def add_row(table, positional, named):
+		if named:
+			raise NotImplementedError()	#TODO
+
+		assert len(positional) == len(table.columns)
+
+		table.data.append(positional)
+
+	@staticmethod
+	def iter_columns(table):
+		yield from enumerate(table.columns)
+
+
+	@staticmethod
+	def get_column_name(table, index):
+		return table.columns[index]
+
+	@staticmethod
+	def iter_row(table, index, row):
+		for column_index, column in enumerate(table.columns):
+			yield column_index, row[column_index]
+
 
 class Dict_Based_Row:
-
 	@staticmethod
 	def reorder_rows(table, new_order):
 		new_data = tuple(table.data[index] for index in new_order)
@@ -109,12 +132,29 @@ class String_Formatter(R.Record):
 		return str(data)
 
 
-class Basic_Table(R.Record):
-	row_type: R.Field() = Sequence_Based_Row
+class Function_Formatter(R.Record):
+	table: R.Field()
+	function: R.Field()
+
+	def get_length(self, data):
+		return len(self.format(data))
+
+	def format(self, data):
+		return self.function(data)
+
+
+class Abstract_Table(R.Record):
+	columns: R.Field(factory=list)
 	cell_formatter: R.Field(factory='_init_default_cell_formatter')
 	column_formatter: R.Field(factory='_init_default_column_formatter')
-	columns: R.Field(factory=list)
 	data: R.Field(factory=list)
+	row_type: R.Field() = None
+
+	def set_column_format(self, column_index, formatter):
+		self.cell_formatter.by_column[column_index] = formatter
+
+	def __len__(self):
+		return len(self.data)
 
 	def _init_default_column_formatter(self):
 		return Column_Settings(String_Formatter(self))
@@ -229,6 +269,13 @@ class Basic_Table(R.Record):
 		self.row_type.reorder_rows(self, sorted(self.iter_row_indices(), key=lambda row_index: self.row_type.get_sort_key(self, row_index, column_indices)))
 
 
+#TODO - rename and reorder abstract and concrete
+class Basic_Dict_Table(Abstract_Table):
+	row_type: R.Field() = Dict_Based_Row
+
+class Basic_Sequence_Table(Abstract_Table):
+	row_type: R.Field() = Sequence_Based_Row
+
 
 # bt = Basic_Table(Dict_Based_Row)
 # bt.add_row(stuff=123, things='hello')
@@ -236,4 +283,4 @@ class Basic_Table(R.Record):
 # bt.add_row(789, 'and stuff')
 
 # bt.sort_by('things')
-#print(bt.format())
+# print(bt.format())

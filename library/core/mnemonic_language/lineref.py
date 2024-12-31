@@ -3,8 +3,11 @@ from . import Indention, Token, NEW_LINE
 
 import re
 
+#NOTE - currently indent is assuming tabulators. Lineref should refer to document for indention
+
 class Line_Reference(R.Record):
 	document: R.Field()
+	index: R.Field()
 	start: R.Field()
 	end: R.Field()
 

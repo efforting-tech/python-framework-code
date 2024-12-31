@@ -8,9 +8,12 @@ class Indented_Socket_Log_Writer:
 		self.pending_clear = True
 		self._current_indent = ''
 
+	def clear(self):
+		self.socket.sendall(ANSI_CLEAR)
+
 	def print(self, *pieces, end='\n', flush=False):	#Note - flush is ignored, just for API compatibility with print
 		if self.pending_clear:
-			self.socket.sendall(ANSI_CLEAR)
+			self.clear()
 			self.pending_clear = False
 
 		final = ' '.join(map(str, pieces)) + end

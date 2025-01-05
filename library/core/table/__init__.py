@@ -1,5 +1,5 @@
 from .. import records as R, Symbol as S
-
+from . import formatting as FMT
 
 
 #TODO - define API for row types and add optional runtime check
@@ -28,6 +28,26 @@ class Sequence_Based_Row:
 	def iter_row(table, index, row):
 		for column_index, column in enumerate(table.columns):
 			yield column_index, row[column_index]
+
+	@staticmethod
+	def get_row(table, row_index):
+		return table.data[row_index]
+
+	@staticmethod
+	def resolve_columns(table, columns):
+		def rc(col):
+			match col:
+				case str():
+					return table.columns.index(col)
+				case int():
+					return col
+
+				case symbol if symbol is S.Table.Row_Index:
+					return col
+
+			raise TypeError(col)
+
+		return tuple(map(rc, columns))
 
 
 class Dict_Based_Row:
@@ -70,8 +90,7 @@ class Dict_Based_Row:
 
 	@staticmethod
 	def get_cell(table, row_index, column_index):
-		pass
-
+		raise NotImplementedError()
 
 	@staticmethod
 	def iter_row(table, index, row):
@@ -149,8 +168,10 @@ class Abstract_Table(R.Record):
 	column_formatter: R.Field(factory='_init_default_column_formatter')
 	data: R.Field(factory=list)
 	row_type: R.Field() = None
+	table_formatter: R.Field(factory=FMT.Simple_Terminal_Formatter)
 
-	def set_column_format(self, column_index, formatter):
+	def set_column_format(self, column, formatter):
+		[column_index] = self.row_type.resolve_columns(self, (column,))
 		self.cell_formatter.by_column[column_index] = formatter
 
 	def __len__(self):
@@ -184,78 +205,18 @@ class Abstract_Table(R.Record):
 		for index, row in enumerate(self.data):
 			yield index, self.row_type.iter_row(self, index, row)
 
+	def format_row_by_index(self, row_index):
+		return tuple(self.lookup_cell_formatter(row_index, col_index).format(cell_data) for col_index, cell_data in self.get_row_iter(row_index))
+
+	def format_row(self, index_and_row_iter):
+		[index, row_iter] = index_and_row_iter
+		return tuple(self.lookup_cell_formatter(index, col_index).format(cell_data) for col_index, cell_data in row_iter)
+
+	def get_row_iter(self, row_index):
+		return self.row_type.iter_row(self, row_index, self.row_type.get_row(self, row_index))
 
 	def format(self):
-		#This function was written by ChatGPT 4o by OpenAI
-		# Collate header and body to calculate column widths
-		column_widths = {}
-		headers = {}
-
-		# Determine column widths by considering both headers and body
-		for col_index, column in self.iter_columns():
-			column_fmt = self.lookup_column_formatter(col_index)
-			header = self.get_column_name(col_index)
-			headers[col_index] = column_fmt.format(header) if column_fmt else header
-			column_widths[col_index] = column_fmt.get_length(headers[col_index]) if column_fmt else len(header)
-
-		for row_index, row_iter in self:
-			for col_index, cell_data in row_iter:
-				cell_fmt = self.lookup_cell_formatter(row_index, col_index)
-				cell_length = cell_fmt.get_length(cell_data)
-				column_widths[col_index] = max(column_widths[col_index], cell_length)
-
-		# Box drawing characters
-		top_left = "\u250C"
-		top_right = "\u2510"
-		bottom_left = "\u2514"
-		bottom_right = "\u2518"
-		horizontal = "\u2500"
-		vertical = "\u2502"
-		junction_top = "\u252C"
-		junction_bottom = "\u2534"
-		junction_left = "\u251C"
-		junction_right = "\u2524"
-		junction_center = "\u253C"
-
-		# Generate horizontal dividers
-		def horizontal_divider(left, middle, right):
-			parts = [left]
-			for col_index, width in sorted(column_widths.items()):
-				parts.append(horizontal * (width + 2))  # Add padding
-				if col_index < max(column_widths):
-					parts.append(middle)
-			parts.append(right)
-			return "".join(parts)
-
-		top_divider = horizontal_divider(top_left, junction_top, top_right)
-		bottom_divider = horizontal_divider(bottom_left, junction_bottom, bottom_right)
-		middle_divider = horizontal_divider(junction_left, junction_center, junction_right)
-
-		# Create column headers
-		column_headers = []
-		for col_index in sorted(column_widths):
-			column_headers.append(f" {headers[col_index]:<{column_widths[col_index]}} ")
-		header_row = vertical + vertical.join(column_headers) + vertical
-
-		# Format the rows
-		rows = []
-		for row_index, row_iter in self:
-			row_parts = []
-			for col_index, cell_data in row_iter:
-				cell_fmt = self.lookup_cell_formatter(row_index, col_index)
-				formatted_data = cell_fmt.format(cell_data)
-				row_parts.append(f" {formatted_data:<{column_widths[col_index]}} ")
-			rows.append(vertical + vertical.join(row_parts) + vertical)
-
-		# Combine everything
-		formatted_table = [top_divider, header_row, middle_divider]
-		for i, row in enumerate(rows):
-			formatted_table.append(row)
-			if i < len(rows) - 1:
-				formatted_table.append(middle_divider)
-		formatted_table.append(bottom_divider)
-
-		return "\n".join(formatted_table)
+		return self.table_formatter.format(self)
 
 	def resolve_columns(self, *columns):
 		return self.row_type.resolve_columns(self, columns)

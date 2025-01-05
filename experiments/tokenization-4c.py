@@ -179,6 +179,7 @@ class Block_To_Tree_Node_Translator(R.Record):
 
 		if parent is None:
 			parent = Tree_Node(block)
+			bt2.add_row(parent, None, None, block.span, level)
 
 		pieces = list(self.hbt_split_by_indent_level(block, level))
 
@@ -186,25 +187,26 @@ class Block_To_Tree_Node_Translator(R.Record):
 			first_indent = self.compute_line_indent(pieces[0][0])
 			if first_indent > level:
 				head = pieces.pop(0)
-				#print('We must go in', head)
 				virtual = Tree_Node(head)
+				bt2.add_row(virtual, parent, None, head.span, level+1)
 				parent.body.append(virtual)
 				self.translate_tree(head, level+1, virtual)
 
 			else:
-				title = pieces[0][0].text.strip()
+				head = pieces.pop(0)
+				title = head[0].text.strip()
 				if title:
-					parent.body.append(Tree_Node(pieces.pop(0), title))
+					concrete = Tree_Node(head, title)
+					bt2.add_row(concrete, parent, title, head.span, level+1)
+					parent.body.append(concrete)
 				else:
-					raise NotImplementedError()
+					raise NotImplementedError()	#TODO: Determine if this can happen
 
-			#print('We must handle remaining pieces', pieces)
 			for p in pieces:
 				self.translate_tree(p, level+1, parent)
 
 		else:
-			raise NotImplementedError()
-
+			raise NotImplementedError()	#TODO: Determine if this can happen
 
 		return parent
 
@@ -289,49 +291,4 @@ def dump_node(node):
 			dump_node(sub_node)
 
 dump_node(root)
-
-
-# Output (dump_log)
-# ┌────────────────┬───────┬────────┬───────┐
-# │ Category       │ Block │ Parent │ Level │
-# ├────────────────┼───────┼────────┼───────┤
-# │ translate_tree │ 0..3  │ -      │ None  │
-# │ translate_node │ 0..2  │ N1     │ 0     │
-# │ translate_node │ 0..2  │ N2     │ 1     │
-# └────────────────┴───────┴────────┴───────┘
-
-# Output (stderr)
-# Traceback (most recent call last):
-#   File "/srv/datacore2/devilholk/Projects/efforting.tech/github/efforting-tech-template1/experiments/tokenization-4c.py", line 245, in <module>
-#     root = Block_To_Tree_Node_Translator().translate_tree(B)
-#   File "/srv/datacore2/devilholk/Projects/efforting.tech/github/efforting-tech-template1/experiments/tokenization-4c.py", line 188, in translate_tree
-#     head_node = self.translate_node(body.pop(0), root, 0)
-#   File "/srv/datacore2/devilholk/Projects/efforting.tech/github/efforting-tech-template1/experiments/tokenization-4c.py", line 216, in translate_node
-#     head_node = self.translate_node(body.pop(0), node, level + 1)
-#   File "/srv/datacore2/devilholk/Projects/efforting.tech/github/efforting-tech-template1/experiments/tokenization-4c.py", line 210, in translate_node
-#     t.add_row(node, parent, title, block.span, level)
-#     ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-#   File "/home/devilholk/.local/lib/python3.13/site-packages/efforting/tech/template1/core/table/condition.py", line 38, in add_row
-#     self.test()
-#     ~~~~~~~~~^^
-#   File "/home/devilholk/.local/lib/python3.13/site-packages/efforting/tech/template1/core/table/condition.py", line 49, in test
-#     raise Table_Mismatch_Exception(self.expected_table, self.tested_table, row)
-# efforting.tech.template1.core.table.condition.Table_Mismatch_Exception: Table mismatch detected on row 3.
-
-# Expected table:                            Tested table:
-# ┌──────┬────────┬───────┬──────┬───────┐   ┌──────┬────────┬───────┬──────┬───────┐
-# │ Node │ Parent │ Title │ Span │ Level │   │ Node │ Parent │ Title │ Span │ Level │
-# ├──────┼────────┼───────┼──────┼───────┤   ├──────┼────────┼───────┼──────┼───────┤
-# │ N1   │ -      │ -     │ 0..3 │ -     │   │ N1   │ -      │ -     │ 0..3 │ -     │
-# │ N2   │ N1     │ -     │ 0..2 │ 0     │   │ N2   │ N1     │ -     │ 0..2 │ 0     │
-# │ N3   │ N2     │ -     │ 0..0 │ 1     │   │ N3   │ N2     │ -     │ 0..2 │ 1     │
-# │ N4   │ N3     │ 'a'   │ 0..0 │ 2     │   └──────┴────────┴───────┴──────┴───────┘
-# │ N5   │ N2     │ 'b'   │ 1..1 │ 1     │
-# │ N6   │ N2     │ 'c'   │ 2..2 │ 1     │
-# │ N7   │ N1     │ 'd'   │ 3..3 │ 0     │
-# └──────┴────────┴───────┴──────┴───────┘
-
-
-
-
 
